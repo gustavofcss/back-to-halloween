@@ -1,0 +1,12 @@
+__pycache__/
+*.pyc
+.env
+venv/
+.venv/
+*.log
+.DS_Store
+
+# Mockups/referências de design (não fazem parte do app publicado --
+# os SVGs já foram copiados pra app/static/assets)
+front/
+Untitled-*.png
