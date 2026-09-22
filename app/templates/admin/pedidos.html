@@ -9,12 +9,11 @@
 {% block admin_body %}
 <img class="admin-deco admin-deco--top-right" src="{{ url_for('static', filename='assets/deco-zombie.png') }}" alt="" aria-hidden="true">
 {% set status_pill = {'confirmado': 'admin-pill--ok', 'pendente': 'admin-pill--warn', 'cancelado': 'admin-pill--bad'} %}
-{% set ns = namespace(total_valor=0, confirmados=0, pendentes=0, cancelados=0) %}
+{% set ns = namespace(total_valor=0, confirmados=0, pendentes=0) %}
 {% for p in pedidos %}
-  {% set ns.total_valor = ns.total_valor + (p.valor or 0) %}
+  {% if p.status_pedido != 'cancelado' %}{% set ns.total_valor = ns.total_valor + (p.valor or 0) %}{% endif %}
   {% if p.status_pedido == 'confirmado' %}{% set ns.confirmados = ns.confirmados + 1 %}{% endif %}
   {% if p.status_pedido == 'pendente' %}{% set ns.pendentes = ns.pendentes + 1 %}{% endif %}
-  {% if p.status_pedido == 'cancelado' %}{% set ns.cancelados = ns.cancelados + 1 %}{% endif %}
 {% endfor %}
 
 <div class="admin-kpis">
@@ -30,11 +29,6 @@
     <div class="admin-kpi__label">Confirmados</div>
     <div class="admin-kpi__value">{{ ns.confirmados }}</div>
     <div class="admin-kpi__delta">{{ ns.pendentes }} pendente(s)</div>
-  </div>
-  <div class="admin-kpi">
-    <div class="admin-kpi__label">Cancelados</div>
-    <div class="admin-kpi__value">{{ ns.cancelados }}</div>
-    <div class="admin-kpi__delta admin-kpi__delta--muted">de {{ pedidos|length }} no total</div>
   </div>
   <div class="admin-kpi">
     <div class="admin-kpi__label">Vagas do evento</div>
