@@ -7,6 +7,23 @@
 <a href="#form-material" class="admin-cta">+ Novo material</a>
 {% endblock %}
 {% block admin_body %}
+<img class="admin-deco admin-deco--top-right" src="{{ url_for('static', filename='assets/deco-pumpkin.png') }}" alt="" aria-hidden="true">
+
+<div class="admin-kpis">
+  <div class="admin-kpi">
+    <div class="admin-kpi__label">Total arrecadado</div>
+    <div class="admin-kpi__value">R$ {{ total_arrecadado }}</div>
+  </div>
+  <div class="admin-kpi">
+    <div class="admin-kpi__label">Total gasto em material</div>
+    <div class="admin-kpi__value">R$ {{ total_gasto }}</div>
+  </div>
+  <div class="admin-kpi">
+    <div class="admin-kpi__label">Saldo disponível</div>
+    <div class="admin-kpi__value">R$ {{ saldo }}</div>
+  </div>
+</div>
+
 <section class="admin-panel" id="form-material">
   <div class="admin-panel__head">
     <h2 class="admin-panel__title">Cadastrar material</h2>

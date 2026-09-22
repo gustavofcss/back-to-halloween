@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS evento (
     numero_lote               INTEGER NOT NULL DEFAULT 1,
     valor_entrada             NUMERIC(10,2) NOT NULL,
     quantidade_max_ingressos  INTEGER NOT NULL DEFAULT 2,
+    capacidade_maxima         INTEGER NOT NULL DEFAULT 60,
     usuario_cadastro          INTEGER REFERENCES login_usuario(id_usuario),
     data_cadastro             TIMESTAMPTZ NOT NULL DEFAULT now()
 );

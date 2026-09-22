@@ -7,30 +7,37 @@
 <a href="#form-lote" class="admin-cta">+ Novo lote</a>
 {% endblock %}
 {% block admin_body %}
+<img class="admin-deco admin-deco--top-left" src="{{ url_for('static', filename='assets/deco-walk.png') }}" alt="" aria-hidden="true">
 {% set meses_pt = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] %}
+<section class="admin-panel">
+  <div class="admin-panel__head">
+    <h2 class="admin-panel__title">Capacidade do evento</h2>
+  </div>
+  <p class="help-text">{{ ingressos_vendidos_total }} de {{ capacidade_maxima }} ingressos vendidos</p>
+  <form method="post" action="/admin/eventos/capacidade" style="display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;">
+    <div class="field" style="margin-bottom: 0; flex: 0 0 auto;">
+      <label for="capacidade_maxima">Capacidade máxima</label>
+      <input id="capacidade_maxima" name="capacidade_maxima" type="number" min="1" value="{{ capacidade_maxima }}">
+    </div>
+    <button type="submit" class="admin-btn-outline">Atualizar capacidade</button>
+  </form>
+</section>
+
 <section class="admin-panel" id="form-lote">
   <div class="admin-panel__head">
     <h2 class="admin-panel__title">Cadastrar novo lote</h2>
   </div>
   <p class="help-text">
-    É sempre o MESMO evento (Halloween) -- aqui você cadastra um novo lote
-    quando quiser mudar o preço da entrada (ex.: 1º lote R$ 30, depois 2º
-    lote R$ 40). O lote mais recente cadastrado é o que fica valendo pra
-    quem for comprar ingresso agora.
+    É sempre o MESMO evento{% if ultimo %} ({{ ultimo.nome_evento }}, {{ ultimo.data_evento.strftime('%d/%m/%Y') if ultimo.data_evento else 'data a definir' }}{% if ultimo.hora_evento %} às {{ ultimo.hora_evento.strftime('%H:%M') }}{% endif %}){% endif %} -- aqui
+    você só cadastra o lote {{ proximo_lote }}, com um novo preço (ex.: 1º
+    lote R$ 30, depois 2º lote R$ 40). O lote mais recente cadastrado é o
+    que fica valendo pra quem for comprar ingresso agora.
   </p>
 
   <form method="post" action="/admin/eventos">
     <div class="field">
-      <label for="nome_evento">Nome do evento</label>
-      <input id="nome_evento" name="nome_evento" required value="Halloween">
-    </div>
-    <div class="field">
-      <label for="data_evento">Data</label>
-      <input id="data_evento" name="data_evento" type="date">
-    </div>
-    <div class="field">
-      <label for="numero_lote">Número do lote</label>
-      <input id="numero_lote" name="numero_lote" type="number" min="1" value="1">
+      <label>Próximo lote</label>
+      <input type="text" value="Lote {{ proximo_lote }}" disabled>
     </div>
     <div class="field">
       <label for="valor_entrada">Valor da entrada deste lote (R$)</label>
@@ -38,9 +45,9 @@
     </div>
     <div class="field">
       <label for="quantidade_max_ingressos">Máx. de ingressos por pessoa</label>
-      <input id="quantidade_max_ingressos" name="quantidade_max_ingressos" type="number" min="1" value="2">
+      <input id="quantidade_max_ingressos" name="quantidade_max_ingressos" type="number" min="1" value="{{ ultimo.quantidade_max_ingressos if ultimo else 2 }}">
     </div>
-    <button type="submit" class="admin-btn-primary">Cadastrar novo lote</button>
+    <button type="submit" class="admin-btn-primary">Cadastrar lote {{ proximo_lote }}</button>
   </form>
 </section>
 

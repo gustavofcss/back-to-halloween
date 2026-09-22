@@ -2,6 +2,8 @@
 {% block title %}Comprar ingresso -- Horror Night Party{% endblock %}
 {% block content %}
 <div class="auth-wrap">
+  <img class="auth-deco-witch-static" src="{{ url_for('static', filename='assets/deco-witch.png') }}" alt="" aria-hidden="true">
+  <img class="auth-deco-bat" src="{{ url_for('static', filename='assets/deco-bat-solid.png') }}" alt="" aria-hidden="true">
   <div class="progress-steps">
     <div class="progress-step">
       <div class="progress-step__circle progress-step__circle--done">1</div>
@@ -27,6 +29,8 @@
 
     {% if sem_evento %}
       <p class="help-text">Nenhum evento disponível no momento.</p>
+    {% elif esgotado %}
+      <div class="alert-error">Ingressos esgotados! A Horror Night Party atingiu a capacidade máxima.</div>
     {% elif limite_atingido %}
       <div class="alert-error">Você já atingiu o limite de ingressos para este evento.</div>
       <p class="card-footer"><a href="/meus-pedidos">Ver meus pedidos</a></p>

@@ -2,6 +2,8 @@
 {% block title %}Pagamento -- Horror Night Party{% endblock %}
 {% block content %}
 <div class="auth-wrap">
+  <img class="auth-deco-skull" src="{{ url_for('static', filename='assets/deco-skull.png') }}" alt="" aria-hidden="true">
+  <img class="auth-deco-broom" src="{{ url_for('static', filename='assets/deco-broom.png') }}" alt="" aria-hidden="true">
   <div class="progress-steps">
     <div class="progress-step">
       <div class="progress-step__circle progress-step__circle--done">1</div>
@@ -78,6 +80,31 @@
             <button type="submit" class="btn-primary">Já paguei, confirmar</button>
           </form>
         </div>
+
+        {% if qr_code_base64 or qr_code or pedido.mp_payment_id %}
+        <script>
+          (function () {
+            var tentativas = 0;
+            var maxTentativas = 60; // 60 x 5s ~= 5 minutos
+            var intervalo = setInterval(function () {
+              tentativas += 1;
+              if (tentativas > maxTentativas) {
+                clearInterval(intervalo);
+                return;
+              }
+              fetch('/pagamento/{{ pedido.id_pedido }}/verificar', { method: 'POST' })
+                .then(function (resp) { return resp.json(); })
+                .then(function (data) {
+                  if (data.status === 'confirmado') {
+                    clearInterval(intervalo);
+                    window.location.reload();
+                  }
+                })
+                .catch(function () {});
+            }, 5000);
+          })();
+        </script>
+        {% endif %}
       {% endif %}
     </div>
   </div>

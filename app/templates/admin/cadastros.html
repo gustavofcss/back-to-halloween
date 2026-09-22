@@ -1,0 +1,42 @@
+{% extends "admin/_layout.html" %}
+{% set active_nav = "cadastros" %}
+{% block title %}Admin -- Cadastros pendentes{% endblock %}
+{% block admin_title %}Cadastros pendentes{% endblock %}
+{% block admin_subtitle %}Aprove quem pode criar conta na Horror Night Party{% endblock %}
+{% block admin_body %}
+<section class="admin-panel">
+  <div class="admin-panel__head">
+    <h2 class="admin-panel__title">Cadastros pendentes</h2>
+    <span class="admin-panel__count">{{ pendentes|length }} resultado(s)</span>
+  </div>
+
+  {% if pendentes %}
+  <div class="admin-table-scroll">
+    <table class="admin-table">
+      <thead>
+        <tr><th>Nome</th><th>E-mail</th><th>Cadastrado em</th><th></th></tr>
+      </thead>
+      <tbody>
+      {% for p in pendentes %}
+        <tr>
+          <td>{{ p.nome }}</td>
+          <td>{{ p.email }}</td>
+          <td>{{ p.data_cadastro|data_hora_br }}</td>
+          <td>
+            <form method="post" action="/admin/cadastros/{{ p.id_usuario }}/confirmar" style="display:inline">
+              <button type="submit" class="admin-btn-primary">Confirmar cadastro</button>
+            </form>
+            <form method="post" action="/admin/cadastros/{{ p.id_usuario }}/recusar" style="display:inline">
+              <button type="submit" class="admin-btn-outline" onclick="return confirm('Recusar e apagar esse cadastro?')">Recusar</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="help-text">Nenhum cadastro pendente.</p>
+  {% endif %}
+</section>
+{% endblock %}

@@ -162,7 +162,7 @@ h1, h2, h3 {
 .spider-deco {
   position: absolute;
   top: -8px;
-  width: 28px;
+  width: 34px;
   pointer-events: none;
   z-index: 2;
 }
@@ -172,20 +172,37 @@ h1, h2, h3 {
   height: auto;
   opacity: .5;
 }
+/* Balanço sutil tipo pêndulo, girando a partir do ponto onde o fio encosta
+   na teia (topo) -- pedido do usuário: "deixa as aranhas com uma animação
+   sutil de ta balançando". thread + spider-box ficam dentro desse wrapper
+   pra girarem juntos como um bloco só. */
+.spider-deco__hang {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transform-origin: 50% 22px;
+  animation: spiderSway 4.5s ease-in-out infinite;
+}
+@keyframes spiderSway {
+  0%, 100% { transform: rotate(-4deg); }
+  50% { transform: rotate(4deg); }
+}
 .spider-deco__thread {
   position: absolute;
-  top: 18px;
+  top: 22px;
   left: 50%;
   width: 1px;
-  height: 18px;
+  height: 22px;
   background: rgba(244, 236, 224, .3);
   transform: translateX(-50%);
 }
 .spider-deco__spider-box {
   position: absolute;
-  top: 32px;
+  top: 39px;
   left: 50%;
-  width: 15px;
+  width: 18px;
   transform: translateX(-50%);
 }
 .spider-deco__spider-box img {
@@ -211,14 +228,19 @@ h1, h2, h3 {
 }
 
 .spider-deco--1 { left: 6%; top: -8px; }
+.spider-deco--1 .spider-deco__hang { animation-delay: -.5s; }
 .spider-deco--2 { left: 22%; top: 8px; transform: scale(.8); }
 .spider-deco--2 .spider-deco__blink { animation-delay: -1.4s; }
+.spider-deco--2 .spider-deco__hang { animation-delay: -2.1s; }
 .spider-deco--3 { left: 42%; top: -10px; transform: scale(1.1); }
 .spider-deco--3 .spider-deco__blink { animation-delay: -2.8s; }
+.spider-deco--3 .spider-deco__hang { animation-delay: -3.4s; }
 .spider-deco--4 { left: 64%; top: 4px; transform: scale(.9); }
 .spider-deco--4 .spider-deco__blink { animation-delay: -3.6s; }
+.spider-deco--4 .spider-deco__hang { animation-delay: -1.2s; }
 .spider-deco--5 { left: 84%; top: -6px; }
 .spider-deco--5 .spider-deco__blink { animation-delay: -.8s; }
+.spider-deco--5 .spider-deco__hang { animation-delay: -4.0s; }
 
 /* acentos atmosféricos extras nas telas de auth -- um por tela, discreto,
    sem competir com o card. Os já pretos (mão, gato) só reduzem opacidade;
@@ -275,6 +297,79 @@ h1, h2, h3 {
   pointer-events: none;
 }
 
+/* mais variedade -- ícones que estavam prontos em app/static/assets/ mas
+   nunca tinham sido usados em nenhuma página. Mesma lógica de sempre:
+   absolute, pequeno, opacidade baixa, pointer-events:none. Os já escuros
+   (bruxa, morcego, gato) só reduzem opacidade; os coloridos (vassoura,
+   doce-ou-travessura) ganham brightness(0) pra virar silhueta escura. */
+.auth-deco-witch-static {
+  position: absolute;
+  top: 60px;
+  left: 4%;
+  width: 34px;
+  height: auto;
+  opacity: .16;
+  pointer-events: none;
+}
+.auth-deco-bat {
+  position: absolute;
+  top: 90px;
+  right: 5%;
+  width: 30px;
+  height: auto;
+  opacity: .18;
+  pointer-events: none;
+}
+.auth-deco-skull {
+  position: absolute;
+  top: 70px;
+  right: 4%;
+  width: 30px;
+  height: auto;
+  opacity: .16;
+  filter: brightness(0);
+  pointer-events: none;
+}
+.auth-deco-broom {
+  position: absolute;
+  bottom: 8%;
+  left: 3%;
+  width: 34px;
+  height: auto;
+  opacity: .18;
+  filter: brightness(0);
+  pointer-events: none;
+}
+.auth-deco-cat-static {
+  position: absolute;
+  top: 50px;
+  left: 4%;
+  width: 32px;
+  height: auto;
+  opacity: .18;
+  pointer-events: none;
+}
+.auth-deco-treat {
+  position: absolute;
+  bottom: 8%;
+  right: 4%;
+  width: 30px;
+  height: auto;
+  opacity: .18;
+  filter: brightness(0);
+  pointer-events: none;
+}
+.auth-deco-ghost-static {
+  position: absolute;
+  top: 8%;
+  left: 6%;
+  width: 30px;
+  height: auto;
+  opacity: .16;
+  filter: brightness(0) invert(1);
+  pointer-events: none;
+}
+
 .auth-brand {
   font-family: var(--font-heading);
   font-weight: 800;
@@ -287,6 +382,7 @@ h1, h2, h3 {
 }
 
 .card-parchment {
+  position: relative;
   width: 100%;
   max-width: 420px;
   background: linear-gradient(170deg, var(--parchment-1) 0%, var(--parchment-2) 100%);
@@ -374,14 +470,16 @@ h1, h2, h3 {
   margin-top: 4px;
 }
 
-/* zumbi pequeno andando bem devagar sobre a borda superior do botão de
-   login -- mesma técnica do sprite sheet de front/zombie-reference
-   (background-position animado em steps()), só que bem mais devagar que o
-   original (era 0.6s/15s lá) e numa escala minúscula. */
+/* zumbi pequeno andando bem devagar sobre a borda superior do CARD inteiro
+   (antes era só em cima do botão) -- mesma técnica do sprite sheet de
+   front/zombie-reference (background-position animado em steps()), bem mais
+   devagar que o original (era 0.6s/15s lá) e numa escala minúscula. O sprite
+   olha/estica o braço pra ESQUERDA -- por isso a travessia vai da direita
+   pra esquerda (senão ele fica andando de costas). */
 .login-zombie {
   position: absolute;
-  top: -30px;
-  left: -8%;
+  top: -20px;
+  left: 104%;
   width: 24px;
   height: 37px;
   background-image: url("../assets/zombie-walk.png");
@@ -390,14 +488,14 @@ h1, h2, h3 {
   background-position: 0 0;
   pointer-events: none;
   z-index: 2;
-  animation: loginZombieFrames 2.4s steps(9) infinite, loginZombieCross 11s linear infinite;
+  animation: loginZombieFrames 3.6s steps(9) infinite, loginZombieCross 20s linear infinite;
 }
 @keyframes loginZombieFrames {
   100% { background-position: -216px 0; }
 }
 @keyframes loginZombieCross {
-  0% { left: -8%; }
-  100% { left: 104%; }
+  0% { left: 104%; }
+  100% { left: -8%; }
 }
 .btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
 
@@ -1310,12 +1408,28 @@ h1, h2, h3 {
 /* -------------------- main / header -------------------- */
 
 .admin-main {
+  position: relative;
   flex: 1 1 560px;
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 18px;
 }
+
+/* toque atmosférico discreto por página admin (área de gestão é mais
+   profissional/contida que as telas de cliente -- só um ícone pequeno e
+   pálido no canto, nada "festivo"). */
+.admin-deco {
+  position: absolute;
+  width: 30px;
+  height: auto;
+  opacity: .14;
+  filter: brightness(0) invert(1);
+  pointer-events: none;
+  z-index: 0;
+}
+.admin-deco--top-right { top: -6px; right: 4px; }
+.admin-deco--top-left { top: -6px; left: 4px; }
 
 .admin-header {
   background: var(--a-cream);

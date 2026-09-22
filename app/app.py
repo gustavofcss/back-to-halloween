@@ -46,6 +46,17 @@ _DIAS_SEMANA = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Do
 _MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
 
 
+@app.template_filter("data_hora_br")
+def data_hora_br(valor):
+    # Sem isso, `{{ p.data_pedido }}` no template imprime o repr cru do
+    # datetime do Postgres (com microssegundos e timezone tipo
+    # "2026-09-21 23:26:32.186000+00:00") -- formato estranho pro usuário
+    # (achado real, na aba de pedidos). Formata como dd/mm/aaaa hh:mm.
+    if not valor:
+        return "--"
+    return valor.strftime("%d/%m/%Y %H:%M")
+
+
 @app.route("/")
 def index():
     with db.get_conn() as conn:

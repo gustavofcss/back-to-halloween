@@ -33,3 +33,12 @@ PIX_KEY = os.environ.get("PIX_KEY", "")
 BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:5000")
 
 MERCADOPAGO_ACCESS_TOKEN = os.environ.get("MERCADOPAGO_ACCESS_TOKEN", "")
+
+# Links de pagamento por cartão (Checkout Pro) criados manualmente pelo
+# usuário no site do Mercado Pago -- um por valor possível de pedido (preço
+# do lote x quantidade). Se o preço do lote mudar, esses links precisam ser
+# recriados manualmente e atualizados aqui.
+LINKS_PAGAMENTO_CARTAO = {
+    30.0: os.environ.get("LINK_PAGAMENTO_30", ""),
+    60.0: os.environ.get("LINK_PAGAMENTO_60", ""),
+}

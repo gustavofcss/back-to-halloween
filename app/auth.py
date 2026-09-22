@@ -19,12 +19,11 @@ from flask import (
     session,
     url_for,
 )
-from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
 from werkzeug.security import check_password_hash, generate_password_hash
 
 import config
 import db
-from email_utils import enviar_codigo_recuperacao, enviar_email_confirmacao
+from email_utils import enviar_codigo_recuperacao
 
 auth_bp = Blueprint("auth", __name__)
 
@@ -38,28 +37,6 @@ oauth.register(
 )
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
-CONFIRM_EMAIL_SALT = "confirmar-email"
-CONFIRM_EMAIL_MAX_AGE = 86400  # 24h
-
-
-def _serializer() -> URLSafeTimedSerializer:
-    return URLSafeTimedSerializer(config.SECRET_KEY)
-
-
-def gerar_token_confirmacao(id_usuario: int) -> str:
-    return _serializer().dumps(id_usuario, salt=CONFIRM_EMAIL_SALT)
-
-
-def _ler_token_confirmacao(token: str) -> int | None:
-    try:
-        return _serializer().loads(token, salt=CONFIRM_EMAIL_SALT, max_age=CONFIRM_EMAIL_MAX_AGE)
-    except (BadSignature, SignatureExpired):
-        return None
-
-
-def _criar_conta_e_enviar_confirmacao(id_usuario: int, nome: str, email: str) -> None:
-    token = gerar_token_confirmacao(id_usuario)
-    enviar_email_confirmacao(email, nome, token)
 
 
 def login_required(view_func):
@@ -150,45 +127,6 @@ def signup():
                 (id_usuario,),
             )
 
-    _criar_conta_e_enviar_confirmacao(id_usuario, nome, email)
-
-    return render_template("verifique_email.html", email=email)
-
-
-@auth_bp.route("/confirmar-email/<token>")
-def confirmar_email(token: str):
-    id_usuario = _ler_token_confirmacao(token)
-    if id_usuario is None:
-        return render_template("confirmar_email_erro.html")
-
-    with db.get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "UPDATE login_usuario SET email_confirmado = TRUE, data_atualizacao = now() "
-                "WHERE id_usuario = %s",
-                (id_usuario,),
-            )
-
-    flash("E-mail confirmado! Já pode fazer login.")
-    return redirect(url_for("auth.login"))
-
-
-@auth_bp.route("/reenviar-confirmacao", methods=["POST"])
-def reenviar_confirmacao():
-    email = (request.form.get("email") or "").strip().lower()
-
-    with db.get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id_usuario, nome FROM login_usuario "
-                "WHERE email = %s AND email_confirmado = FALSE",
-                (email,),
-            )
-            usuario = cur.fetchone()
-
-    if usuario:
-        _criar_conta_e_enviar_confirmacao(usuario["id_usuario"], usuario["nome"], email)
-
     return render_template("verifique_email.html", email=email)
 
 
@@ -214,7 +152,10 @@ def login():
         return render_template("login.html"), 401
 
     if not usuario["email_confirmado"]:
-        flash("Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.")
+        flash(
+            "Seu cadastro ainda está em análise. Você vai receber um e-mail assim que "
+            "for confirmado pelo administrador."
+        )
         return render_template("login.html"), 401
 
     session["user_id"] = usuario["id_usuario"]

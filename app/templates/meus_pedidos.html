@@ -2,6 +2,8 @@
 {% block title %}Meus pedidos -- Horror Night Party{% endblock %}
 {% block content %}
 <div class="auth-wrap">
+  <img class="auth-deco-cat-static" src="{{ url_for('static', filename='assets/deco-cat.png') }}" alt="" aria-hidden="true">
+  <img class="auth-deco-treat" src="{{ url_for('static', filename='assets/deco-trick-or-treat.png') }}" alt="" aria-hidden="true">
   <div class="card-parchment">
     <div class="card-title">
       <img src="{{ url_for('static', filename='assets/pumpkin.svg') }}" alt="">
@@ -20,7 +22,7 @@
           <td>{{ p.quantidade }}</td>
           <td>R$ {{ p.valor }}</td>
           <td>{{ p.status_pedido }}</td>
-          <td>{{ p.data_pedido }}</td>
+          <td>{{ p.data_pedido|data_hora_br }}</td>
           <td><a href="/pagamento/{{ p.id_pedido }}">ver</a></td>
         </tr>
       {% endfor %}

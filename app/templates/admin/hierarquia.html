@@ -4,6 +4,7 @@
 {% block admin_title %}Hierarquia{% endblock %}
 {% block admin_subtitle %}Quem tem acesso admin na Horror Night Party{% endblock %}
 {% block admin_body %}
+<img class="admin-deco admin-deco--top-left" src="{{ url_for('static', filename='assets/deco-walk.png') }}" alt="" aria-hidden="true">
 {% macro initials(nome) -%}
 {% set partes = nome.split(' ') %}{{- (partes[0][0] ~ (partes[1][0] if partes|length > 1 else ''))|upper -}}
 {%- endmacro %}

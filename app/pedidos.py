@@ -4,11 +4,12 @@ from __future__ import annotations
 import logging
 
 import mercadopago
-from flask import Blueprint, abort, redirect, render_template, request, url_for
+from flask import Blueprint, abort, jsonify, redirect, render_template, request, url_for
 
 import config
 import db
 from auth import current_user, login_required
+from email_utils import enviar_confirmacao_pedido
 
 pedidos_bp = Blueprint("pedidos", __name__)
 logger = logging.getLogger(__name__)
@@ -48,6 +49,13 @@ def _ingressos_comprados(cur, id_usuario: int, id_evento: int) -> int:
     return cur.fetchone()["total"]
 
 
+def _ingressos_vendidos_total(cur) -> int:
+    cur.execute(
+        "SELECT COALESCE(SUM(quantidade), 0) AS total FROM pedido WHERE status_pedido != 'cancelado'"
+    )
+    return cur.fetchone()["total"]
+
+
 def _pedido_do_usuario(cur, id_pedido: int, id_usuario: int):
     cur.execute(
         "SELECT * FROM pedido WHERE id_pedido = %s AND id_usuario = %s",
@@ -73,6 +81,12 @@ def comprar():
             if max_permitido <= 0:
                 return render_template("comprar.html", limite_atingido=True)
 
+            vagas_restantes = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)
+            max_permitido = max(0, min(max_permitido, vagas_restantes))
+
+            if max_permitido <= 0:
+                return render_template("comprar.html", esgotado=True)
+
             if request.method == "GET":
                 return render_template(
                     "comprar.html", usuario=usuario, evento=evento, max_permitido=max_permitido
@@ -85,7 +99,15 @@ def comprar():
             except ValueError:
                 quantidade = 0
 
-            if not rg or not whatsapp or quantidade < 1 or quantidade > max_permitido:
+            vagas_restantes_atual = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)
+
+            if (
+                not rg
+                or not whatsapp
+                or quantidade < 1
+                or quantidade > max_permitido
+                or quantidade > vagas_restantes_atual
+            ):
                 return render_template(
                     "comprar.html",
                     usuario=usuario,
@@ -179,22 +201,29 @@ def pagamento_verificar(id_pedido: int):
             if not pedido:
                 abort(404)
 
+            status_atual = pedido["status_pedido"]
+
             if (
-                config.MERCADOPAGO_ACCESS_TOKEN
+                status_atual != "confirmado"
+                and config.MERCADOPAGO_ACCESS_TOKEN
                 and pedido["mp_payment_id"]
-                and pedido["status_pedido"] != "confirmado"
             ):
                 try:
                     resultado = _consultar_pagamento(pedido["mp_payment_id"])
-                    if resultado.get("status") == "approved":
+                    status_mp = resultado.get("status")
+                    if status_mp == "approved":
                         cur.execute(
                             "UPDATE pedido SET status_pedido = 'confirmado' WHERE id_pedido = %s",
                             (id_pedido,),
                         )
+                        enviar_confirmacao_pedido(usuario["email"], usuario["nome"], pedido)
+                        status_atual = "confirmado"
+                    else:
+                        status_atual = status_mp or status_atual
                 except Exception:
                     logger.warning("Falha ao verificar pagamento no Mercado Pago", exc_info=True)
 
-    return redirect(url_for("pedidos.pagamento", id_pedido=id_pedido))
+    return jsonify({"status": status_atual})
 
 
 @pedidos_bp.route("/pagamento/<int:id_pedido>/cartao", methods=["POST"])
@@ -207,39 +236,15 @@ def pagamento_cartao(id_pedido: int):
             if not pedido:
                 abort(404)
 
-            if not config.MERCADOPAGO_ACCESS_TOKEN:
-                return redirect(url_for("pedidos.pagamento", id_pedido=id_pedido))
+    # Link estático de Checkout Pro (criado manualmente no painel do Mercado
+    # Pago para cada valor possível) em vez de uma preference dinâmica --
+    # pedido explícito do usuário.
+    link = config.LINKS_PAGAMENTO_CARTAO.get(round(float(pedido["valor"]), 2))
+    if not link:
+        logger.warning("Sem link de pagamento por cartão cadastrado para o valor %s", pedido["valor"])
+        return redirect(url_for("pedidos.pagamento", id_pedido=id_pedido))
 
-            preference_data = {
-                "items": [
-                    {
-                        "title": f"Ingresso Horror Night Party -- pedido #{pedido['id_pedido']}",
-                        "quantity": 1,
-                        "unit_price": float(pedido["valor"]),
-                    }
-                ],
-                "back_urls": {
-                    "success": f"{config.BASE_URL}/pagamento/{id_pedido}",
-                    "failure": f"{config.BASE_URL}/pagamento/{id_pedido}",
-                    "pending": f"{config.BASE_URL}/pagamento/{id_pedido}",
-                },
-                "external_reference": str(id_pedido),
-            }
-
-            try:
-                resultado = _sdk().preference().create(preference_data)
-                preference = resultado["response"]
-            except Exception:
-                logger.warning("Falha ao criar preference no Mercado Pago", exc_info=True)
-                return redirect(url_for("pedidos.pagamento", id_pedido=id_pedido))
-
-            cur.execute(
-                "UPDATE pedido SET mp_preference_id = %s WHERE id_pedido = %s",
-                (preference["id"], id_pedido),
-            )
-            destino = preference.get("init_point") or preference.get("sandbox_init_point")
-
-    return redirect(destino)
+    return redirect(link)
 
 
 @pedidos_bp.route("/meus-pedidos")

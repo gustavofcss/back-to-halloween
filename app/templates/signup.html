@@ -5,10 +5,12 @@
   {% for n in range(1, 6) %}
   <div class="spider-deco spider-deco--{{ n }}" aria-hidden="true">
     <img class="spider-deco__web" src="{{ url_for('static', filename='assets/deco-spiderweb.png') }}" alt="">
-    <div class="spider-deco__thread"></div>
-    <div class="spider-deco__spider-box">
-      <img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt="">
-      <div class="spider-deco__blink"></div>
+    <div class="spider-deco__hang">
+      <div class="spider-deco__thread"></div>
+      <div class="spider-deco__spider-box">
+        <img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt="">
+        <div class="spider-deco__blink"></div>
+      </div>
     </div>
   </div>
   {% endfor %}

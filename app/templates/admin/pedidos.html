@@ -7,6 +7,7 @@
 <input type="search" class="admin-search" id="admin-pedidos-search" placeholder="Buscar pedido, nome, e-mail…">
 {% endblock %}
 {% block admin_body %}
+<img class="admin-deco admin-deco--top-right" src="{{ url_for('static', filename='assets/deco-zombie.png') }}" alt="" aria-hidden="true">
 {% set status_pill = {'confirmado': 'admin-pill--ok', 'pendente': 'admin-pill--warn', 'cancelado': 'admin-pill--bad'} %}
 {% set ns = namespace(total_valor=0, confirmados=0, pendentes=0, cancelados=0) %}
 {% for p in pedidos %}
@@ -35,6 +36,10 @@
     <div class="admin-kpi__value">{{ ns.cancelados }}</div>
     <div class="admin-kpi__delta admin-kpi__delta--muted">de {{ pedidos|length }} no total</div>
   </div>
+  <div class="admin-kpi">
+    <div class="admin-kpi__label">Vagas do evento</div>
+    <div class="admin-kpi__value">{{ ingressos_vendidos_total }} / {{ capacidade_maxima }}</div>
+  </div>
 </div>
 
 <section class="admin-panel">
@@ -58,7 +63,7 @@
           <td>{{ p.quantidade }}</td>
           <td>R$ {{ p.valor }}</td>
           <td><span class="admin-pill {{ status_pill.get(p.status_pedido, 'admin-pill--neutral') }}">{{ p.status_pedido }}</span></td>
-          <td>{{ p.data_pedido }}</td>
+          <td>{{ p.data_pedido|data_hora_br }}</td>
           <td>
             <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/confirmar" style="display:inline">
               <button type="submit" class="admin-btn-primary">Confirmar</button>
