@@ -70,20 +70,12 @@
             <td>{{ p.data_pedido|data_hora_br }}</td>
             <td>
               {% if p.status_pedido == 'pendente' %}
-              <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/confirmar" style="display:inline">
-                <button type="submit" class="admin-btn-primary">Confirmar</button>
-              </form>
-              <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/cancelar" style="display:inline">
-                <button type="submit" class="admin-btn-outline">Cancelar</button>
-              </form>
+              <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/confirmar" class="admin-btn-primary">Confirmar</button>
+              <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/cancelar" class="admin-btn-outline">Cancelar</button>
               {% elif p.status_pedido == 'confirmado' %}
-              <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/cancelar" style="display:inline">
-                <button type="submit" class="admin-btn-outline">Cancelar</button>
-              </form>
+              <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/cancelar" class="admin-btn-outline">Cancelar</button>
               {% elif p.status_pedido == 'cancelado' %}
-              <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/apagar" style="display:inline" onsubmit="return confirmarAcao(this, 'Apagar esse pedido cancelado? Não tem como desfazer.')">
-                <button type="submit" class="admin-btn-outline">Apagar</button>
-              </form>
+              <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/{{ p.id_pedido }}/apagar', 'Apagar esse pedido cancelado? Não tem como desfazer.')">Apagar</button>
               {% endif %}
             </td>
           </tr>
