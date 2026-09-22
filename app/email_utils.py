@@ -1,9 +1,13 @@
-"""Envio de e-mail transacional via API do Resend (HTTPS).
+"""Envio de e-mail transacional via API do Brevo (HTTPS).
 
 Antes usava smtplib puro, mas o Render bloqueia conexão SMTP de saída --
 a chamada em smtp.gmail.com:587 ficava pendurada até o worker do gunicorn
 matar a requisição (WORKER TIMEOUT), derrubando a página no meio de uma
-confirmação de cadastro/pedido. API HTTPS não sofre esse bloqueio.
+confirmação de cadastro/pedido. Tentamos Resend depois, mas o remetente de
+testes deles (onboarding@resend.dev) só manda pra dono da conta -- qualquer
+cliente real tomava 422 (achado real: confirmar pedido #5 quebrou assim).
+Brevo verifica só o e-mail remetente (link, sem DNS/domínio) e manda pra
+qualquer destinatário de verdade.
 """
 from __future__ import annotations
 
@@ -15,30 +19,33 @@ import config
 
 logger = logging.getLogger(__name__)
 
-_RESEND_URL = "https://api.resend.com/emails"
+_BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 
 
 def _enviar(destinatario: str, assunto: str, corpo: str, corpo_html: str | None = None) -> None:
-    if not config.RESEND_API_KEY:
+    if not config.BREVO_API_KEY:
         logger.warning(
-            "RESEND_API_KEY não configurada, e-mail '%s' não enviado -- "
-            "configure RESEND_API_KEY no .env",
+            "BREVO_API_KEY não configurada, e-mail '%s' não enviado -- "
+            "configure BREVO_API_KEY no .env",
             assunto,
         )
         return
 
     payload = {
-        "from": config.RESEND_FROM,
-        "to": [destinatario],
+        "sender": {"name": config.BREVO_FROM_NOME, "email": config.BREVO_FROM_EMAIL},
+        "to": [{"email": destinatario}],
         "subject": assunto,
-        "text": corpo,
+        "textContent": corpo,
+        "htmlContent": corpo_html or f"<pre style=\"font-family:inherit\">{corpo}</pre>",
     }
-    if corpo_html:
-        payload["html"] = corpo_html
 
     resposta = requests.post(
-        _RESEND_URL,
-        headers={"Authorization": f"Bearer {config.RESEND_API_KEY}"},
+        _BREVO_URL,
+        headers={
+            "api-key": config.BREVO_API_KEY,
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+        },
         json=payload,
         timeout=10,
     )
@@ -85,7 +92,7 @@ def enviar_cadastro_aprovado(destinatario: str, nome: str) -> None:
         f"Já pode entrar por aqui: {config.BASE_URL}/login\n\n"
         "Até a noite mais assustadora do ano!"
     )
-    _enviar(destinatario, "Cadastro confirmado -- Horror Night Party", corpo)
+    _enviar(destinatario, "Cadastro confirmado — Horror Night Party", corpo)
 
 
 def enviar_confirmacao_pedido(destinatario: str, nome: str, pedido) -> None:
@@ -93,7 +100,7 @@ def enviar_confirmacao_pedido(destinatario: str, nome: str, pedido) -> None:
         f"Oi, {nome}! \U0001f383\n\n"
         "Seu pagamento foi confirmado! O pedido a seguir já está garantido pra "
         "Horror Night Party:\n\n"
-        f"Pedido #{pedido['id_pedido']} -- {pedido['quantidade']} ingresso(s) -- "
+        f"Pedido #{pedido['id_pedido']} — {pedido['quantidade']} ingresso(s) — "
         f"R$ {pedido['valor']}\n\n"
         "Nos vemos na noite mais assustadora do ano!"
     )
@@ -117,6 +124,6 @@ def enviar_codigo_recuperacao(destinatario: str, nome: str, codigo: str) -> None
         "Recebemos um pedido pra redefinir sua senha da Horror Night Party. "
         f"Use o código abaixo (válido por 15 minutos):\n\n"
         f"{codigo}\n\n"
-        "Se você não pediu isso, pode ignorar este e-mail -- sua senha continua a mesma."
+        "Se você não pediu isso, pode ignorar este e-mail — sua senha continua a mesma."
     )
-    _enviar(destinatario, "Código para redefinir sua senha -- Horror Night Party", corpo)
+    _enviar(destinatario, "Código para redefinir sua senha — Horror Night Party", corpo)

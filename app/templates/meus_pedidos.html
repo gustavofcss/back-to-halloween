@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Meus pedidos -- Horror Night Party{% endblock %}
+{% block title %}Meus pedidos — Horror Night Party{% endblock %}
 {% block content %}
 {% set status_pill = {'confirmado': 'admin-pill--ok', 'pendente': 'admin-pill--warn', 'cancelado': 'admin-pill--bad'} %}
 <div class="admin-shell" style="justify-content: center;">
@@ -9,10 +9,13 @@
         <div class="admin-header__title">Meus pedidos</div>
         <div class="admin-header__subtitle">Seus ingressos pra Horror Night Party</div>
       </div>
-      <div class="admin-header__actions">
+      <div class="admin-header__actions" style="display: flex; align-items: center; gap: 14px;">
         {% if pode_comprar_mais > 0 %}
         <a href="/comprar" class="admin-cta">Comprar mais {{ pode_comprar_mais }} ingresso(s)</a>
         {% endif %}
+        <form method="post" action="/logout" style="margin: 0;">
+          <button type="submit" class="admin-btn-outline">Sair</button>
+        </form>
       </div>
     </header>
 

@@ -23,13 +23,15 @@ SECRET_KEY = _require("SECRET_KEY")
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 
-# E-mail transacional via API do Resend (HTTPS) -- SMTP direto (porta 587)
-# é bloqueado pelo Render (achado real: conexão em smtp.gmail.com travava até
-# o worker do gunicorn matar a requisição). RESEND_FROM usa o remetente de
-# testes do Resend por padrão -- funciona sem precisar verificar um domínio
-# próprio; troque só se/quando verificar um domínio de verdade lá.
-RESEND_API_KEY = os.environ.get("RESEND_API_KEY", "")
-RESEND_FROM = os.environ.get("RESEND_FROM", "Horror Night Party <onboarding@resend.dev>")
+# E-mail transacional via API do Brevo (HTTPS) -- SMTP direto (porta 587) é
+# bloqueado pelo Render (achado real: conexão em smtp.gmail.com travava até
+# o worker do gunicorn matar a requisição). Trocado do Resend pro Brevo
+# porque o Resend só manda pra fora com um domínio verificado (DNS) -- o
+# Brevo verifica só o e-mail remetente (clicando num link), sem precisar de
+# domínio próprio, e ainda assim manda pra qualquer destinatário.
+BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
+BREVO_FROM_EMAIL = os.environ.get("BREVO_FROM_EMAIL", "horrornightparty2026@gmail.com")
+BREVO_FROM_NOME = os.environ.get("BREVO_FROM_NOME", "Horror Night Party")
 
 PIX_KEY = os.environ.get("PIX_KEY", "")
 BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:5000")

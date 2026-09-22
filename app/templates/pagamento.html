@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Pagamento -- Horror Night Party{% endblock %}
+{% block title %}Pagamento — Horror Night Party{% endblock %}
 {% block content %}
 <div class="auth-wrap">
   <img class="auth-deco-skull" src="{{ url_for('static', filename='assets/deco-skull.png') }}" alt="" aria-hidden="true">
@@ -27,6 +27,8 @@
     <div class="ticket__section">
       {% if pedido.status_pedido == 'confirmado' %}
         <div class="alert-success" style="text-align: center;">Pagamento confirmado! Seu ingresso já está garantido.</div>
+      {% elif pedido.status_pedido == 'cancelado' %}
+        <div class="alert-error" style="text-align: center;">Esse pedido foi cancelado.</div>
       {% elif aguardando %}
         <div class="alert-success" style="text-align: center;">Ingresso reservado, aguardando confirmação do pagamento.</div>
       {% else %}

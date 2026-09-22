@@ -46,6 +46,9 @@
         <div class="admin-sidebar__user-role">Guardião(ã) da Cripta</div>
       </div>
     </div>
+    <form method="post" action="/logout" style="margin-top: 10px;">
+      <button type="submit" class="admin-btn-outline" style="width: 100%;">Sair</button>
+    </form>
     {% endif %}
   </aside>
 
@@ -103,6 +106,20 @@
         formPendente = null;
       }
     });
+  })();
+
+  // Atualiza a aba sozinha a cada 60s (pedidos/cadastros novos aparecem sem
+  // precisar recarregar na mão) -- pausa se o admin estiver digitando em
+  // algum campo, pra não perder o que já tava escrevendo.
+  (function () {
+    setInterval(function () {
+      var ativo = document.activeElement;
+      var editando = ativo && ['INPUT', 'TEXTAREA', 'SELECT'].indexOf(ativo.tagName) !== -1;
+      var modalAberto = overlay.style.display === 'flex';
+      if (!editando && !modalAberto) {
+        location.reload();
+      }
+    }, 60000);
   })();
 </script>
 {% endblock %}

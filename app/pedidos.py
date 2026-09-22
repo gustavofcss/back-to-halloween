@@ -147,7 +147,7 @@ def pagamento(id_pedido: int):
 
             qr_code_base64 = qr_code = mp_erro = None
 
-            if pedido["status_pedido"] != "confirmado":
+            if pedido["status_pedido"] == "pendente":
                 try:
                     if pedido["mp_payment_id"]:
                         pagamento_mp = _consultar_pagamento(pedido["mp_payment_id"])

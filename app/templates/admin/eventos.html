@@ -1,8 +1,8 @@
 {% extends "admin/_layout.html" %}
 {% set active_nav = "eventos" %}
-{% block title %}Admin -- Lotes do evento{% endblock %}
+{% block title %}Admin — Lotes do evento{% endblock %}
 {% block admin_title %}Lotes do evento{% endblock %}
-{% block admin_subtitle %}É sempre o mesmo evento (Halloween) -- só o lote (preço/data) muda{% endblock %}
+{% block admin_subtitle %}É sempre o mesmo evento (Halloween) — só o lote (preço/data) muda{% endblock %}
 {% block admin_header_actions %}
 <button type="button" id="btn-novo-lote" class="admin-cta">+ Novo lote</button>
 {% endblock %}
@@ -28,7 +28,7 @@
     <h2 class="admin-panel__title">Cadastrar novo lote</h2>
   </div>
   <p class="help-text">
-    É sempre o MESMO evento{% if ultimo %} ({{ ultimo.nome_evento }}, {{ ultimo.data_evento.strftime('%d/%m/%Y') if ultimo.data_evento else 'data a definir' }}{% if ultimo.hora_evento %} às {{ ultimo.hora_evento.strftime('%H:%M') }}{% endif %}){% endif %} -- aqui
+    É sempre o MESMO evento{% if ultimo %} ({{ ultimo.nome_evento }}, {{ ultimo.data_evento.strftime('%d/%m/%Y') if ultimo.data_evento else 'data a definir' }}{% if ultimo.hora_evento %} às {{ ultimo.hora_evento.strftime('%H:%M') }}{% endif %}){% endif %} — aqui
     você só cadastra o lote {{ proximo_lote }}, com um novo preço (ex.: 1º
     lote R$ 30, depois 2º lote R$ 40). O lote mais recente cadastrado é o
     que fica valendo pra quem for comprar ingresso agora.

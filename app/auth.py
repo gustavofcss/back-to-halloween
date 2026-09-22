@@ -161,7 +161,7 @@ def login():
         return render_template("login.html"), 401
 
     session["user_id"] = usuario["id_usuario"]
-    destino = request.args.get("next") or _destino_pos_login(usuario["id_usuario"])
+    destino = request.form.get("next") or _destino_pos_login(usuario["id_usuario"])
     return redirect(destino)
 
 
@@ -242,6 +242,10 @@ def redefinir_senha():
 
 @auth_bp.route("/auth/google")
 def auth_google():
+    # Guarda pra onde o usuário ia (ex.: veio de /comprar via login_required)
+    # -- sem isso, depois do login pelo Google ele sempre caía na tela
+    # padrão em vez de continuar o que estava fazendo.
+    session["login_next"] = request.args.get("next")
     redirect_uri = url_for("auth.auth_google_callback", _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
@@ -285,7 +289,8 @@ def auth_google_callback():
                 )
 
     session["user_id"] = id_usuario
-    return redirect(_destino_pos_login(id_usuario))
+    destino = session.pop("login_next", None) or _destino_pos_login(id_usuario)
+    return redirect(destino)
 
 
 @auth_bp.route("/logout", methods=["POST"])
