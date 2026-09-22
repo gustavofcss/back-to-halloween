@@ -54,9 +54,12 @@
           <span class="admin-group__name">{{ u.nome }}</span>
           <span class="admin-group__email">{{ u.email }}</span>
         </span>
-        <span class="admin-group__action">
+        <span class="admin-group__action" style="display: flex; gap: 8px;">
           <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/promover">
             <button type="submit" class="admin-btn-primary">Promover a admin</button>
+          </form>
+          <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/remover" onsubmit="return confirm('Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.')">
+            <button type="submit" class="admin-btn-outline">Apagar</button>
           </form>
         </span>
       </div>

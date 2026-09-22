@@ -4,6 +4,8 @@ outro projeto/credencial de trabalho.
 """
 from __future__ import annotations
 
+from zoneinfo import ZoneInfo
+
 from flask import Flask, render_template
 
 import config
@@ -44,6 +46,7 @@ def inject_usuario():
 
 _DIAS_SEMANA = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
 _MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
+_TZ_BRASIL = ZoneInfo("America/Sao_Paulo")
 
 
 @app.template_filter("data_hora_br")
@@ -52,9 +55,11 @@ def data_hora_br(valor):
     # datetime do Postgres (com microssegundos e timezone tipo
     # "2026-09-21 23:26:32.186000+00:00") -- formato estranho pro usuário
     # (achado real, na aba de pedidos). Formata como dd/mm/aaaa hh:mm.
+    # O valor vem em UTC (TIMESTAMPTZ) -- sem converter, mostra 3h a mais do
+    # que o horário real de Brasília (achado real, na tela de cadastros).
     if not valor:
         return "--"
-    return valor.strftime("%d/%m/%Y %H:%M")
+    return valor.astimezone(_TZ_BRASIL).strftime("%d/%m/%Y %H:%M")
 
 
 @app.route("/")

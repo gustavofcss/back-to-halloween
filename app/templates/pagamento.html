@@ -22,29 +22,13 @@
   </div>
 
   <div class="ticket">
-    <div class="ticket__header">
-      <div class="ticket__header-brand">
-        <img src="{{ url_for('static', filename='assets/pumpkin.svg') }}" alt="">
-        <p>Horror Night</p>
-      </div>
-      <p class="ticket__header-tag">Ingresso</p>
-    </div>
-
-    <div class="ticket__summary">
-      <div>
-        <p class="ticket__summary-qty">{{ pedido.quantidade }} &times; Entrada</p>
-        <p class="ticket__summary-name">Pedido #{{ pedido.id_pedido }}</p>
-      </div>
-      <p class="ticket__summary-total">R$ {{ pedido.valor }}</p>
-    </div>
-
-    <div class="ticket__perforation"></div>
+    {% include "_ticket_topo.html" %}
 
     <div class="ticket__section">
       {% if pedido.status_pedido == 'confirmado' %}
-        <div class="alert-success">Pagamento confirmado! Seu ingresso já está garantido.</div>
+        <div class="alert-success" style="text-align: center;">Pagamento confirmado! Seu ingresso já está garantido.</div>
       {% elif aguardando %}
-        <div class="alert-success">Ingresso reservado, aguardando confirmação do pagamento.</div>
+        <div class="alert-success" style="text-align: center;">Ingresso reservado, aguardando confirmação do pagamento.</div>
       {% else %}
         {% if mp_erro %}
         <div class="alert-error">{{ mp_erro }}</div>
@@ -60,8 +44,25 @@
         {% if qr_code %}
         <div class="ticket__pix-box">
           <p class="ticket__pix-label">Pix copia e cola</p>
-          <p class="ticket__pix-value">{{ qr_code }}</p>
+          <div class="ticket__pix-copy-row">
+            <p class="ticket__pix-value ticket__pix-value--clip" id="pix-copia-cola">{{ qr_code }}</p>
+            <button type="button" class="ticket__pix-copy-btn" id="btn-copiar-pix">Copiar</button>
+          </div>
         </div>
+        <script>
+          (function () {
+            var btn = document.getElementById('btn-copiar-pix');
+            var valor = document.getElementById('pix-copia-cola');
+            if (!btn || !valor) { return; }
+            btn.addEventListener('click', function () {
+              navigator.clipboard.writeText(valor.textContent.trim()).then(function () {
+                var textoOriginal = btn.textContent;
+                btn.textContent = 'Copiado!';
+                setTimeout(function () { btn.textContent = textoOriginal; }, 2000);
+              });
+            });
+          })();
+        </script>
         {% else %}
         <div class="ticket__pix-box">
           <p class="ticket__pix-label">Chave Pix</p>

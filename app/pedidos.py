@@ -258,4 +258,14 @@ def meus_pedidos():
                 (usuario["id_usuario"],),
             )
             pedidos = cur.fetchall()
-    return render_template("meus_pedidos.html", pedidos=pedidos)
+
+            pode_comprar_mais = 0
+            evento = _evento_ativo(cur)
+            if evento:
+                ja_comprados = _ingressos_comprados(cur, usuario["id_usuario"], evento["id_evento"])
+                vagas_restantes = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)
+                pode_comprar_mais = max(
+                    0, min(evento["quantidade_max_ingressos"] - ja_comprados, vagas_restantes)
+                )
+
+    return render_template("meus_pedidos.html", pedidos=pedidos, pode_comprar_mais=pode_comprar_mais)

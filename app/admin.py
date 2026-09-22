@@ -2,11 +2,15 @@
 (admin_required em toda rota, decorator já existe desde a Fase 2)."""
 from __future__ import annotations
 
-from flask import Blueprint, abort, redirect, render_template, request, session, url_for
+import logging
+
+from flask import Blueprint, abort, flash, redirect, render_template, request, session, url_for
 
 import db
 from auth import admin_required, current_user
 from email_utils import enviar_cadastro_aprovado, enviar_confirmacao_pedido
+
+logger = logging.getLogger(__name__)
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -75,7 +79,11 @@ def pedido_confirmar(id_pedido: int):
             )
 
     if not ja_confirmado:
-        enviar_confirmacao_pedido(pedido["email"], pedido["nome"], pedido)
+        try:
+            enviar_confirmacao_pedido(pedido["email"], pedido["nome"], pedido)
+        except Exception:
+            logger.warning("Falha ao enviar e-mail de confirmação de pedido", exc_info=True)
+            flash("Pedido confirmado, mas não consegui enviar o e-mail pro cliente. Avise ele manualmente.")
 
     return redirect(url_for("admin.pedidos"))
 
@@ -135,6 +143,21 @@ def hierarquia_rebaixar(id_usuario: int):
     return redirect(url_for("admin.hierarquia"))
 
 
+@admin_bp.route("/hierarquia/<int:id_usuario>/remover", methods=["POST"])
+@admin_required
+def hierarquia_remover(id_usuario: int):
+    if id_usuario == session.get("user_id"):
+        abort(400, "Não é possível apagar a si mesmo.")
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM login_usuario WHERE id_usuario = %s AND id_usuario IN "
+                "(SELECT id_usuario FROM hierarquia WHERE hierarquia = 'cliente')",
+                (id_usuario,),
+            )
+    return redirect(url_for("admin.hierarquia"))
+
+
 @admin_bp.route("/cadastros")
 @admin_required
 def cadastros():
@@ -167,7 +190,11 @@ def cadastro_confirmar(id_usuario: int):
                 (id_usuario,),
             )
 
-    enviar_cadastro_aprovado(usuario["email"], usuario["nome"])
+    try:
+        enviar_cadastro_aprovado(usuario["email"], usuario["nome"])
+    except Exception:
+        logger.warning("Falha ao enviar e-mail de cadastro aprovado", exc_info=True)
+        flash("Cadastro confirmado, mas não consegui enviar o e-mail pro cliente. Avise ele manualmente.")
     return redirect(url_for("admin.cadastros"))
 
 
@@ -229,6 +256,15 @@ def material():
         total_gasto=total_gasto,
         saldo=saldo,
     )
+
+
+@admin_bp.route("/material/<int:id_material>/apagar", methods=["POST"])
+@admin_required
+def material_apagar(id_material: int):
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM despesa_material WHERE id = %s", (id_material,))
+    return redirect(url_for("admin.material"))
 
 
 @admin_bp.route("/eventos", methods=["GET", "POST"])

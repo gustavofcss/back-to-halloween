@@ -4,7 +4,7 @@
 {% block admin_title %}Material{% endblock %}
 {% block admin_subtitle %}Compras de cenografia, fantasias e efeitos{% endblock %}
 {% block admin_header_actions %}
-<a href="#form-material" class="admin-cta">+ Novo material</a>
+<button type="button" id="btn-novo-material" class="admin-cta">+ Novo material</button>
 {% endblock %}
 {% block admin_body %}
 <img class="admin-deco admin-deco--top-right" src="{{ url_for('static', filename='assets/deco-pumpkin.png') }}" alt="" aria-hidden="true">
@@ -24,7 +24,7 @@
   </div>
 </div>
 
-<section class="admin-panel" id="form-material">
+<section class="admin-panel" id="form-material" style="display: none;">
   <div class="admin-panel__head">
     <h2 class="admin-panel__title">Cadastrar material</h2>
   </div>
@@ -57,10 +57,24 @@
     </div>
     <div class="admin-material-card__value">R$ {{ m.valor }}</div>
     <div class="admin-material-card__meta">{{ m.data_compra }} &middot; {{ m.cadastrado_por or '--' }}</div>
+    <form method="post" action="/admin/material/{{ m.id }}/apagar" onsubmit="return confirm('Apagar esse material?')" style="margin-top: 10px;">
+      <button type="submit" class="admin-btn-outline">Apagar</button>
+    </form>
   </div>
   {% endfor %}
 </div>
 {% else %}
 <p class="help-text admin-empty-text">Nenhum material cadastrado ainda.</p>
 {% endif %}
+<script>
+  (function () {
+    var btn = document.getElementById('btn-novo-material');
+    var secao = document.getElementById('form-material');
+    if (!btn || !secao) { return; }
+    btn.addEventListener('click', function () {
+      secao.style.display = 'block';
+      secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  })();
+</script>
 {% endblock %}

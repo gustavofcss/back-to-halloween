@@ -4,7 +4,7 @@
 {% block admin_title %}Lotes do evento{% endblock %}
 {% block admin_subtitle %}É sempre o mesmo evento (Halloween) -- só o lote (preço/data) muda{% endblock %}
 {% block admin_header_actions %}
-<a href="#form-lote" class="admin-cta">+ Novo lote</a>
+<button type="button" id="btn-novo-lote" class="admin-cta">+ Novo lote</button>
 {% endblock %}
 {% block admin_body %}
 <img class="admin-deco admin-deco--top-left" src="{{ url_for('static', filename='assets/deco-walk.png') }}" alt="" aria-hidden="true">
@@ -23,7 +23,7 @@
   </form>
 </section>
 
-<section class="admin-panel" id="form-lote">
+<section class="admin-panel" id="form-lote" style="display: none;">
   <div class="admin-panel__head">
     <h2 class="admin-panel__title">Cadastrar novo lote</h2>
   </div>
@@ -81,4 +81,15 @@
 {% else %}
 <p class="help-text admin-empty-text">Nenhum lote cadastrado ainda.</p>
 {% endif %}
+<script>
+  (function () {
+    var btn = document.getElementById('btn-novo-lote');
+    var secao = document.getElementById('form-lote');
+    if (!btn || !secao) { return; }
+    btn.addEventListener('click', function () {
+      secao.style.display = 'block';
+      secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  })();
+</script>
 {% endblock %}

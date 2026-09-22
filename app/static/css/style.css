@@ -82,6 +82,43 @@
   src: url("../fonts/poppins-700.ttf") format('truetype');
 }
 
+/* Fontes do painel admin -- também self-hosted (mesmo motivo das de cima:
+   não depender do Google Fonts CDN, que já se mostrou instável nesse
+   projeto). São fontes variáveis, por isso um @font-face só cobre a faixa
+   inteira de peso (weight) usada no painel, em vez de um arquivo por peso. */
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 500 800;
+  font-display: swap;
+  src: url("../fonts/bricolage-grotesque-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'Bricolage Grotesque';
+  font-style: normal;
+  font-weight: 500 800;
+  font-display: swap;
+  src: url("../fonts/bricolage-grotesque-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/dm-sans-latin.woff2") format('woff2');
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: 'DM Sans';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("../fonts/dm-sans-latin-ext.woff2") format('woff2');
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
 *, *::before, *::after { box-sizing: border-box; }
 
 html, body {
@@ -591,17 +628,20 @@ h1, h2, h3 {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
-  padding: 0 20px 24px;
+  gap: 6px;
+  padding: 0 12px 24px;
 }
 .progress-step {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 .progress-step__circle {
   width: 26px;
   height: 26px;
+  flex: 0 0 auto;
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -616,11 +656,13 @@ h1, h2, h3 {
   color: #2a1503;
 }
 .progress-step__label {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--purple-soft);
+  white-space: nowrap;
 }
 .progress-divider {
-  width: 26px;
+  width: 14px;
+  flex: 0 0 auto;
   height: 1px;
   background: #4a3f6b;
 }
@@ -782,6 +824,32 @@ h1, h2, h3 {
   word-break: break-all;
   font-family: var(--font-body), monospace;
 }
+.ticket__pix-copy-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ticket__pix-value--clip {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  word-break: normal;
+}
+.ticket__pix-copy-btn {
+  flex: 0 0 auto;
+  border: none;
+  cursor: pointer;
+  background: var(--accent);
+  color: #2a1503;
+  font-weight: 700;
+  font-size: 12.5px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  transition: filter .15s;
+}
+.ticket__pix-copy-btn:hover { filter: brightness(1.08); }
 .ticket__qr {
   display: block;
   width: 180px;
@@ -1240,8 +1308,11 @@ h1, h2, h3 {
    Paleta própria (mockup "front/painel adm/Painel Admin Halloween.dc.html"),
    separada da paleta pública do site -- área de gestão tem identidade visual
    diferente de propósito. Tokens escopados em .admin-shell pra não vazar
-   pro resto do site. Fontes (Bricolage Grotesque + DM Sans) carregadas via
-   Google Fonts só nas páginas de admin (ver head das templates admin/*). */
+   pro resto do site. Fontes (Bricolage Grotesque + DM Sans) self-hosted,
+   ver @font-face lá em cima -- eram carregadas via Google Fonts CDN e
+   caíam pra serif/sans-serif genérico quando o CDN falhava (achado real:
+   só a tela "Painel admin" mostrou isso, mas era risco em qualquer página
+   de admin). */
 
 .admin-shell {
   --a-bg-void: #0b0713;

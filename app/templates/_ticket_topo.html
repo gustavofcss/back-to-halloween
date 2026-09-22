@@ -1,0 +1,19 @@
+{# Cabeçalho + resumo do "ingresso" -- reaproveitado por pagamento.html e
+   meus_pedidos.html. Espera uma variável `pedido` no escopo. #}
+<div class="ticket__header">
+  <div class="ticket__header-brand">
+    <img src="{{ url_for('static', filename='assets/pumpkin.svg') }}" alt="">
+    <p>Horror Night</p>
+  </div>
+  <p class="ticket__header-tag">Ingresso</p>
+</div>
+
+<div class="ticket__summary">
+  <div>
+    <p class="ticket__summary-qty">{{ pedido.quantidade }} &times; Entrada</p>
+    <p class="ticket__summary-name">Pedido #{{ pedido.id_pedido }}</p>
+  </div>
+  <p class="ticket__summary-total">R$ {{ pedido.valor }}</p>
+</div>
+
+<div class="ticket__perforation"></div>

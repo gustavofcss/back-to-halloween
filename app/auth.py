@@ -3,6 +3,7 @@ mais os helpers de autorização (login_required, admin_required,
 current_user) reaproveitados pelas fases seguintes (pedidos, admin)."""
 from __future__ import annotations
 
+import logging
 import re
 import secrets
 from datetime import datetime, timezone
@@ -26,6 +27,7 @@ import db
 from email_utils import enviar_codigo_recuperacao
 
 auth_bp = Blueprint("auth", __name__)
+logger = logging.getLogger(__name__)
 
 oauth = OAuth()
 oauth.register(
@@ -189,7 +191,10 @@ def esqueci_senha():
                 )
 
     if usuario:
-        enviar_codigo_recuperacao(email, usuario["nome"], codigo)
+        try:
+            enviar_codigo_recuperacao(email, usuario["nome"], codigo)
+        except Exception:
+            logger.warning("Falha ao enviar código de recuperação por e-mail", exc_info=True)
 
     flash("Se esse e-mail existir, enviamos um código de recuperação.")
     return render_template("esqueci_senha.html")
