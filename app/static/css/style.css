@@ -427,44 +427,35 @@ h1, h2, h3 {
   pointer-events: none;
 }
 
-/* Ícones da tela de "Seus dados" (comprar.html) -- bem mais visíveis que a
-   família .auth-deco-* acima (que ficava quase invisível, opacidade .16-.18
-   -- achado real, usuário achou feio/sumido). Mesmo tamanho/opacidade que
-   já funcionava bem em .auth-deco-hand/.auth-deco-cat. */
-.buy-deco-cat {
+/* Ícones da tela de "Seus dados" (comprar.html) -- 2ª rodada: os 4 cantos
+   com ícones pequenos (42-58px) ficaram espalhados/perdidos (achado real).
+   Agora só 3, bem maiores e concentrados: teia gigante no canto (textura de
+   fundo, opacidade baixa) + gato e balde de doces grandes embaixo. */
+.buy-deco-web {
   position: absolute;
-  top: 30px;
-  left: 3%;
-  width: 54px;
+  top: -30px;
+  right: -30px;
+  width: 240px;
   height: auto;
-  opacity: .55;
+  opacity: .35;
   pointer-events: none;
 }
-.buy-deco-bat {
+.buy-deco-cat {
   position: absolute;
-  top: 96px;
-  right: 5%;
-  width: 42px;
+  bottom: -4px;
+  left: -6px;
+  width: 100px;
   height: auto;
-  opacity: .5;
+  opacity: .7;
   pointer-events: none;
 }
 .buy-deco-treat {
   position: absolute;
-  bottom: 6%;
-  right: 4%;
-  width: 58px;
+  bottom: 0;
+  right: 2%;
+  width: 84px;
   height: auto;
-  opacity: .55;
-  pointer-events: none;
-}
-.buy-deco-ghost {
-  position: absolute;
-  bottom: 10%;
-  left: 3%;
-  width: 46px;
-  height: auto;
-  opacity: .5;
+  opacity: .75;
   pointer-events: none;
 }
 .auth-deco-skull {
@@ -557,6 +548,11 @@ h1, h2, h3 {
   margin: 0 0 22px;
   font-size: 13px;
   color: var(--ink-muted);
+}
+.buy-price-highlight {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--accent-dark);
 }
 
 .field {
@@ -689,6 +685,19 @@ h1, h2, h3 {
 }
 .card-footer a { color: var(--accent-dark); font-weight: 600; }
 .card-footer a:hover { color: var(--accent); }
+.card-footer__link-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  padding: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  font-family: var(--font-body);
+  color: var(--accent-dark);
+}
+.card-footer__link-btn:hover { color: var(--accent); }
+.card-footer__link-btn--purple { color: #6B4A8A; }
+.card-footer__link-btn--purple:hover { color: #4A2358; }
 
 .flash-messages {
   width: 100%;
@@ -889,6 +898,21 @@ h1, h2, h3 {
   font-weight: 800;
   font-size: 28px;
   color: var(--accent-dark);
+}
+.ticket__holder {
+  padding: 0 26px 20px;
+  margin-top: -6px;
+}
+.ticket__holder-name {
+  margin: 0;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--ink-dark);
+}
+.ticket__holder-rg {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--ink-muted);
 }
 .ticket__perforation {
   position: relative;
@@ -1863,6 +1887,27 @@ h1, h2, h3 {
 }
 .admin-btn-outline:hover { background: rgba(42, 19, 48, .07); }
 
+/* Botão de sair da barra lateral -- antes usava .admin-btn-outline, que é
+   feito pra ficar sobre fundo claro (texto/borda escuros); sobre o roxo
+   escuro da sidebar ficava quase invisível (achado real, usuário pediu pra
+   destacar). Preenchido com a cor de destaque, igual .admin-btn-primary. */
+.admin-sidebar__logout {
+  width: 100%;
+  margin-top: 10px;
+  border: none;
+  cursor: pointer;
+  font-family: var(--a-font-body);
+  font-weight: 700;
+  font-size: 14px;
+  color: #FFF3E2;
+  background: linear-gradient(160deg, var(--a-accent), var(--a-accent-dark));
+  padding: 10px 16px;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(216, 84, 26, .35);
+  transition: filter .15s;
+}
+.admin-sidebar__logout:hover { filter: brightness(1.1); }
+
 /* -------------------- hierarquia: grupos -------------------- */
 
 .admin-group + .admin-group { margin-top: 14px; }
@@ -1877,7 +1922,7 @@ h1, h2, h3 {
 }
 .admin-group__title {
   font-family: var(--a-font-heading);
-  font-weight: 700;
+  font-weight: 800;
   font-size: 14.5px;
   color: var(--a-ink);
 }
@@ -1983,7 +2028,7 @@ h1, h2, h3 {
 .admin-material-card__name {
   font-family: var(--a-font-heading);
   font-size: 16px;
-  font-weight: 700;
+  font-weight: 800;
   color: var(--a-ink);
 }
 .admin-material-card__meta {
@@ -2031,7 +2076,7 @@ h1, h2, h3 {
 .admin-quick-link__icon img { width: 22px; filter: brightness(0) invert(1); }
 .admin-quick-link__label {
   font-family: var(--a-font-heading);
-  font-weight: 700;
+  font-weight: 800;
   font-size: 15px;
 }
 

@@ -261,23 +261,28 @@ def auth_google_callback():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id_usuario FROM login_usuario WHERE google_id = %s OR email = %s",
+                "SELECT id_usuario, email_confirmado FROM login_usuario WHERE google_id = %s OR email = %s",
                 (google_id, email),
             )
             usuario = cur.fetchone()
 
             if usuario:
                 id_usuario = usuario["id_usuario"]
+                email_confirmado = usuario["email_confirmado"]
                 cur.execute(
-                    "UPDATE login_usuario SET google_id = %s, email_confirmado = TRUE, "
-                    "data_atualizacao = now() WHERE id_usuario = %s",
+                    "UPDATE login_usuario SET google_id = %s, data_atualizacao = now() "
+                    "WHERE id_usuario = %s",
                     (google_id, id_usuario),
                 )
             else:
+                # Login com Google não isenta da aprovação manual do admin --
+                # pedido explícito do usuário (achado real: cadastro via
+                # Google entrava direto, sem passar pela fila de "Cadastros
+                # pendentes"). Mesma regra do cadastro por e-mail/senha.
                 cur.execute(
                     """
                     INSERT INTO login_usuario (nome, email, senha_hash, google_id, email_confirmado)
-                    VALUES (%s, %s, NULL, %s, TRUE)
+                    VALUES (%s, %s, NULL, %s, FALSE)
                     RETURNING id_usuario
                     """,
                     (nome, email, google_id),
@@ -287,13 +292,25 @@ def auth_google_callback():
                     "INSERT INTO hierarquia (id_usuario, hierarquia) VALUES (%s, 'cliente')",
                     (id_usuario,),
                 )
+                email_confirmado = False
+
+    if not email_confirmado:
+        session.pop("login_next", None)
+        flash(
+            "Seu cadastro ainda está em análise. Você vai receber um e-mail assim que "
+            "for confirmado pelo administrador."
+        )
+        return redirect(url_for("auth.login"))
 
     session["user_id"] = id_usuario
     destino = session.pop("login_next", None) or _destino_pos_login(id_usuario)
     return redirect(destino)
 
 
-@auth_bp.route("/logout", methods=["POST"])
+@auth_bp.route("/logout", methods=["GET", "POST"])
 def logout():
+    # Aceita GET também -- achado real: recarregar/reabrir a página depois
+    # de sair (ou o auto-refresh do admin pegando essa URL) reenviava um GET
+    # pra /logout, que só aceitava POST e dava "Method Not Allowed".
     session.clear()
     return redirect(url_for("index"))

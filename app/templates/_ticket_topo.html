@@ -16,4 +16,11 @@
   <p class="ticket__summary-total">R$ {{ pedido.valor }}</p>
 </div>
 
+{% if usuario %}
+<div class="ticket__holder">
+  <p class="ticket__holder-name">{{ usuario.nome }}</p>
+  {% if pedido.rg %}<p class="ticket__holder-rg">RG {{ pedido.rg }}</p>{% endif %}
+</div>
+{% endif %}
+
 <div class="ticket__perforation"></div>
