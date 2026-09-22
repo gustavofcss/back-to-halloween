@@ -2,8 +2,10 @@
 {% block title %}Comprar ingresso -- Horror Night Party{% endblock %}
 {% block content %}
 <div class="auth-wrap">
-  <img class="auth-deco-witch-static" src="{{ url_for('static', filename='assets/deco-witch.png') }}" alt="" aria-hidden="true">
-  <img class="auth-deco-bat" src="{{ url_for('static', filename='assets/deco-bat-solid.png') }}" alt="" aria-hidden="true">
+  <img class="buy-deco-cat" src="{{ url_for('static', filename='assets/deco-cat.png') }}" alt="" aria-hidden="true">
+  <img class="buy-deco-bat" src="{{ url_for('static', filename='assets/deco-bat-solid.png') }}" alt="" aria-hidden="true">
+  <img class="buy-deco-treat" src="{{ url_for('static', filename='assets/deco-trick-or-treat.png') }}" alt="" aria-hidden="true">
+  <img class="buy-deco-ghost" src="{{ url_for('static', filename='assets/deco-ghost-new.png') }}" alt="" aria-hidden="true">
   <div class="progress-steps">
     <div class="progress-step">
       <div class="progress-step__circle progress-step__circle--done">1</div>
@@ -35,7 +37,7 @@
       <div class="alert-error">Você já atingiu o limite de ingressos para este evento.</div>
       <p class="card-footer"><a href="/meus-pedidos">Ver meus pedidos</a></p>
     {% else %}
-      <p class="card-subtitle">{{ evento.nome_evento }} -- R$ {{ evento.valor_entrada }} por ingresso.</p>
+      <p class="card-subtitle">{{ evento.nome_evento }} -- Lote {{ evento.numero_lote }} -- R$ {{ evento.valor_entrada }} por ingresso.</p>
 
       {% if erro %}
       <div class="alert-error">{{ erro }}</div>

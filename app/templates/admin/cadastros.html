@@ -26,8 +26,8 @@
             <form method="post" action="/admin/cadastros/{{ p.id_usuario }}/confirmar" style="display:inline">
               <button type="submit" class="admin-btn-primary">Confirmar cadastro</button>
             </form>
-            <form method="post" action="/admin/cadastros/{{ p.id_usuario }}/recusar" style="display:inline">
-              <button type="submit" class="admin-btn-outline" onclick="return confirm('Recusar e apagar esse cadastro?')">Recusar</button>
+            <form method="post" action="/admin/cadastros/{{ p.id_usuario }}/recusar" style="display:inline" onsubmit="return confirmarAcao(this, 'Recusar e apagar esse cadastro?')">
+              <button type="submit" class="admin-btn-outline">Recusar</button>
             </form>
           </td>
         </tr>

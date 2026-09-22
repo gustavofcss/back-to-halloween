@@ -56,8 +56,8 @@
       </div>
     </div>
     <div class="admin-material-card__value">R$ {{ m.valor }}</div>
-    <div class="admin-material-card__meta">{{ m.data_compra }} &middot; {{ m.cadastrado_por or '--' }}</div>
-    <form method="post" action="/admin/material/{{ m.id }}/apagar" onsubmit="return confirm('Apagar esse material?')" style="margin-top: 10px;">
+    <div class="admin-material-card__meta">{{ m.data_compra.strftime('%d/%m/%Y') }} &middot; {{ m.cadastrado_por or '--' }}</div>
+    <form method="post" action="/admin/material/{{ m.id }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse material?')" style="margin-top: 10px;">
       <button type="submit" class="admin-btn-outline">Apagar</button>
     </form>
   </div>

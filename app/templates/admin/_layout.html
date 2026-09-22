@@ -62,5 +62,47 @@
 
     {% block admin_body %}{% endblock %}
   </main>
+
+  <div class="confirm-overlay" id="confirm-overlay">
+    <div class="confirm-modal">
+      <p class="confirm-modal__text" id="confirm-modal-text"></p>
+      <div class="confirm-modal__actions">
+        <button type="button" class="admin-btn-outline" id="confirm-modal-cancel">Cancelar</button>
+        <button type="button" class="admin-btn-primary" id="confirm-modal-ok">Confirmar</button>
+      </div>
+    </div>
+  </div>
 </div>
+<script>
+  (function () {
+    var overlay = document.getElementById('confirm-overlay');
+    var textEl = document.getElementById('confirm-modal-text');
+    var btnOk = document.getElementById('confirm-modal-ok');
+    var btnCancel = document.getElementById('confirm-modal-cancel');
+    var formPendente = null;
+
+    window.confirmarAcao = function (form, mensagem) {
+      formPendente = form;
+      textEl.textContent = mensagem;
+      overlay.style.display = 'flex';
+      return false;
+    };
+
+    btnOk.addEventListener('click', function () {
+      overlay.style.display = 'none';
+      if (formPendente) { formPendente.submit(); }
+      formPendente = null;
+    });
+    btnCancel.addEventListener('click', function () {
+      overlay.style.display = 'none';
+      formPendente = null;
+    });
+    overlay.addEventListener('click', function (e) {
+      if (e.target === overlay) {
+        overlay.style.display = 'none';
+        formPendente = null;
+      }
+    });
+  })();
+</script>
 {% endblock %}

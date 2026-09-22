@@ -3,6 +3,9 @@
 {% block title %}Admin -- Hierarquia{% endblock %}
 {% block admin_title %}Hierarquia{% endblock %}
 {% block admin_subtitle %}Quem tem acesso admin na Horror Night Party{% endblock %}
+{% block admin_header_actions %}
+<input type="search" class="admin-search" id="admin-hierarquia-search" placeholder="Buscar por nome ou e-mail…">
+{% endblock %}
 {% block admin_body %}
 <img class="admin-deco admin-deco--top-left" src="{{ url_for('static', filename='assets/deco-walk.png') }}" alt="" aria-hidden="true">
 {% macro initials(nome) -%}
@@ -58,7 +61,7 @@
           <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/promover">
             <button type="submit" class="admin-btn-primary">Promover a admin</button>
           </form>
-          <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/remover" onsubmit="return confirm('Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.')">
+          <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/remover" onsubmit="return confirmarAcao(this, 'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.')">
             <button type="submit" class="admin-btn-outline">Apagar</button>
           </form>
         </span>
@@ -69,4 +72,18 @@
     </div>
   </div>
 </section>
+
+<script>
+  (function () {
+    var input = document.getElementById('admin-hierarquia-search');
+    var rows = document.querySelectorAll('.admin-group__row');
+    if (!input || !rows.length) { return; }
+    input.addEventListener('input', function () {
+      var q = input.value.trim().toLowerCase();
+      rows.forEach(function (row) {
+        row.style.display = (!q || row.textContent.toLowerCase().includes(q)) ? '' : 'none';
+      });
+    });
+  })();
+</script>
 {% endblock %}

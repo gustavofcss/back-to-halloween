@@ -357,6 +357,47 @@ h1, h2, h3 {
   opacity: .18;
   pointer-events: none;
 }
+
+/* Ícones da tela de "Seus dados" (comprar.html) -- bem mais visíveis que a
+   família .auth-deco-* acima (que ficava quase invisível, opacidade .16-.18
+   -- achado real, usuário achou feio/sumido). Mesmo tamanho/opacidade que
+   já funcionava bem em .auth-deco-hand/.auth-deco-cat. */
+.buy-deco-cat {
+  position: absolute;
+  top: 30px;
+  left: 3%;
+  width: 54px;
+  height: auto;
+  opacity: .55;
+  pointer-events: none;
+}
+.buy-deco-bat {
+  position: absolute;
+  top: 96px;
+  right: 5%;
+  width: 42px;
+  height: auto;
+  opacity: .5;
+  pointer-events: none;
+}
+.buy-deco-treat {
+  position: absolute;
+  bottom: 6%;
+  right: 4%;
+  width: 58px;
+  height: auto;
+  opacity: .55;
+  pointer-events: none;
+}
+.buy-deco-ghost {
+  position: absolute;
+  bottom: 10%;
+  left: 3%;
+  width: 46px;
+  height: auto;
+  opacity: .5;
+  pointer-events: none;
+}
 .auth-deco-skull {
   position: absolute;
   top: 70px;
@@ -1685,6 +1726,42 @@ h1, h2, h3 {
 .admin-pill--bad { background: rgba(160, 40, 40, .14); color: #8E2B2B; }
 .admin-pill--accent { background: rgba(242, 144, 59, .22); color: #A8460F; }
 .admin-pill--neutral { background: rgba(74, 35, 88, .14); color: #4A2358; }
+
+/* -------------------- modal de confirmação (substitui window.confirm) --------------------
+   O confirm() nativo do navegador mostra o domínio ("horror-night-party.
+   onrender.com diz...") e não combina em nada com o resto do site -- achado
+   real, usuário achou feio. */
+.confirm-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(11, 7, 19, .72);
+  z-index: 50;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+.confirm-modal {
+  background: var(--a-cream);
+  color: var(--a-ink);
+  border-radius: 14px;
+  padding: 22px 24px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 24px 54px rgba(0, 0, 0, .5);
+  animation: hwRise .25s ease-out both;
+}
+.confirm-modal__text {
+  margin: 0 0 18px;
+  font-family: var(--a-font-body);
+  font-size: 14px;
+  line-height: 1.5;
+}
+.confirm-modal__actions {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
 
 /* -------------------- botões admin -------------------- */
 
