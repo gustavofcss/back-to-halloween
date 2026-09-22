@@ -1,9 +1,3 @@
-databases:
-  - name: horror-night-db
-    plan: free
-    databaseName: horror_night
-    user: horror_night
-
 services:
   - type: web
     name: horror-night-party
@@ -12,10 +6,12 @@ services:
     buildCommand: "pip install -r requirements.txt"
     startCommand: "cd app && gunicorn app:app"
     envVars:
+      # Já existe um Postgres criado manualmente no Render com os dados reais
+      # (evento, hierarquia do admin, pedido de teste) -- por isso não tem
+      # bloco `databases:` provisionando um banco novo aqui. Cole a mesma
+      # "External Database URL" que já está no .env local.
       - key: DATABASE_URL
-        fromDatabase:
-          name: horror-night-db
-          property: connectionString
+        sync: false
       - key: SECRET_KEY
         generateValue: true
       - key: GOOGLE_CLIENT_ID
@@ -35,4 +31,10 @@ services:
       - key: PIX_KEY
         sync: false
       - key: BASE_URL
+        sync: false
+      - key: MERCADOPAGO_ACCESS_TOKEN
+        sync: false
+      - key: LINK_PAGAMENTO_30
+        sync: false
+      - key: LINK_PAGAMENTO_60
         sync: false
