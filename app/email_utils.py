@@ -52,57 +52,84 @@ def _enviar(destinatario: str, assunto: str, corpo: str, corpo_html: str | None 
     resposta.raise_for_status()
 
 
+def _email_shell(corpo_interno: str) -> str:
+    # Gmail (e outros webmails) aplicam modo escuro automático no HTML do
+    # e-mail, "corrigindo" cores explícitas -- o texto escuro do ingresso
+    # (pensado pra ficar sobre o fundo creme dele) virava cinza claro quase
+    # ilegível, mesmo o fundo creme continuando visível (achado real, print
+    # do Gmail no celular). Esses metas avisam explicitamente pra não fazer
+    # essa inversão e respeitar as cores exatas que a gente definiu.
+    return f"""<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+</head>
+<body style="margin:0;padding:0;">
+{corpo_interno}
+</body>
+</html>"""
+
+
 def _ticket_html(pedido, nome_titular: str) -> str:
     # Mesmas cores/estrutura do "ingresso" mostrado na tela de pagamento
     # (ver .ticket* em style.css), só que com estilo inline -- cliente de
     # e-mail não carrega arquivo .css externo nem @font-face.
     titulares_html = (
-        f'<p style="margin:0;font-weight:bold;font-size:14px;">{nome_titular} '
+        f'<p style="margin:0;font-weight:bold;font-size:14px;color:#241a14 !important;">{nome_titular} '
         '<span style="font-size:10.5px;font-weight:600;text-transform:uppercase;'
-        f'color:#7a6a56;">(ingresso 1)</span></p>'
-        + (f'<p style="margin:2px 0 0;font-size:12px;color:#7a6a56;">RG {pedido["rg"]}</p>' if pedido.get("rg") else "")
+        f'color:#7a6a56 !important;">(ingresso 1)</span></p>'
+        + (
+            f'<p style="margin:2px 0 0;font-size:12px;color:#7a6a56 !important;">RG {pedido["rg"]}</p>'
+            if pedido.get("rg")
+            else ""
+        )
     )
     if pedido.get("acompanhante_nome"):
         titulares_html += (
-            f'<p style="margin:10px 0 0;font-weight:bold;font-size:14px;">{pedido["acompanhante_nome"]} '
+            f'<p style="margin:10px 0 0;font-weight:bold;font-size:14px;color:#241a14 !important;">{pedido["acompanhante_nome"]} '
             '<span style="font-size:10.5px;font-weight:600;text-transform:uppercase;'
-            'color:#7a6a56;">(ingresso 2)</span></p>'
+            'color:#7a6a56 !important;">(ingresso 2)</span></p>'
             + (
-                f'<p style="margin:2px 0 0;font-size:12px;color:#7a6a56;">RG {pedido["acompanhante_rg"]}</p>'
+                f'<p style="margin:2px 0 0;font-size:12px;color:#7a6a56 !important;">RG {pedido["acompanhante_rg"]}</p>'
                 if pedido.get("acompanhante_rg")
                 else ""
             )
         )
 
     return f"""
-    <div style="max-width:420px;margin:20px auto;border-radius:16px;overflow:hidden;
-                background:linear-gradient(170deg,#fbf3e3 0%,#f3e7cf 100%);
-                font-family:Arial,Helvetica,sans-serif;color:#241a14;">
-      <div style="background:#241a14;padding:16px 26px;display:flex;
-                  justify-content:space-between;align-items:center;">
-        <p style="margin:0;font-weight:bold;font-size:15px;letter-spacing:2px;
-                  text-transform:uppercase;color:#f2dcaa;">Horror Night</p>
-        <p style="margin:0;font-size:11px;letter-spacing:2px;text-transform:uppercase;
-                  color:#b9a48a;">Ingresso</p>
-      </div>
-      <div style="padding:24px 26px 20px;display:flex;justify-content:space-between;
-                  align-items:flex-start;">
-        <div>
-          <p style="margin:0 0 4px;font-weight:bold;font-size:20px;">{pedido['quantidade']} &times; Entrada</p>
-          <p style="margin:0;font-size:13px;color:#7a6a56;">Pedido #{pedido['id_pedido']}</p>
-        </div>
-        <p style="margin:0;font-weight:bold;font-size:28px;color:#e1690f;">R$ {pedido['valor']}</p>
-      </div>
-      <div style="padding:0 26px 20px;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:420px;margin:20px auto;">
+      <tr><td bgcolor="#241a14" style="background-color:#241a14 !important;padding:16px 26px;border-radius:16px 16px 0 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="font-family:Arial,Helvetica,sans-serif;font-weight:bold;font-size:15px;
+                     letter-spacing:2px;text-transform:uppercase;color:#f2dcaa !important;">Horror Night</td>
+          <td align="right" style="font-family:Arial,Helvetica,sans-serif;font-size:11px;letter-spacing:2px;
+                     text-transform:uppercase;color:#b9a48a !important;">Ingresso</td>
+        </tr></table>
+      </td></tr>
+      <tr><td bgcolor="#fbf3e3" style="background-color:#fbf3e3 !important;padding:24px 26px 20px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
+          <td style="font-family:Arial,Helvetica,sans-serif;">
+            <p style="margin:0 0 4px;font-weight:bold;font-size:20px;color:#241a14 !important;">{pedido['quantidade']} &times; Entrada</p>
+            <p style="margin:0;font-size:13px;color:#7a6a56 !important;">Pedido #{pedido['id_pedido']}</p>
+          </td>
+          <td align="right" valign="top" style="font-family:Arial,Helvetica,sans-serif;
+                     font-weight:bold;font-size:28px;color:#e1690f !important;">R$ {pedido['valor']}</td>
+        </tr></table>
+      </td></tr>
+      <tr><td bgcolor="#fbf3e3" style="background-color:#fbf3e3 !important;padding:0 26px 20px;font-family:Arial,Helvetica,sans-serif;">
         {titulares_html}
-      </div>
-      <div style="border-top:2px dashed #d8c7a3;margin:0 26px;"></div>
-      <div style="padding:20px 26px 26px;">
-        <p style="margin:0;font-size:13.5px;line-height:1.6;color:#4a3d2f;">
+      </td></tr>
+      <tr><td bgcolor="#fbf3e3" style="background-color:#fbf3e3 !important;padding:0 26px;">
+        <div style="border-top:2px dashed #d8c7a3;"></div>
+      </td></tr>
+      <tr><td bgcolor="#f3e7cf" style="background-color:#f3e7cf !important;padding:20px 26px 26px;border-radius:0 0 16px 16px;">
+        <p style="margin:0;font-family:Arial,Helvetica,sans-serif;font-size:13.5px;line-height:1.6;color:#4a3d2f !important;">
           Apresente este pedido (#{pedido['id_pedido']}) na entrada da festa.
         </p>
-      </div>
-    </div>
+      </td></tr>
+    </table>
     """
 
 
@@ -130,7 +157,7 @@ def enviar_confirmacao_pedido(destinatario: str, nome: str, pedido) -> None:
         )
         + "Nos vemos na noite mais assustadora do ano!"
     )
-    corpo_html = (
+    corpo_html = _email_shell(
         f"<p>Oi, {nome}! \U0001f383</p>"
         "<p>Seu pagamento foi confirmado! Seu ingresso pra Horror Night Party:</p>"
         f"{_ticket_html(pedido, nome)}"
