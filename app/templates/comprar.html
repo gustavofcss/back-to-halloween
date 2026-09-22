@@ -63,24 +63,13 @@
           <input id="whatsapp" name="whatsapp" placeholder="(00) 00000-0000" required>
         </div>
 
-        <div class="qty-row">
-          <div>
-            <p class="qty-row__label">Ingressos</p>
-            <p class="qty-row__hint">Máx. {{ max_permitido }} por pessoa</p>
-          </div>
-          <div class="qty-controls">
-            <button type="button" class="qty-btn" id="qty-dec" aria-label="Diminuir quantidade">&minus;</button>
-            <span class="qty-value" id="qty-display">1</span>
-            <button type="button" class="qty-btn" id="qty-inc" aria-label="Aumentar quantidade">+</button>
-          </div>
-        </div>
         <input type="hidden" id="quantidade" name="quantidade" value="1">
 
         {% if max_permitido > 1 %}
         <div id="acompanhante-fields" style="display: none;">
           <p class="buy-section-label">Ingresso 2 (acompanhante)</p>
           <p class="help-text" style="margin-top: -8px;">
-            Pode ser pra outra pessoa -- preenche os dados de quem vai usar esse ingresso.
+            Pode ser pra outra pessoa: preenche os dados de quem vai usar esse ingresso.
           </p>
           <div class="field">
             <label for="acompanhante_nome">Nome do acompanhante</label>
@@ -100,6 +89,18 @@
           </div>
         </div>
         {% endif %}
+
+        <div class="qty-row">
+          <div>
+            <p class="qty-row__label">Ingressos</p>
+            <p class="qty-row__hint">Máx. {{ max_permitido }} por pessoa</p>
+          </div>
+          <div class="qty-controls">
+            <button type="button" class="qty-btn" id="qty-dec" aria-label="Diminuir quantidade">&minus;</button>
+            <span class="qty-value" id="qty-display">1</span>
+            <button type="button" class="qty-btn" id="qty-inc" aria-label="Aumentar quantidade">+</button>
+          </div>
+        </div>
 
         <button type="submit" class="btn-primary">Continuar &middot; R$ <span id="total-display">{{ evento.valor_entrada }}</span></button>
       </form>

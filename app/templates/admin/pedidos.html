@@ -43,44 +43,55 @@
   </div>
 
   {% if pedidos %}
-  <div class="admin-table-scroll">
-    <table class="admin-table" id="admin-pedidos-table">
-      <thead>
-        <tr><th>Pedido</th><th>Nome</th><th>E-mail</th><th>Qtd.</th><th>Valor</th><th>Status</th><th>Data</th><th></th></tr>
-      </thead>
-      <tbody>
-      {% for p in pedidos %}
-        <tr>
-          <td>#{{ p.id_pedido }}</td>
-          <td>{{ p.nome }}{% if p.acompanhante_nome %}<br><span class="help-text" style="margin:0;">+ {{ p.acompanhante_nome }}</span>{% endif %}</td>
-          <td>{{ p.email }}</td>
-          <td>{{ p.quantidade }}</td>
-          <td>R$ {{ p.valor }}</td>
-          <td><span class="admin-pill {{ status_pill.get(p.status_pedido, 'admin-pill--neutral') }}">{{ p.status_pedido }}</span></td>
-          <td>{{ p.data_pedido|data_hora_br }}</td>
-          <td>
-            {% if p.status_pedido == 'pendente' %}
-            <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/confirmar" style="display:inline">
-              <button type="submit" class="admin-btn-primary">Confirmar</button>
-            </form>
-            <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/cancelar" style="display:inline">
-              <button type="submit" class="admin-btn-outline">Cancelar</button>
-            </form>
-            {% elif p.status_pedido == 'confirmado' %}
-            <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/cancelar" style="display:inline">
-              <button type="submit" class="admin-btn-outline">Cancelar</button>
-            </form>
-            {% elif p.status_pedido == 'cancelado' %}
-            <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/apagar" style="display:inline" onsubmit="return confirmarAcao(this, 'Apagar esse pedido cancelado? Não tem como desfazer.')">
-              <button type="submit" class="admin-btn-outline">Apagar</button>
-            </form>
-            {% endif %}
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <form method="post" id="pedidos-lote-form">
+    <div class="admin-bulk-bar" id="pedidos-bulk-bar">
+      <span class="admin-bulk-bar__count" id="pedidos-bulk-count">0 selecionado(s)</span>
+      <button type="submit" formaction="/admin/pedidos/confirmar-lote" class="admin-btn-primary">Confirmar selecionados</button>
+      <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/cancelar-lote', 'Cancelar os pedidos selecionados?')">Cancelar selecionados</button>
+    </div>
+    <div class="admin-table-scroll">
+      <table class="admin-table" id="admin-pedidos-table">
+        <thead>
+          <tr>
+            <th class="admin-table__check-col"><input type="checkbox" id="pedidos-check-all" aria-label="Selecionar todos"></th>
+            <th>Pedido</th><th>Nome</th><th>E-mail</th><th>Qtd.</th><th>Valor</th><th>Status</th><th>Data</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for p in pedidos %}
+          <tr>
+            <td class="admin-table__check-col"><input type="checkbox" name="ids" value="{{ p.id_pedido }}" class="pedidos-check-item" aria-label="Selecionar pedido #{{ p.id_pedido }}"></td>
+            <td>#{{ p.id_pedido }}</td>
+            <td>{{ p.nome }}{% if p.acompanhante_nome %}<br><span class="help-text" style="margin:0;">+ {{ p.acompanhante_nome }}</span>{% endif %}</td>
+            <td>{{ p.email }}</td>
+            <td>{{ p.quantidade }}</td>
+            <td>R$ {{ p.valor }}</td>
+            <td><span class="admin-pill {{ status_pill.get(p.status_pedido, 'admin-pill--neutral') }}">{{ p.status_pedido }}</span></td>
+            <td>{{ p.data_pedido|data_hora_br }}</td>
+            <td>
+              {% if p.status_pedido == 'pendente' %}
+              <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/confirmar" style="display:inline">
+                <button type="submit" class="admin-btn-primary">Confirmar</button>
+              </form>
+              <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/cancelar" style="display:inline">
+                <button type="submit" class="admin-btn-outline">Cancelar</button>
+              </form>
+              {% elif p.status_pedido == 'confirmado' %}
+              <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/cancelar" style="display:inline">
+                <button type="submit" class="admin-btn-outline">Cancelar</button>
+              </form>
+              {% elif p.status_pedido == 'cancelado' %}
+              <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/apagar" style="display:inline" onsubmit="return confirmarAcao(this, 'Apagar esse pedido cancelado? Não tem como desfazer.')">
+                <button type="submit" class="admin-btn-outline">Apagar</button>
+              </form>
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
   {% else %}
     <p class="help-text">Nenhum pedido ainda.</p>
   {% endif %}
@@ -98,6 +109,26 @@
         tr.style.display = (!q || tr.textContent.toLowerCase().includes(q)) ? '' : 'none';
       });
     });
+  })();
+
+  (function () {
+    var checkAll = document.getElementById('pedidos-check-all');
+    var itens = document.querySelectorAll('.pedidos-check-item');
+    var bar = document.getElementById('pedidos-bulk-bar');
+    var contagem = document.getElementById('pedidos-bulk-count');
+    if (!checkAll || !itens.length) { return; }
+
+    function atualizar() {
+      var marcados = document.querySelectorAll('.pedidos-check-item:checked').length;
+      bar.classList.toggle('admin-bulk-bar--visivel', marcados > 0);
+      contagem.textContent = marcados + ' selecionado(s)';
+      checkAll.checked = marcados === itens.length;
+    }
+    checkAll.addEventListener('change', function () {
+      itens.forEach(function (item) { item.checked = checkAll.checked; });
+      atualizar();
+    });
+    itens.forEach(function (item) { item.addEventListener('change', atualizar); });
   })();
 </script>
 {% endblock %}

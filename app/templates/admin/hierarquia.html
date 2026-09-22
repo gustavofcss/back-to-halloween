@@ -49,27 +49,37 @@
       <span class="admin-pill admin-pill--neutral">Cliente</span>
       <span class="admin-group__title">Clientes<span class="admin-group__count">{{ clientes|length }} pessoa(s)</span></span>
     </div>
-    <div class="admin-group__list">
-      {% for u in clientes %}
-      <div class="admin-group__row">
-        <span class="admin-group__avatar">{{ initials(u.nome) }}</span>
-        <span class="admin-group__info">
-          <span class="admin-group__name">{{ u.nome }}</span>
-          <span class="admin-group__email">{{ u.email }}</span>
-        </span>
-        <span class="admin-group__action admin-group__action--duplo">
-          <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/promover">
-            <button type="submit" class="admin-btn-primary">Promover a admin</button>
-          </form>
-          <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/remover" onsubmit="return confirmarAcao(this, 'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.')">
-            <button type="submit" class="admin-btn-outline">Apagar</button>
-          </form>
-        </span>
+    {% if clientes %}
+    <form method="post" id="clientes-lote-form">
+      <div class="admin-bulk-bar" id="clientes-bulk-bar">
+        <span class="admin-bulk-bar__count" id="clientes-bulk-count">0 selecionado(s)</span>
+        <button type="submit" formaction="/admin/hierarquia/promover-lote" class="admin-btn-primary">Promover selecionados</button>
+        <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/remover-lote', 'Apagar os clientes selecionados? Isso também apaga os pedidos deles. Não tem como desfazer.')">Apagar selecionados</button>
       </div>
-      {% else %}
-      <p class="help-text" style="margin: 14px 4px 4px;">Nenhum cliente cadastrado.</p>
-      {% endfor %}
-    </div>
+      <div class="admin-group__list">
+        <label class="admin-group__row" style="cursor:pointer;">
+          <input type="checkbox" id="clientes-check-all" aria-label="Selecionar todos">
+          <span class="admin-group__info"><span class="admin-group__name">Selecionar todos</span></span>
+        </label>
+        {% for u in clientes %}
+        <div class="admin-group__row">
+          <input type="checkbox" name="ids" value="{{ u.id_usuario }}" class="clientes-check-item" aria-label="Selecionar {{ u.nome }}">
+          <span class="admin-group__avatar">{{ initials(u.nome) }}</span>
+          <span class="admin-group__info">
+            <span class="admin-group__name">{{ u.nome }}</span>
+            <span class="admin-group__email">{{ u.email }}</span>
+          </span>
+          <span class="admin-group__action admin-group__action--duplo">
+            <button type="submit" formaction="/admin/hierarquia/{{ u.id_usuario }}/promover" class="admin-btn-primary">Promover a admin</button>
+            <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/{{ u.id_usuario }}/remover', 'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.')">Apagar</button>
+          </span>
+        </div>
+        {% endfor %}
+      </div>
+    </form>
+    {% else %}
+    <p class="help-text" style="margin: 14px 4px 4px;">Nenhum cliente cadastrado.</p>
+    {% endif %}
   </div>
 </section>
 
@@ -84,6 +94,26 @@
         row.style.display = (!q || row.textContent.toLowerCase().includes(q)) ? '' : 'none';
       });
     });
+  })();
+
+  (function () {
+    var checkAll = document.getElementById('clientes-check-all');
+    var itens = document.querySelectorAll('.clientes-check-item');
+    var bar = document.getElementById('clientes-bulk-bar');
+    var contagem = document.getElementById('clientes-bulk-count');
+    if (!checkAll || !itens.length) { return; }
+
+    function atualizar() {
+      var marcados = document.querySelectorAll('.clientes-check-item:checked').length;
+      bar.classList.toggle('admin-bulk-bar--visivel', marcados > 0);
+      contagem.textContent = marcados + ' selecionado(s)';
+      checkAll.checked = marcados === itens.length;
+    }
+    checkAll.addEventListener('change', function () {
+      itens.forEach(function (item) { item.checked = checkAll.checked; });
+      atualizar();
+    });
+    itens.forEach(function (item) { item.addEventListener('change', atualizar); });
   })();
 </script>
 {% endblock %}

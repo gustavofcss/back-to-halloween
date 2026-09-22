@@ -91,6 +91,17 @@
       return false;
     };
 
+    // Igual confirmarAcao, mas pra ação em lote: o form tem vários botões
+    // de submit com formaction diferente (confirmar/cancelar/apagar em
+    // lote), então precisa trocar o action do form antes de confirmar.
+    window.confirmarAcaoLote = function (form, action, mensagem) {
+      formPendente = form;
+      formPendente.setAttribute('action', action);
+      textEl.textContent = mensagem;
+      overlay.style.display = 'flex';
+      return false;
+    };
+
     btnOk.addEventListener('click', function () {
       overlay.style.display = 'none';
       if (formPendente) { formPendente.submit(); }

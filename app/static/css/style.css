@@ -1841,6 +1841,30 @@ h1, h2, h3 {
 }
 .admin-table tbody tr:hover { background: rgba(242, 144, 59, .09); }
 .admin-table tbody tr:last-child td { border-bottom: none; }
+.admin-table td.admin-table__check-col,
+.admin-table th.admin-table__check-col { width: 1%; padding-right: 0; }
+
+/* -------------------- barra de ação em lote -------------------- */
+
+.admin-bulk-bar {
+  display: none;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--a-cream-soft);
+  border: 1.5px solid var(--a-accent);
+  border-radius: 14px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+}
+.admin-bulk-bar--visivel { display: flex; }
+.admin-bulk-bar__count {
+  font-family: var(--a-font-body);
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--a-ink);
+  margin-right: auto;
+}
 
 .admin-pill {
   display: inline-block;
@@ -2187,4 +2211,12 @@ h1, h2, h3 {
 
 @media (max-width: 480px) {
   .admin-kpis { grid-template-columns: 1fr; }
+
+  /* barra de ação em lote -- contador em cima, botões empilhados e
+     ocupando a largura toda, igual ao resto dos botões do admin no
+     celular. */
+  .admin-bulk-bar { flex-direction: column; align-items: stretch; }
+  .admin-bulk-bar__count { margin-right: 0; }
+  .admin-bulk-bar .admin-btn-primary,
+  .admin-bulk-bar .admin-btn-outline { width: 100%; }
 }

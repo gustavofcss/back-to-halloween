@@ -100,6 +100,56 @@ def pedido_cancelar(id_pedido: int):
     return redirect(url_for("admin.pedidos"))
 
 
+@admin_bp.route("/pedidos/confirmar-lote", methods=["POST"])
+@admin_required
+def pedidos_confirmar_lote():
+    ids = request.form.getlist("ids", type=int)
+    pendentes = []
+    if ids:
+        with db.get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT p.*, u.nome, u.email
+                    FROM pedido p
+                    JOIN login_usuario u ON u.id_usuario = p.id_usuario
+                    WHERE p.id_pedido = ANY(%s) AND p.status_pedido != 'confirmado'
+                    """,
+                    (ids,),
+                )
+                pendentes = cur.fetchall()
+                if pendentes:
+                    cur.execute(
+                        "UPDATE pedido SET status_pedido = 'confirmado' WHERE id_pedido = ANY(%s)",
+                        ([p["id_pedido"] for p in pendentes],),
+                    )
+
+    falhou_email = False
+    for pedido in pendentes:
+        try:
+            enviar_confirmacao_pedido(pedido["email"], pedido["nome"], pedido)
+        except Exception:
+            logger.warning("Falha ao enviar e-mail de confirmação de pedido (lote)", exc_info=True)
+            falhou_email = True
+    if falhou_email:
+        flash("Pedidos confirmados, mas não consegui enviar e-mail pra algum cliente. Avise manualmente.")
+    return redirect(url_for("admin.pedidos"))
+
+
+@admin_bp.route("/pedidos/cancelar-lote", methods=["POST"])
+@admin_required
+def pedidos_cancelar_lote():
+    ids = request.form.getlist("ids", type=int)
+    if ids:
+        with db.get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE pedido SET status_pedido = 'cancelado' WHERE id_pedido = ANY(%s)",
+                    (ids,),
+                )
+    return redirect(url_for("admin.pedidos"))
+
+
 @admin_bp.route("/pedidos/<int:id_pedido>/apagar", methods=["POST"])
 @admin_required
 def pedido_apagar(id_pedido: int):
@@ -124,6 +174,7 @@ def hierarquia():
                 SELECT u.id_usuario, u.nome, u.email, h.hierarquia
                 FROM login_usuario u
                 JOIN hierarquia h ON h.id_usuario = u.id_usuario
+                WHERE u.email_confirmado = TRUE
                 ORDER BY u.nome
                 """
             )
@@ -169,6 +220,35 @@ def hierarquia_remover(id_usuario: int):
                 "(SELECT id_usuario FROM hierarquia WHERE hierarquia = 'cliente')",
                 (id_usuario,),
             )
+    return redirect(url_for("admin.hierarquia"))
+
+
+@admin_bp.route("/hierarquia/promover-lote", methods=["POST"])
+@admin_required
+def hierarquia_promover_lote():
+    ids = request.form.getlist("ids", type=int)
+    if ids:
+        with db.get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "UPDATE hierarquia SET hierarquia = 'adm' WHERE id_usuario = ANY(%s)",
+                    (ids,),
+                )
+    return redirect(url_for("admin.hierarquia"))
+
+
+@admin_bp.route("/hierarquia/remover-lote", methods=["POST"])
+@admin_required
+def hierarquia_remover_lote():
+    ids = [i for i in request.form.getlist("ids", type=int) if i != session.get("user_id")]
+    if ids:
+        with db.get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM login_usuario WHERE id_usuario = ANY(%s) AND id_usuario IN "
+                    "(SELECT id_usuario FROM hierarquia WHERE hierarquia = 'cliente')",
+                    (ids,),
+                )
     return redirect(url_for("admin.hierarquia"))
 
 
@@ -221,6 +301,53 @@ def cadastro_recusar(id_usuario: int):
                 "DELETE FROM login_usuario WHERE id_usuario = %s AND email_confirmado = FALSE",
                 (id_usuario,),
             )
+    return redirect(url_for("admin.cadastros"))
+
+
+@admin_bp.route("/cadastros/confirmar-lote", methods=["POST"])
+@admin_required
+def cadastros_confirmar_lote():
+    ids = request.form.getlist("ids", type=int)
+    pendentes = []
+    if ids:
+        with db.get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT id_usuario, nome, email FROM login_usuario "
+                    "WHERE id_usuario = ANY(%s) AND email_confirmado = FALSE",
+                    (ids,),
+                )
+                pendentes = cur.fetchall()
+                if pendentes:
+                    cur.execute(
+                        "UPDATE login_usuario SET email_confirmado = TRUE, data_atualizacao = now() "
+                        "WHERE id_usuario = ANY(%s)",
+                        ([u["id_usuario"] for u in pendentes],),
+                    )
+
+    falhou_email = False
+    for usuario in pendentes:
+        try:
+            enviar_cadastro_aprovado(usuario["email"], usuario["nome"])
+        except Exception:
+            logger.warning("Falha ao enviar e-mail de cadastro aprovado (lote)", exc_info=True)
+            falhou_email = True
+    if falhou_email:
+        flash("Cadastros confirmados, mas não consegui enviar e-mail pra algum cliente. Avise manualmente.")
+    return redirect(url_for("admin.cadastros"))
+
+
+@admin_bp.route("/cadastros/recusar-lote", methods=["POST"])
+@admin_required
+def cadastros_recusar_lote():
+    ids = request.form.getlist("ids", type=int)
+    if ids:
+        with db.get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "DELETE FROM login_usuario WHERE id_usuario = ANY(%s) AND email_confirmado = FALSE",
+                    (ids,),
+                )
     return redirect(url_for("admin.cadastros"))
 
 

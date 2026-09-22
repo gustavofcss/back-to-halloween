@@ -11,32 +11,65 @@
   </div>
 
   {% if pendentes %}
-  <div class="admin-table-scroll">
-    <table class="admin-table">
-      <thead>
-        <tr><th>Nome</th><th>E-mail</th><th>Cadastrado em</th><th></th></tr>
-      </thead>
-      <tbody>
-      {% for p in pendentes %}
-        <tr>
-          <td>{{ p.nome }}</td>
-          <td>{{ p.email }}</td>
-          <td>{{ p.data_cadastro|data_hora_br }}</td>
-          <td>
-            <form method="post" action="/admin/cadastros/{{ p.id_usuario }}/confirmar" style="display:inline">
-              <button type="submit" class="admin-btn-primary">Confirmar cadastro</button>
-            </form>
-            <form method="post" action="/admin/cadastros/{{ p.id_usuario }}/recusar" style="display:inline" onsubmit="return confirmarAcao(this, 'Recusar e apagar esse cadastro?')">
-              <button type="submit" class="admin-btn-outline">Recusar</button>
-            </form>
-          </td>
-        </tr>
-      {% endfor %}
-      </tbody>
-    </table>
-  </div>
+  <form method="post" id="cadastros-lote-form">
+    <div class="admin-bulk-bar" id="cadastros-bulk-bar">
+      <span class="admin-bulk-bar__count" id="cadastros-bulk-count">0 selecionado(s)</span>
+      <button type="submit" formaction="/admin/cadastros/confirmar-lote" class="admin-btn-primary">Confirmar selecionados</button>
+      <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('cadastros-lote-form'), '/admin/cadastros/recusar-lote', 'Recusar e apagar os cadastros selecionados?')">Recusar selecionados</button>
+    </div>
+    <div class="admin-table-scroll">
+      <table class="admin-table">
+        <thead>
+          <tr>
+            <th class="admin-table__check-col"><input type="checkbox" id="cadastros-check-all" aria-label="Selecionar todos"></th>
+            <th>Nome</th><th>E-mail</th><th>Cadastrado em</th><th></th>
+          </tr>
+        </thead>
+        <tbody>
+        {% for p in pendentes %}
+          <tr>
+            <td class="admin-table__check-col"><input type="checkbox" name="ids" value="{{ p.id_usuario }}" class="cadastros-check-item" aria-label="Selecionar {{ p.nome }}"></td>
+            <td>{{ p.nome }}</td>
+            <td>{{ p.email }}</td>
+            <td>{{ p.data_cadastro|data_hora_br }}</td>
+            <td>
+              <form method="post" action="/admin/cadastros/{{ p.id_usuario }}/confirmar" style="display:inline">
+                <button type="submit" class="admin-btn-primary">Confirmar cadastro</button>
+              </form>
+              <form method="post" action="/admin/cadastros/{{ p.id_usuario }}/recusar" style="display:inline" onsubmit="return confirmarAcao(this, 'Recusar e apagar esse cadastro?')">
+                <button type="submit" class="admin-btn-outline">Recusar</button>
+              </form>
+            </td>
+          </tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </form>
   {% else %}
     <p class="help-text">Nenhum cadastro pendente.</p>
   {% endif %}
 </section>
+
+<script>
+  (function () {
+    var checkAll = document.getElementById('cadastros-check-all');
+    var itens = document.querySelectorAll('.cadastros-check-item');
+    var bar = document.getElementById('cadastros-bulk-bar');
+    var contagem = document.getElementById('cadastros-bulk-count');
+    if (!checkAll || !itens.length) { return; }
+
+    function atualizar() {
+      var marcados = document.querySelectorAll('.cadastros-check-item:checked').length;
+      bar.classList.toggle('admin-bulk-bar--visivel', marcados > 0);
+      contagem.textContent = marcados + ' selecionado(s)';
+      checkAll.checked = marcados === itens.length;
+    }
+    checkAll.addEventListener('change', function () {
+      itens.forEach(function (item) { item.checked = checkAll.checked; });
+      atualizar();
+    });
+    itens.forEach(function (item) { item.addEventListener('change', atualizar); });
+  })();
+</script>
 {% endblock %}
