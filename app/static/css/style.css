@@ -433,11 +433,12 @@ h1, h2, h3 {
    fundo, opacidade baixa) + gato e balde de doces grandes embaixo. */
 .buy-deco-web {
   position: absolute;
-  top: -30px;
-  right: -30px;
-  width: 240px;
+  top: 0;
+  right: 0;
+  width: 220px;
   height: auto;
-  opacity: .35;
+  opacity: .5;
+  filter: brightness(0) invert(1);
   pointer-events: none;
 }
 .buy-deco-cat {
@@ -1373,6 +1374,23 @@ h1, h2, h3 {
 @media (max-width: 900px) {
   .margin-skeleton,
   .margin-dino { display: none; }
+}
+
+/* No celular a cena do chão (mão, caveira, caixão, abóbora) ficava
+   sobreposta/bagunçada -- os ícones têm tamanho fixo em px mas a distância
+   entre eles é em %, então numa tela estreita o espaço encolhe e o tamanho
+   não, virando uma zona de colisão (achado real, print do celular). Encolhe
+   tudo mantendo a base "presa" no chão (transform-origin: bottom). */
+@media (max-width: 480px) {
+  .house-door,
+  .house-ghost-face,
+  .house-pumpkin {
+    transform: scale(.62);
+    transform-origin: bottom center;
+  }
+  .house-hand--left { transform: rotate(-9deg) scale(.6); transform-origin: bottom center; }
+  .house-hand--right { transform: rotate(11deg) scale(.65); transform-origin: bottom center; }
+  .ground-hat { transform: rotate(12deg) scale(.6); transform-origin: bottom center; }
 }
 
 /* seção de informações abaixo do herói */

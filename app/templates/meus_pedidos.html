@@ -30,7 +30,9 @@
             <span class="admin-pill {{ status_pill.get(p.status_pedido, 'admin-pill--neutral') }}">{{ p.status_pedido }}</span>
             <p class="help-text" style="margin: 6px 0 0;">{{ p.data_pedido|data_hora_br }}</p>
           </div>
-          <a href="/pagamento/{{ p.id_pedido }}" class="btn-outline" style="width: auto; text-decoration: none; padding: 10px 18px;">Ver</a>
+          {% if p.status_pedido == 'pendente' %}
+          <a href="/pagamento/{{ p.id_pedido }}" class="btn-outline" style="width: auto; text-decoration: none; padding: 10px 18px;">Pagar agora</a>
+          {% endif %}
         </div>
       </div>
       {% endfor %}

@@ -87,14 +87,27 @@ def _destino_pos_login(id_usuario: int, next_url: str | None = None) -> str:
     com `next` (ex.: clicou em "Comprar ingresso" deslogado, que manda pra
     /login?next=/comprar; sem essa checagem de hierarquia vir PRIMEIRO, um
     admin também caía em /comprar, achado real). Cliente respeita o `next`
-    quando existir, senão cai na tela de convite."""
+    quando existir; sem next, vai direto pra "Meus pedidos" (se já tiver
+    pedido) ou "Seus dados"/comprar (se não tiver) -- nunca a tela inicial,
+    pedido explícito do usuário."""
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT hierarquia FROM hierarquia WHERE id_usuario = %s", (id_usuario,))
             row = cur.fetchone()
     if row and row["hierarquia"] == "adm":
         return url_for("admin.index")
-    return next_url or url_for("index")
+
+    if next_url:
+        return next_url
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT 1 FROM pedido WHERE id_usuario = %s AND status_pedido != 'cancelado' LIMIT 1",
+                (id_usuario,),
+            )
+            tem_pedido = cur.fetchone() is not None
+    return url_for("pedidos.meus_pedidos") if tem_pedido else url_for("pedidos.comprar")
 
 
 @auth_bp.route("/signup", methods=["GET", "POST"])
@@ -157,11 +170,11 @@ def login():
         return render_template("login.html"), 401
 
     if not usuario["email_confirmado"]:
-        flash(
-            "Seu cadastro ainda está em análise. Você vai receber um e-mail assim que "
-            "for confirmado pelo administrador."
-        )
-        return render_template("login.html"), 401
+        # Antes só reexibia o form de login com um aviso em cima -- usuário
+        # achou confuso/poluído (spiders, campo de senha etc. no meio de um
+        # aviso de "aguarde"). Reaproveita o estilo limpo do
+        # "Verifique seu e-mail", mesma tela que aparece logo após cadastrar.
+        return render_template("cadastro_pendente.html"), 401
 
     session["user_id"] = usuario["id_usuario"]
     destino = _destino_pos_login(usuario["id_usuario"], request.form.get("next"))
@@ -299,11 +312,7 @@ def auth_google_callback():
 
     if not email_confirmado:
         session.pop("login_next", None)
-        flash(
-            "Seu cadastro ainda está em análise. Você vai receber um e-mail assim que "
-            "for confirmado pelo administrador."
-        )
-        return redirect(url_for("auth.login"))
+        return render_template("cadastro_pendente.html"), 401
 
     session["user_id"] = id_usuario
     destino = _destino_pos_login(id_usuario, session.pop("login_next", None))
