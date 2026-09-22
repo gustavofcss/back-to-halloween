@@ -100,6 +100,20 @@ def pedido_cancelar(id_pedido: int):
     return redirect(url_for("admin.pedidos"))
 
 
+@admin_bp.route("/pedidos/<int:id_pedido>/apagar", methods=["POST"])
+@admin_required
+def pedido_apagar(id_pedido: int):
+    # Só apaga se já estiver cancelado -- evita apagar por engano um pedido
+    # pendente/confirmado que ainda representa uma venda de verdade.
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "DELETE FROM pedido WHERE id_pedido = %s AND status_pedido = 'cancelado'",
+                (id_pedido,),
+            )
+    return redirect(url_for("admin.pedidos"))
+
+
 @admin_bp.route("/hierarquia")
 @admin_required
 def hierarquia():

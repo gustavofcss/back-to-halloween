@@ -70,6 +70,10 @@
             <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/cancelar" style="display:inline">
               <button type="submit" class="admin-btn-outline">Cancelar</button>
             </form>
+            {% elif p.status_pedido == 'cancelado' %}
+            <form method="post" action="/admin/pedidos/{{ p.id_pedido }}/apagar" style="display:inline" onsubmit="return confirmarAcao(this, 'Apagar esse pedido cancelado? Não tem como desfazer.')">
+              <button type="submit" class="admin-btn-outline">Apagar</button>
+            </form>
             {% endif %}
           </td>
         </tr>
