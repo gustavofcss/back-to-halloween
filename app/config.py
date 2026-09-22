@@ -31,3 +31,5 @@ SMTP_FROM = os.environ.get("SMTP_FROM", "")
 
 PIX_KEY = os.environ.get("PIX_KEY", "")
 BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:5000")
+
+MERCADOPAGO_ACCESS_TOKEN = os.environ.get("MERCADOPAGO_ACCESS_TOKEN", "")

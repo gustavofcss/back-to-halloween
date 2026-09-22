@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Criar conta -- Horror Night Party{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  {% for n in range(1, 6) %}
+  <div class="spider-deco spider-deco--{{ n }}" aria-hidden="true">
+    <img class="spider-deco__web" src="{{ url_for('static', filename='assets/deco-spiderweb.png') }}" alt="">
+    <div class="spider-deco__thread"></div>
+    <div class="spider-deco__spider-box">
+      <img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt="">
+      <div class="spider-deco__blink"></div>
+    </div>
+  </div>
+  {% endfor %}
+  <img class="auth-deco-cat" src="{{ url_for('static', filename='assets/deco-evil-cat.png') }}" alt="" aria-hidden="true">
+  <p class="auth-brand">Horror Night Party</p>
+  <div class="card-parchment">
+    <div class="card-title">
+      <img src="{{ url_for('static', filename='assets/witch.svg') }}" alt="">
+      <h1>Criar conta</h1>
+    </div>
+    <p class="card-subtitle">Cadastre-se pra garantir seu lugar na festa.</p>
+
+    {% if erro %}
+    <div class="alert-error">{{ erro }}</div>
+    {% endif %}
+
+    <form method="post" action="/signup" id="signup-form">
+      <div class="field">
+        <label for="nome">Nome completo</label>
+        <input id="nome" name="nome" type="text" placeholder="Seu nome" required autocomplete="name">
+      </div>
+      <div class="field">
+        <label for="email">E-mail</label>
+        <input id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email">
+      </div>
+      <div class="field">
+        <label for="senha">Senha</label>
+        <input id="senha" name="senha" type="password" placeholder="Mínimo 6 caracteres" required minlength="6" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label for="confirmar_senha">Confirmar senha</label>
+        <input id="confirmar_senha" name="confirmar_senha" type="password" placeholder="Repita a senha" required minlength="6" autocomplete="new-password">
+      </div>
+      <p class="alert-error" id="senha-erro" style="display:none;">As senhas não coincidem.</p>
+      <button type="submit" class="btn-primary">Criar conta</button>
+    </form>
+
+    <div class="divider">ou</div>
+
+    <a href="/auth/google" class="btn-outline">Entrar com Google</a>
+
+    <p class="card-footer">Já tem conta? <a href="/login">Entrar</a></p>
+  </div>
+</div>
+<script>
+  (function () {
+    var form = document.getElementById('signup-form');
+    var senha = document.getElementById('senha');
+    var confirmar = document.getElementById('confirmar_senha');
+    var aviso = document.getElementById('senha-erro');
+    form.addEventListener('submit', function (evt) {
+      if (senha.value !== confirmar.value) {
+        evt.preventDefault();
+        aviso.style.display = 'block';
+      } else {
+        aviso.style.display = 'none';
+      }
+    });
+  })();
+</script>
+{% endblock %}

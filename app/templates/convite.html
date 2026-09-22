@@ -1,10 +1,128 @@
-<!doctype html>
-<html lang="pt-br">
-<head>
-  <meta charset="utf-8">
-  <title>Horror Night Party</title>
-</head>
-<body>
-  <p>Esqueleto do projeto -- a página real (convite/compra de ingresso) ainda vai ser construída a partir do mockup em front/Festa de Halloween - Convite.dc.html.</p>
-</body>
-</html>
+{% extends "base.html" %}
+{% block title %}Horror Night Party -- Você está convidado{% endblock %}
+{% block content %}
+<div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+
+  {% if usuario %}
+  <div style="width: 100%; max-width: 520px; box-sizing: border-box; padding: 14px 20px 0; display: flex; justify-content: flex-end; align-items: center; gap: 14px; position: relative; z-index: 4;">
+    {% if tem_pedido %}
+    <a href="/meus-pedidos" style="color: var(--purple-mute); font-size: 12px; font-family: var(--font-body);">Meus pedidos</a>
+    {% endif %}
+    {% if usuario.hierarquia == 'adm' %}
+    <a href="/admin" style="color: var(--purple-mute); font-size: 12px; font-family: var(--font-body);">Admin</a>
+    {% endif %}
+    <form method="post" action="/logout" style="margin: 0;">
+      <button type="submit" style="background: none; border: none; color: var(--purple-mute); font-size: 12px; cursor: pointer; font-family: var(--font-body);">Sair ({{ usuario.nome }})</button>
+    </form>
+  </div>
+  {% endif %}
+
+  <div class="hero">
+    <div class="hero-stars"></div>
+    <div class="hero-stars hero-stars--twinkle"></div>
+
+    <img class="hero-moon" src="{{ url_for('static', filename='assets/moon.svg') }}" alt="">
+
+    <img class="hero-ghost hero-ghost--1" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="">
+    <img class="hero-ghost hero-ghost--2" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="">
+
+    <img class="hero-bat hero-bat--1" src="{{ url_for('static', filename='assets/bat.svg') }}" alt="">
+    <img class="hero-bat hero-bat--2" src="{{ url_for('static', filename='assets/bat.svg') }}" alt="">
+    <img class="hero-bat hero-bat--3" src="{{ url_for('static', filename='assets/bat.svg') }}" alt="">
+    <img class="hero-bat hero-bat--4" src="{{ url_for('static', filename='assets/bat.svg') }}" alt="">
+    <img class="hero-bat hero-bat--5" src="{{ url_for('static', filename='assets/bat.svg') }}" alt="">
+
+    <div class="hero-fog"></div>
+    <div class="hero-fog hero-fog--2"></div>
+
+    <img class="hero-tree hero-tree--left" src="{{ url_for('static', filename='assets/lTree.svg') }}" alt="">
+    <img class="hero-tree hero-tree--right" src="{{ url_for('static', filename='assets/rTree.svg') }}" alt="">
+
+    <img class="flying-witch" src="{{ url_for('static', filename='assets/witch-flying.png') }}" alt="">
+
+    <div class="house-roof"></div>
+    <div class="house-roof house-roof--back"></div>
+
+    <div class="house-door">
+      <div class="house-door__handle-v"></div>
+      <div class="house-door__handle-h"></div>
+    </div>
+
+    <div class="house-ghost-face">
+      <div class="body"></div>
+      <div class="chin"></div>
+      <div class="eye eye--l"></div>
+      <div class="eye eye--r"></div>
+      <div class="mouth"></div>
+      <div class="tooth tooth--1"></div>
+      <div class="tooth tooth--2"></div>
+      <div class="tooth tooth--3"></div>
+    </div>
+
+    <div class="house-hand house-hand--left">
+      <div class="house-hand__palm"></div>
+      <div class="house-hand__finger house-hand__finger--1"></div>
+      <div class="house-hand__finger house-hand__finger--2"></div>
+      <div class="house-hand__finger house-hand__finger--3"></div>
+      <div class="house-hand__finger house-hand__finger--4"></div>
+      <div class="house-hand__finger house-hand__finger--5"></div>
+    </div>
+    <div class="house-hand house-hand--right">
+      <div class="house-hand__palm"></div>
+      <div class="house-hand__finger house-hand__finger--1"></div>
+      <div class="house-hand__finger house-hand__finger--2"></div>
+      <div class="house-hand__finger house-hand__finger--3"></div>
+      <div class="house-hand__finger house-hand__finger--4"></div>
+      <div class="house-hand__finger house-hand__finger--5"></div>
+    </div>
+
+    <img class="house-pumpkin" src="{{ url_for('static', filename='assets/pumpkin.svg') }}" alt="">
+
+    <div class="ground-marker ground-marker--1">
+      <div class="ground-marker__bar"></div>
+      <div class="ground-marker__circle ground-marker__circle--l"></div>
+      <div class="ground-marker__circle ground-marker__circle--r"></div>
+    </div>
+    <div class="ground-marker ground-marker--2">
+      <div class="ground-marker__bar"></div>
+      <div class="ground-marker__circle ground-marker__circle--l"></div>
+      <div class="ground-marker__circle ground-marker__circle--r"></div>
+    </div>
+    <div class="ground-marker ground-marker--3">
+      <div class="ground-marker__bar"></div>
+      <div class="ground-marker__circle ground-marker__circle--l"></div>
+      <div class="ground-marker__circle ground-marker__circle--r"></div>
+    </div>
+
+    <img class="ground-hat" src="{{ url_for('static', filename='assets/deco-witch-hat.png') }}" alt="">
+  </div>
+
+  <div class="hero-title-wrap">
+    <div class="hero-title-bg" aria-hidden="true"></div>
+    <p class="hero-eyebrow">Você está convidado</p>
+    <h1 class="hero-title">
+      <span>H</span><span class="buzz-a">A</span><span>L</span><span>L</span><span class="buzz-b">O</span><span>W</span><span>E</span><span class="buzz-c">E</span><span>N</span>
+    </h1>
+    <p class="hero-subtitle">Horror Night Party</p>
+  </div>
+
+  <div class="info-panel">
+    <div class="margin-skeleton" aria-hidden="true">
+      <img src="{{ url_for('static', filename='assets/deco-skeleton.webp') }}" alt="">
+    </div>
+    <img class="margin-dino margin-dino--1" src="{{ url_for('static', filename='assets/deco-dino-bones.webp') }}" alt="" aria-hidden="true">
+    <img class="margin-dino margin-dino--2" src="{{ url_for('static', filename='assets/deco-dino-bones.webp') }}" alt="" aria-hidden="true">
+
+    <div class="info-panel-inner">
+      <p class="info-date">{{ data_formatada or "Data a definir" }}</p>
+      <p class="info-place">Rua das Aboboras, 1956, 98,<br>Coqueiral &ndash; Salem</p>
+      <p class="info-dress">Traje a rigor: quanto mais assustador, melhor. Vagas limitadas.</p>
+
+      <a class="cta-button" href="{% if usuario %}/comprar{% else %}/login{% endif %}">
+        <span>Comprar ingresso — R$ {{ "%.0f"|format(evento.valor_entrada) if evento else 30 }}</span>
+      </a>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

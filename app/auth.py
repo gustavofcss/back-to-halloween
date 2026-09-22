@@ -1,0 +1,348 @@
+"""Rotas de autenticação -- cadastro/login por e-mail+senha e por Google,
+mais os helpers de autorização (login_required, admin_required,
+current_user) reaproveitados pelas fases seguintes (pedidos, admin)."""
+from __future__ import annotations
+
+import re
+import secrets
+from datetime import datetime, timezone
+from functools import wraps
+
+from authlib.integrations.flask_client import OAuth
+from flask import (
+    Blueprint,
+    abort,
+    flash,
+    redirect,
+    render_template,
+    request,
+    session,
+    url_for,
+)
+from itsdangerous import BadSignature, SignatureExpired, URLSafeTimedSerializer
+from werkzeug.security import check_password_hash, generate_password_hash
+
+import config
+import db
+from email_utils import enviar_codigo_recuperacao, enviar_email_confirmacao
+
+auth_bp = Blueprint("auth", __name__)
+
+oauth = OAuth()
+oauth.register(
+    name="google",
+    client_id=config.GOOGLE_CLIENT_ID,
+    client_secret=config.GOOGLE_CLIENT_SECRET,
+    server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+    client_kwargs={"scope": "openid email profile"},
+)
+
+EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+CONFIRM_EMAIL_SALT = "confirmar-email"
+CONFIRM_EMAIL_MAX_AGE = 86400  # 24h
+
+
+def _serializer() -> URLSafeTimedSerializer:
+    return URLSafeTimedSerializer(config.SECRET_KEY)
+
+
+def gerar_token_confirmacao(id_usuario: int) -> str:
+    return _serializer().dumps(id_usuario, salt=CONFIRM_EMAIL_SALT)
+
+
+def _ler_token_confirmacao(token: str) -> int | None:
+    try:
+        return _serializer().loads(token, salt=CONFIRM_EMAIL_SALT, max_age=CONFIRM_EMAIL_MAX_AGE)
+    except (BadSignature, SignatureExpired):
+        return None
+
+
+def _criar_conta_e_enviar_confirmacao(id_usuario: int, nome: str, email: str) -> None:
+    token = gerar_token_confirmacao(id_usuario)
+    enviar_email_confirmacao(email, nome, token)
+
+
+def login_required(view_func):
+    @wraps(view_func)
+    def wrapped(*args, **kwargs):
+        if not session.get("user_id"):
+            return redirect(url_for("auth.login", next=request.path))
+        return view_func(*args, **kwargs)
+
+    return wrapped
+
+
+def admin_required(view_func):
+    @wraps(view_func)
+    def wrapped(*args, **kwargs):
+        if not session.get("user_id"):
+            return redirect(url_for("auth.login", next=request.path))
+        user = current_user()
+        if not user or user["hierarquia"] != "adm":
+            abort(403)
+        return view_func(*args, **kwargs)
+
+    return wrapped
+
+
+def current_user() -> dict | None:
+    user_id = session.get("user_id")
+    if not user_id:
+        return None
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT u.id_usuario, u.nome, u.email, h.hierarquia
+                FROM login_usuario u
+                JOIN hierarquia h ON h.id_usuario = u.id_usuario
+                WHERE u.id_usuario = %s
+                """,
+                (user_id,),
+            )
+            return cur.fetchone()
+
+
+def _destino_pos_login(id_usuario: int) -> str:
+    """Admin cai direto na área de gestão; cliente cai na tela de convite --
+    pedido explícito do usuário (antes todo mundo caía sempre na home)."""
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT hierarquia FROM hierarquia WHERE id_usuario = %s", (id_usuario,))
+            row = cur.fetchone()
+    if row and row["hierarquia"] == "adm":
+        return url_for("admin.index")
+    return url_for("index")
+
+
+@auth_bp.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "GET":
+        return render_template("signup.html")
+
+    nome = (request.form.get("nome") or "").strip()
+    email = (request.form.get("email") or "").strip().lower()
+    senha = request.form.get("senha") or ""
+
+    if not nome or not EMAIL_RE.match(email) or len(senha) < 6:
+        flash("Preencha nome, e-mail válido e senha com pelo menos 6 caracteres.")
+        return render_template("signup.html"), 400
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM login_usuario WHERE email = %s", (email,))
+            if cur.fetchone():
+                flash("Já existe uma conta com esse e-mail.")
+                return render_template("signup.html"), 400
+
+            senha_hash = generate_password_hash(senha)
+            cur.execute(
+                """
+                INSERT INTO login_usuario (nome, email, senha_hash, email_confirmado)
+                VALUES (%s, %s, %s, FALSE)
+                RETURNING id_usuario
+                """,
+                (nome, email, senha_hash),
+            )
+            id_usuario = cur.fetchone()["id_usuario"]
+            cur.execute(
+                "INSERT INTO hierarquia (id_usuario, hierarquia) VALUES (%s, 'cliente')",
+                (id_usuario,),
+            )
+
+    _criar_conta_e_enviar_confirmacao(id_usuario, nome, email)
+
+    return render_template("verifique_email.html", email=email)
+
+
+@auth_bp.route("/confirmar-email/<token>")
+def confirmar_email(token: str):
+    id_usuario = _ler_token_confirmacao(token)
+    if id_usuario is None:
+        return render_template("confirmar_email_erro.html")
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE login_usuario SET email_confirmado = TRUE, data_atualizacao = now() "
+                "WHERE id_usuario = %s",
+                (id_usuario,),
+            )
+
+    flash("E-mail confirmado! Já pode fazer login.")
+    return redirect(url_for("auth.login"))
+
+
+@auth_bp.route("/reenviar-confirmacao", methods=["POST"])
+def reenviar_confirmacao():
+    email = (request.form.get("email") or "").strip().lower()
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id_usuario, nome FROM login_usuario "
+                "WHERE email = %s AND email_confirmado = FALSE",
+                (email,),
+            )
+            usuario = cur.fetchone()
+
+    if usuario:
+        _criar_conta_e_enviar_confirmacao(usuario["id_usuario"], usuario["nome"], email)
+
+    return render_template("verifique_email.html", email=email)
+
+
+@auth_bp.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "GET":
+        return render_template("login.html")
+
+    email = (request.form.get("email") or "").strip().lower()
+    senha = request.form.get("senha") or ""
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id_usuario, senha_hash, email_confirmado FROM login_usuario "
+                "WHERE email = %s",
+                (email,),
+            )
+            usuario = cur.fetchone()
+
+    if not usuario or not usuario["senha_hash"] or not check_password_hash(usuario["senha_hash"], senha):
+        flash("E-mail ou senha inválidos.")
+        return render_template("login.html"), 401
+
+    if not usuario["email_confirmado"]:
+        flash("Confirme seu e-mail antes de entrar. Verifique sua caixa de entrada.")
+        return render_template("login.html"), 401
+
+    session["user_id"] = usuario["id_usuario"]
+    destino = request.args.get("next") or _destino_pos_login(usuario["id_usuario"])
+    return redirect(destino)
+
+
+@auth_bp.route("/esqueci-senha", methods=["GET", "POST"])
+def esqueci_senha():
+    if request.method == "GET":
+        return render_template("esqueci_senha.html")
+
+    email = (request.form.get("email") or "").strip().lower()
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id_usuario, nome FROM login_usuario WHERE email = %s",
+                (email,),
+            )
+            usuario = cur.fetchone()
+
+            if usuario:
+                codigo = f"{secrets.randbelow(1000000):06d}"
+                codigo_hash = generate_password_hash(codigo)
+                cur.execute(
+                    "UPDATE login_usuario SET reset_codigo_hash = %s, "
+                    "reset_codigo_expira = now() + interval '15 minutes' "
+                    "WHERE id_usuario = %s",
+                    (codigo_hash, usuario["id_usuario"]),
+                )
+
+    if usuario:
+        enviar_codigo_recuperacao(email, usuario["nome"], codigo)
+
+    flash("Se esse e-mail existir, enviamos um código de recuperação.")
+    return render_template("esqueci_senha.html")
+
+
+@auth_bp.route("/redefinir-senha", methods=["GET", "POST"])
+def redefinir_senha():
+    if request.method == "GET":
+        return render_template("redefinir_senha.html")
+
+    email = (request.form.get("email") or "").strip().lower()
+    codigo = request.form.get("codigo") or ""
+    nova_senha = request.form.get("senha") or ""
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id_usuario, reset_codigo_hash, reset_codigo_expira FROM login_usuario "
+                "WHERE email = %s",
+                (email,),
+            )
+            usuario = cur.fetchone()
+
+            valido = (
+                usuario
+                and usuario["reset_codigo_hash"]
+                and usuario["reset_codigo_expira"]
+                and usuario["reset_codigo_expira"] > datetime.now(timezone.utc)
+                and check_password_hash(usuario["reset_codigo_hash"], codigo)
+            )
+
+            if not valido or len(nova_senha) < 6:
+                flash("Código inválido ou expirado.")
+                return render_template("redefinir_senha.html"), 400
+
+            cur.execute(
+                "UPDATE login_usuario SET senha_hash = %s, reset_codigo_hash = NULL, "
+                "reset_codigo_expira = NULL, data_atualizacao = now() WHERE id_usuario = %s",
+                (generate_password_hash(nova_senha), usuario["id_usuario"]),
+            )
+
+    flash("Senha redefinida com sucesso. Faça login com a nova senha.")
+    return redirect(url_for("auth.login"))
+
+
+@auth_bp.route("/auth/google")
+def auth_google():
+    redirect_uri = url_for("auth.auth_google_callback", _external=True)
+    return oauth.google.authorize_redirect(redirect_uri)
+
+
+@auth_bp.route("/auth/google/callback")
+def auth_google_callback():
+    token = oauth.google.authorize_access_token()
+    userinfo = token["userinfo"]
+    google_id = userinfo["sub"]
+    email = userinfo["email"].strip().lower()
+    nome = userinfo.get("name") or email
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id_usuario FROM login_usuario WHERE google_id = %s OR email = %s",
+                (google_id, email),
+            )
+            usuario = cur.fetchone()
+
+            if usuario:
+                id_usuario = usuario["id_usuario"]
+                cur.execute(
+                    "UPDATE login_usuario SET google_id = %s, email_confirmado = TRUE, "
+                    "data_atualizacao = now() WHERE id_usuario = %s",
+                    (google_id, id_usuario),
+                )
+            else:
+                cur.execute(
+                    """
+                    INSERT INTO login_usuario (nome, email, senha_hash, google_id, email_confirmado)
+                    VALUES (%s, %s, NULL, %s, TRUE)
+                    RETURNING id_usuario
+                    """,
+                    (nome, email, google_id),
+                )
+                id_usuario = cur.fetchone()["id_usuario"]
+                cur.execute(
+                    "INSERT INTO hierarquia (id_usuario, hierarquia) VALUES (%s, 'cliente')",
+                    (id_usuario,),
+                )
+
+    session["user_id"] = id_usuario
+    return redirect(_destino_pos_login(id_usuario))
+
+
+@auth_bp.route("/logout", methods=["POST"])
+def logout():
+    session.clear()
+    return redirect(url_for("index"))

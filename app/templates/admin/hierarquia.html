@@ -1,0 +1,68 @@
+{% extends "admin/_layout.html" %}
+{% set active_nav = "hierarquia" %}
+{% block title %}Admin -- Hierarquia{% endblock %}
+{% block admin_title %}Hierarquia{% endblock %}
+{% block admin_subtitle %}Quem tem acesso admin na Horror Night Party{% endblock %}
+{% block admin_body %}
+{% macro initials(nome) -%}
+{% set partes = nome.split(' ') %}{{- (partes[0][0] ~ (partes[1][0] if partes|length > 1 else ''))|upper -}}
+{%- endmacro %}
+{% set admins = usuarios|selectattr('hierarquia', 'equalto', 'adm')|list %}
+{% set clientes = usuarios|selectattr('hierarquia', 'equalto', 'cliente')|list %}
+
+<section class="admin-panel">
+  <div class="admin-group">
+    <div class="admin-group__header">
+      <span class="admin-pill admin-pill--accent">Adm</span>
+      <span class="admin-group__title">Administradores<span class="admin-group__count">{{ admins|length }} pessoa(s)</span></span>
+    </div>
+    <div class="admin-group__list">
+      {% for u in admins %}
+      <div class="admin-group__row">
+        <span class="admin-group__avatar">{{ initials(u.nome) }}</span>
+        <span class="admin-group__info">
+          <span class="admin-group__name">{{ u.nome }}</span>
+          <span class="admin-group__email">{{ u.email }}</span>
+        </span>
+        <span class="admin-group__action">
+          {% if eu and u.id_usuario != eu.id_usuario %}
+          <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/rebaixar">
+            <button type="submit" class="admin-btn-outline">Rebaixar pra cliente</button>
+          </form>
+          {% else %}
+          <span class="help-text" style="margin: 0;">você</span>
+          {% endif %}
+        </span>
+      </div>
+      {% else %}
+      <p class="help-text" style="margin: 14px 4px 4px;">Nenhum administrador cadastrado.</p>
+      {% endfor %}
+    </div>
+  </div>
+
+  <div class="admin-group">
+    <div class="admin-group__header">
+      <span class="admin-pill admin-pill--neutral">Cliente</span>
+      <span class="admin-group__title">Clientes<span class="admin-group__count">{{ clientes|length }} pessoa(s)</span></span>
+    </div>
+    <div class="admin-group__list">
+      {% for u in clientes %}
+      <div class="admin-group__row">
+        <span class="admin-group__avatar">{{ initials(u.nome) }}</span>
+        <span class="admin-group__info">
+          <span class="admin-group__name">{{ u.nome }}</span>
+          <span class="admin-group__email">{{ u.email }}</span>
+        </span>
+        <span class="admin-group__action">
+          <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/promover">
+            <button type="submit" class="admin-btn-primary">Promover a admin</button>
+          </form>
+        </span>
+      </div>
+      {% else %}
+      <p class="help-text" style="margin: 14px 4px 4px;">Nenhum cliente cadastrado.</p>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endblock %}

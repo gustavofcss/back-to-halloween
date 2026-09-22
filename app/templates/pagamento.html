@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}Pagamento -- Horror Night Party{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <div class="progress-steps">
+    <div class="progress-step">
+      <div class="progress-step__circle progress-step__circle--done">1</div>
+      <span class="progress-step__label">Convite</span>
+    </div>
+    <div class="progress-divider"></div>
+    <div class="progress-step">
+      <div class="progress-step__circle progress-step__circle--done">2</div>
+      <span class="progress-step__label">Seus dados</span>
+    </div>
+    <div class="progress-divider"></div>
+    <div class="progress-step">
+      <div class="progress-step__circle progress-step__circle--done">3</div>
+      <span class="progress-step__label">Pagamento</span>
+    </div>
+  </div>
+
+  <div class="ticket">
+    <div class="ticket__header">
+      <div class="ticket__header-brand">
+        <img src="{{ url_for('static', filename='assets/pumpkin.svg') }}" alt="">
+        <p>Horror Night</p>
+      </div>
+      <p class="ticket__header-tag">Ingresso</p>
+    </div>
+
+    <div class="ticket__summary">
+      <div>
+        <p class="ticket__summary-qty">{{ pedido.quantidade }} &times; Entrada</p>
+        <p class="ticket__summary-name">Pedido #{{ pedido.id_pedido }}</p>
+      </div>
+      <p class="ticket__summary-total">R$ {{ pedido.valor }}</p>
+    </div>
+
+    <div class="ticket__perforation"></div>
+
+    <div class="ticket__section">
+      {% if pedido.status_pedido == 'confirmado' %}
+        <div class="alert-success">Pagamento confirmado! Seu ingresso já está garantido.</div>
+      {% elif aguardando %}
+        <div class="alert-success">Ingresso reservado, aguardando confirmação do pagamento.</div>
+      {% else %}
+        {% if mp_erro %}
+        <div class="alert-error">{{ mp_erro }}</div>
+        {% endif %}
+
+        {% if qr_code_base64 %}
+        <div class="ticket__pix-box ticket__pix-box--center">
+          <p class="ticket__pix-label">QR Code Pix</p>
+          <img class="ticket__qr" src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code para pagamento Pix">
+        </div>
+        {% endif %}
+
+        {% if qr_code %}
+        <div class="ticket__pix-box">
+          <p class="ticket__pix-label">Pix copia e cola</p>
+          <p class="ticket__pix-value">{{ qr_code }}</p>
+        </div>
+        {% else %}
+        <div class="ticket__pix-box">
+          <p class="ticket__pix-label">Chave Pix</p>
+          <p class="ticket__pix-value">{{ pix_key }}</p>
+        </div>
+        {% endif %}
+
+        <div>
+          <p class="ticket__pix-label">Como funciona</p>
+          <p class="ticket__how-text">Faça o Pix no valor acima e depois clique em confirmar. Você recebe a confirmação por WhatsApp.</p>
+        </div>
+
+        <div class="ticket__actions">
+          <a href="/comprar" class="btn-outline">Voltar</a>
+          <form method="post" action="/pagamento/{{ pedido.id_pedido }}/confirmar">
+            <button type="submit" class="btn-primary">Já paguei, confirmar</button>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <p class="card-footer"><a href="/meus-pedidos">Meus pedidos</a></p>
+</div>
+{% endblock %}

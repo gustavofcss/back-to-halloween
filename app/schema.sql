@@ -9,6 +9,8 @@ CREATE TABLE IF NOT EXISTS login_usuario (
     senha_hash       VARCHAR(255),        -- NULL se a conta só usa login Google
     google_id        VARCHAR(60) UNIQUE,  -- NULL se a conta só usa login por senha
     email_confirmado BOOLEAN NOT NULL DEFAULT FALSE,
+    reset_codigo_hash    VARCHAR(255),        -- hash do código de "esqueci a senha", NULL fora do fluxo
+    reset_codigo_expira  TIMESTAMPTZ,         -- validade do código acima (15 min)
     data_cadastro    TIMESTAMPTZ NOT NULL DEFAULT now(),
     data_atualizacao TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -21,32 +23,41 @@ CREATE TABLE IF NOT EXISTS hierarquia (
     hierarquia  VARCHAR(20) NOT NULL DEFAULT 'cliente' CHECK (hierarquia IN ('cliente', 'adm'))
 );
 
+-- Um admin pode cadastrar mais de um evento (ex.: festas futuras) -- por isso
+-- "evento" tem id próprio e quem cadastrou, em vez de nome_evento fixo como
+-- chave e uma linha só. "numero_lote" cobre preços por lote (1º lote, 2º
+-- lote etc.) dentro do mesmo evento.
+CREATE TABLE IF NOT EXISTS evento (
+    id_evento                 SERIAL PRIMARY KEY,
+    nome_evento               VARCHAR(160) NOT NULL,
+    data_evento               DATE,
+    hora_evento               TIME,
+    numero_lote               INTEGER NOT NULL DEFAULT 1,
+    valor_entrada             NUMERIC(10,2) NOT NULL,
+    quantidade_max_ingressos  INTEGER NOT NULL DEFAULT 2,
+    usuario_cadastro          INTEGER REFERENCES login_usuario(id_usuario),
+    data_cadastro             TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS pedido (
     id_pedido      SERIAL PRIMARY KEY,
     id_usuario     INTEGER NOT NULL REFERENCES login_usuario(id_usuario) ON DELETE CASCADE,
+    id_evento      INTEGER NOT NULL REFERENCES evento(id_evento),
     rg             VARCHAR(20),
     whatsapp       VARCHAR(20),
     valor          NUMERIC(10,2) NOT NULL,
     quantidade     INTEGER NOT NULL CHECK (quantidade > 0),
     status_pedido  VARCHAR(20) NOT NULL DEFAULT 'pendente' CHECK (status_pedido IN ('pendente', 'confirmado', 'cancelado')),
+    mp_payment_id     VARCHAR(40),  -- id do pagamento Pix criado no Mercado Pago
+    mp_preference_id  VARCHAR(40),  -- id da preference do Checkout Pro (cartão)
     data_pedido    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS despesa_material (
-    id            SERIAL PRIMARY KEY,
-    nome_material VARCHAR(160) NOT NULL,
-    valor         NUMERIC(10,2) NOT NULL,
-    descricao     TEXT,
-    data_compra   DATE NOT NULL DEFAULT CURRENT_DATE
+    id                SERIAL PRIMARY KEY,
+    nome_material     VARCHAR(160) NOT NULL,
+    valor             NUMERIC(10,2) NOT NULL,
+    descricao         TEXT,
+    data_compra       DATE NOT NULL DEFAULT CURRENT_DATE,
+    usuario_cadastro  INTEGER REFERENCES login_usuario(id_usuario)
 );
-
-CREATE TABLE IF NOT EXISTS evento (
-    nome_evento             VARCHAR(160) PRIMARY KEY,
-    valor_entrada           NUMERIC(10,2) NOT NULL,
-    quantidade_max_ingressos INTEGER NOT NULL DEFAULT 2
-);
-
--- Dado inicial do evento (ajuste valor/data/local antes do deploy).
-INSERT INTO evento (nome_evento, valor_entrada, quantidade_max_ingressos)
-VALUES ('Horror Night Party', 30.00, 2)
-ON CONFLICT (nome_evento) DO NOTHING;

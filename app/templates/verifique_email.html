@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}Verifique seu e-mail -- Horror Night Party{% endblock %}
+{% block content %}
+<div class="auth-wrap">
+  <img class="auth-deco-eye" src="{{ url_for('static', filename='assets/deco-eye.png') }}" alt="" aria-hidden="true">
+  <p class="auth-brand">Horror Night Party</p>
+  <div class="card-parchment">
+    <div class="card-title">
+      <img src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="">
+      <h2>Verifique seu e-mail</h2>
+    </div>
+    <p class="help-text">
+      Sua conta foi criada! Em alguns minutos você vai receber um e-mail com o
+      link de confirmação -- clique nele pra ativar sua conta e poder entrar.
+      Não chegou? Reenvie abaixo.
+    </p>
+
+    {% include "_reenviar_confirmacao.html" %}
+
+    <a href="/login" class="btn-outline" style="margin-top: 14px;">Voltar pro login</a>
+  </div>
+</div>
+{% endblock %}

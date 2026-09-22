@@ -1,0 +1,77 @@
+{% extends "admin/_layout.html" %}
+{% set active_nav = "eventos" %}
+{% block title %}Admin -- Lotes do evento{% endblock %}
+{% block admin_title %}Lotes do evento{% endblock %}
+{% block admin_subtitle %}É sempre o mesmo evento (Halloween) -- só o lote (preço/data) muda{% endblock %}
+{% block admin_header_actions %}
+<a href="#form-lote" class="admin-cta">+ Novo lote</a>
+{% endblock %}
+{% block admin_body %}
+{% set meses_pt = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'] %}
+<section class="admin-panel" id="form-lote">
+  <div class="admin-panel__head">
+    <h2 class="admin-panel__title">Cadastrar novo lote</h2>
+  </div>
+  <p class="help-text">
+    É sempre o MESMO evento (Halloween) -- aqui você cadastra um novo lote
+    quando quiser mudar o preço da entrada (ex.: 1º lote R$ 30, depois 2º
+    lote R$ 40). O lote mais recente cadastrado é o que fica valendo pra
+    quem for comprar ingresso agora.
+  </p>
+
+  <form method="post" action="/admin/eventos">
+    <div class="field">
+      <label for="nome_evento">Nome do evento</label>
+      <input id="nome_evento" name="nome_evento" required value="Halloween">
+    </div>
+    <div class="field">
+      <label for="data_evento">Data</label>
+      <input id="data_evento" name="data_evento" type="date">
+    </div>
+    <div class="field">
+      <label for="numero_lote">Número do lote</label>
+      <input id="numero_lote" name="numero_lote" type="number" min="1" value="1">
+    </div>
+    <div class="field">
+      <label for="valor_entrada">Valor da entrada deste lote (R$)</label>
+      <input id="valor_entrada" name="valor_entrada" type="number" step="0.01" min="0" required>
+    </div>
+    <div class="field">
+      <label for="quantidade_max_ingressos">Máx. de ingressos por pessoa</label>
+      <input id="quantidade_max_ingressos" name="quantidade_max_ingressos" type="number" min="1" value="2">
+    </div>
+    <button type="submit" class="admin-btn-primary">Cadastrar novo lote</button>
+  </form>
+</section>
+
+{% if eventos %}
+<section class="admin-panel">
+  <div class="admin-panel__head">
+    <h2 class="admin-panel__title">Histórico de lotes</h2>
+    <span class="admin-panel__count">o primeiro da lista é o ativo agora</span>
+  </div>
+  <div style="display: flex; flex-direction: column; gap: 12px;">
+    {% for e in eventos %}
+    <div class="admin-card admin-event-card">
+      <div class="admin-event-card__date">
+        {% if e.data_evento %}
+        <div class="admin-event-card__day">{{ e.data_evento.day }}</div>
+        <div class="admin-event-card__month">{{ meses_pt[e.data_evento.month - 1] }}</div>
+        {% else %}
+        <div class="admin-event-card__day">--</div>
+        <div class="admin-event-card__month">&nbsp;</div>
+        {% endif %}
+      </div>
+      <div class="admin-event-card__body">
+        <div class="admin-event-card__name">{{ e.nome_evento }} &middot; Lote {{ e.numero_lote }}</div>
+        <div class="admin-event-card__meta">R$ {{ e.valor_entrada }} &middot; máx. {{ e.quantidade_max_ingressos }} por pessoa</div>
+        <div class="admin-event-card__meta">Cadastrado por {{ e.cadastrado_por or '--' }}</div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<p class="help-text admin-empty-text">Nenhum lote cadastrado ainda.</p>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+{% block head %}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;1,9..40,400&display=swap" rel="stylesheet">
+{% endblock %}
+{% block content %}
+{% set active_nav = active_nav|default('') %}
+<div class="admin-shell">
+  <aside class="admin-sidebar">
+    <div class="admin-sidebar__brand">
+      <div class="admin-sidebar__brand-icon">
+        <img src="{{ url_for('static', filename='assets/pumpkin.svg') }}" alt="">
+      </div>
+      <div>
+        <div class="admin-sidebar__brand-name">Cripta</div>
+        <div class="admin-sidebar__brand-tag">Painel admin</div>
+      </div>
+    </div>
+
+    <div class="admin-sidebar__section-label">Operação</div>
+    <nav class="admin-nav">
+      <a class="admin-nav__item {% if active_nav == 'pedidos' %}admin-nav__item--active{% endif %}" href="/admin/pedidos">
+        <span class="admin-nav__dot"></span>
+        <span class="admin-nav__label">Pedidos</span>
+      </a>
+      <a class="admin-nav__item {% if active_nav == 'hierarquia' %}admin-nav__item--active{% endif %}" href="/admin/hierarquia">
+        <span class="admin-nav__dot"></span>
+        <span class="admin-nav__label">Hierarquia</span>
+      </a>
+      <a class="admin-nav__item {% if active_nav == 'material' %}admin-nav__item--active{% endif %}" href="/admin/material">
+        <span class="admin-nav__dot"></span>
+        <span class="admin-nav__label">Material</span>
+      </a>
+      <a class="admin-nav__item {% if active_nav == 'eventos' %}admin-nav__item--active{% endif %}" href="/admin/eventos">
+        <span class="admin-nav__dot"></span>
+        <span class="admin-nav__label">Lotes do evento</span>
+      </a>
+    </nav>
+
+    {% if usuario %}
+    {% set partes = usuario.nome.split(' ') %}
+    <div class="admin-sidebar__user">
+      <div class="admin-sidebar__avatar">{{ (partes[0][0] ~ (partes[1][0] if partes|length > 1 else ''))|upper }}</div>
+      <div class="admin-sidebar__user-info">
+        <div class="admin-sidebar__user-name">{{ usuario.nome }}</div>
+        <div class="admin-sidebar__user-role">Guardião(ã) da Cripta</div>
+      </div>
+    </div>
+    {% endif %}
+  </aside>
+
+  <main class="admin-main">
+    <header class="admin-header">
+      <div class="admin-header__text">
+        <div class="admin-header__title">{% block admin_title %}{% endblock %}</div>
+        <div class="admin-header__subtitle">{% block admin_subtitle %}{% endblock %}</div>
+      </div>
+      <div class="admin-header__actions">
+        {% block admin_header_actions %}{% endblock %}
+      </div>
+    </header>
+
+    {% block admin_body %}{% endblock %}
+  </main>
+</div>
+{% endblock %}
