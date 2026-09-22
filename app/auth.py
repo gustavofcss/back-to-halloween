@@ -82,16 +82,19 @@ def current_user() -> dict | None:
             return cur.fetchone()
 
 
-def _destino_pos_login(id_usuario: int) -> str:
-    """Admin cai direto na área de gestão; cliente cai na tela de convite --
-    pedido explícito do usuário (antes todo mundo caía sempre na home)."""
+def _destino_pos_login(id_usuario: int, next_url: str | None = None) -> str:
+    """Admin cai direto na área de gestão, sempre -- mesmo se veio de um link
+    com `next` (ex.: clicou em "Comprar ingresso" deslogado, que manda pra
+    /login?next=/comprar; sem essa checagem de hierarquia vir PRIMEIRO, um
+    admin também caía em /comprar, achado real). Cliente respeita o `next`
+    quando existir, senão cai na tela de convite."""
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT hierarquia FROM hierarquia WHERE id_usuario = %s", (id_usuario,))
             row = cur.fetchone()
     if row and row["hierarquia"] == "adm":
         return url_for("admin.index")
-    return url_for("index")
+    return next_url or url_for("index")
 
 
 @auth_bp.route("/signup", methods=["GET", "POST"])
@@ -161,7 +164,7 @@ def login():
         return render_template("login.html"), 401
 
     session["user_id"] = usuario["id_usuario"]
-    destino = request.form.get("next") or _destino_pos_login(usuario["id_usuario"])
+    destino = _destino_pos_login(usuario["id_usuario"], request.form.get("next"))
     return redirect(destino)
 
 
@@ -303,7 +306,7 @@ def auth_google_callback():
         return redirect(url_for("auth.login"))
 
     session["user_id"] = id_usuario
-    destino = session.pop("login_next", None) or _destino_pos_login(id_usuario)
+    destino = _destino_pos_login(id_usuario, session.pop("login_next", None))
     return redirect(destino)
 
 
