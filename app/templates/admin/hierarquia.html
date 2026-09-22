@@ -57,7 +57,7 @@
           <span class="admin-group__name">{{ u.nome }}</span>
           <span class="admin-group__email">{{ u.email }}</span>
         </span>
-        <span class="admin-group__action" style="display: flex; gap: 8px;">
+        <span class="admin-group__action admin-group__action--duplo">
           <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/promover">
             <button type="submit" class="admin-btn-primary">Promover a admin</button>
           </form>

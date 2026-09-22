@@ -2013,6 +2013,24 @@ h1, h2, h3 {
 }
 .admin-group__action { flex: 0 0 auto; }
 .admin-group__action form { margin: 0; }
+.admin-group__action--duplo { display: flex; gap: 8px; }
+
+/* No celular a linha (avatar + nome/e-mail + botões) não tinha como
+   encolher e os 2 botões do cliente ("Promover a admin" + "Apagar")
+   estouravam a largura da tela -- achado real, usuário reportou a aba de
+   Hierarquia especificamente "bugada" no celular mesmo já com o resto do
+   admin corrigido. Quebra em duas linhas: dados em cima, ações embaixo. */
+@media (max-width: 480px) {
+  .admin-group__row { flex-wrap: wrap; }
+  .admin-group__action {
+    flex: 1 1 100%;
+    margin-top: 8px;
+  }
+  .admin-group__action form { width: 100%; }
+  .admin-group__action .admin-btn-primary,
+  .admin-group__action .admin-btn-outline { width: 100%; }
+  .admin-group__action--duplo form { flex: 1; width: auto; }
+}
 
 /* -------------------- eventos: cards de lote -------------------- */
 
