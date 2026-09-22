@@ -6,6 +6,12 @@ services:
     buildCommand: "pip install -r requirements.txt"
     startCommand: "cd app && gunicorn app:app"
     envVars:
+      # O runtime Python padrão do Render virou a 3.14, e o psycopg2-binary
+      # 2.9.9 não tem wheel compilado pra ela ainda (ImportError: undefined
+      # symbol _PyInterpreterState_Get ao importar). Trava numa versão
+      # estável com suporte garantido.
+      - key: PYTHON_VERSION
+        value: "3.12.7"
       # Já existe um Postgres criado manualmente no Render com os dados reais
       # (evento, hierarquia do admin, pedido de teste) -- por isso não tem
       # bloco `databases:` provisionando um banco novo aqui. Cole a mesma
