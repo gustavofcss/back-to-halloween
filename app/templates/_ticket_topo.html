@@ -18,9 +18,15 @@
 
 {% if usuario %}
 <div class="ticket__holder">
-  <p class="ticket__holder-name">{{ usuario.nome }}</p>
+  <p class="ticket__holder-name">{{ usuario.nome }}{% if pedido.acompanhante_nome %} <span class="ticket__holder-tag">(ingresso 1)</span>{% endif %}</p>
   {% if pedido.rg %}<p class="ticket__holder-rg">RG {{ pedido.rg }}</p>{% endif %}
 </div>
+{% if pedido.acompanhante_nome %}
+<div class="ticket__holder">
+  <p class="ticket__holder-name">{{ pedido.acompanhante_nome }} <span class="ticket__holder-tag">(ingresso 2)</span></p>
+  {% if pedido.acompanhante_rg %}<p class="ticket__holder-rg">RG {{ pedido.acompanhante_rg }}</p>{% endif %}
+</div>
+{% endif %}
 {% endif %}
 
 <div class="ticket__perforation"></div>

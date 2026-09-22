@@ -43,6 +43,9 @@
       {% endif %}
 
       <form method="post" action="/comprar" id="comprar-form">
+        {% if max_permitido > 1 %}
+        <p class="buy-section-label">Ingresso 1 (você)</p>
+        {% endif %}
         <div class="field">
           <label>Nome</label>
           <input value="{{ usuario.nome }}" disabled>
@@ -73,6 +76,31 @@
         </div>
         <input type="hidden" id="quantidade" name="quantidade" value="1">
 
+        {% if max_permitido > 1 %}
+        <div id="acompanhante-fields" style="display: none;">
+          <p class="buy-section-label">Ingresso 2 (acompanhante)</p>
+          <p class="help-text" style="margin-top: -8px;">
+            Pode ser pra outra pessoa -- preenche os dados de quem vai usar esse ingresso.
+          </p>
+          <div class="field">
+            <label for="acompanhante_nome">Nome do acompanhante</label>
+            <input id="acompanhante_nome" name="acompanhante_nome" placeholder="Nome completo">
+          </div>
+          <div class="field">
+            <label for="acompanhante_email">E-mail do acompanhante</label>
+            <input id="acompanhante_email" name="acompanhante_email" type="email" placeholder="acompanhante@email.com">
+          </div>
+          <div class="field">
+            <label for="acompanhante_rg">RG do acompanhante</label>
+            <input id="acompanhante_rg" name="acompanhante_rg" placeholder="00.000.000-0">
+          </div>
+          <div class="field">
+            <label for="acompanhante_whatsapp">WhatsApp do acompanhante</label>
+            <input id="acompanhante_whatsapp" name="acompanhante_whatsapp" placeholder="(00) 00000-0000">
+          </div>
+        </div>
+        {% endif %}
+
         <button type="submit" class="btn-primary">Continuar &middot; R$ <span id="total-display">{{ evento.valor_entrada }}</span></button>
       </form>
 
@@ -89,10 +117,20 @@
           var totalDisplay = document.getElementById('total-display');
           var dec = document.getElementById('qty-dec');
           var inc = document.getElementById('qty-inc');
+          var acompanhanteBox = document.getElementById('acompanhante-fields');
+          var acompanhanteInputs = acompanhanteBox ? acompanhanteBox.querySelectorAll('input') : [];
 
           function render() {
             display.textContent = input.value;
             totalDisplay.textContent = (price * parseInt(input.value, 10)).toFixed(2);
+            if (acompanhanteBox) {
+              var precisa = parseInt(input.value, 10) === 2;
+              acompanhanteBox.style.display = precisa ? 'block' : 'none';
+              acompanhanteInputs.forEach(function (campo) {
+                if (precisa) { campo.setAttribute('required', 'required'); }
+                else { campo.removeAttribute('required'); }
+              });
+            }
           }
           dec.addEventListener('click', function () {
             input.value = Math.max(1, parseInt(input.value, 10) - 1);

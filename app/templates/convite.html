@@ -115,7 +115,7 @@
 
     <div class="info-panel-inner">
       <p class="info-date">{{ data_formatada or "Data a definir" }}</p>
-      <p class="info-place">Rua das Aboboras, 1956, 98,<br>Coqueiral &ndash; Salem</p>
+      <p class="info-place">Rua Mário Bhering, 171<br>Tamarineira</p>
       <p class="info-dress">Traje a rigor: quanto mais assustador, melhor. Vagas limitadas.</p>
 
       <a class="cta-button" href="{% if not usuario %}/login?next=/comprar{% elif usuario.hierarquia == 'adm' %}/admin{% elif tem_pedido %}/meus-pedidos{% else %}/comprar{% endif %}">

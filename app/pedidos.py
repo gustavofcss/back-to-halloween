@@ -8,7 +8,7 @@ from flask import Blueprint, abort, jsonify, redirect, render_template, request,
 
 import config
 import db
-from auth import current_user, login_required
+from auth import EMAIL_RE, current_user, login_required
 from email_utils import enviar_confirmacao_pedido
 
 pedidos_bp = Blueprint("pedidos", __name__)
@@ -101,6 +101,7 @@ def comprar():
 
             vagas_restantes_atual = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)
 
+            erro = None
             if (
                 not rg
                 or not whatsapp
@@ -108,22 +109,48 @@ def comprar():
                 or quantidade > max_permitido
                 or quantidade > vagas_restantes_atual
             ):
+                erro = "Preencha RG, WhatsApp e uma quantidade válida."
+
+            # O 2º ingresso pode ser pra um acompanhante -- não precisa ser
+            # a mesma pessoa logada comprando. Só exige esses dados quando
+            # quantidade = 2; com quantidade = 1 eles ficam NULL mesmo.
+            acompanhante_nome = acompanhante_email = acompanhante_rg = acompanhante_whatsapp = None
+            if not erro and quantidade == 2:
+                acompanhante_nome = (request.form.get("acompanhante_nome") or "").strip()
+                acompanhante_email = (request.form.get("acompanhante_email") or "").strip().lower()
+                acompanhante_rg = (request.form.get("acompanhante_rg") or "").strip()
+                acompanhante_whatsapp = (request.form.get("acompanhante_whatsapp") or "").strip()
+                if (
+                    not acompanhante_nome
+                    or not EMAIL_RE.match(acompanhante_email)
+                    or not acompanhante_rg
+                    or not acompanhante_whatsapp
+                ):
+                    erro = "Preencha nome, e-mail, RG e WhatsApp válidos do acompanhante."
+
+            if erro:
                 return render_template(
                     "comprar.html",
                     usuario=usuario,
                     evento=evento,
                     max_permitido=max_permitido,
-                    erro="Preencha RG, WhatsApp e uma quantidade válida.",
+                    erro=erro,
                 ), 400
 
             valor = evento["valor_entrada"] * quantidade
             cur.execute(
                 """
-                INSERT INTO pedido (id_usuario, id_evento, rg, whatsapp, valor, quantidade, status_pedido)
-                VALUES (%s, %s, %s, %s, %s, %s, 'pendente')
+                INSERT INTO pedido (
+                    id_usuario, id_evento, rg, whatsapp, valor, quantidade, status_pedido,
+                    acompanhante_nome, acompanhante_email, acompanhante_rg, acompanhante_whatsapp
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, 'pendente', %s, %s, %s, %s)
                 RETURNING id_pedido
                 """,
-                (usuario["id_usuario"], evento["id_evento"], rg, whatsapp, valor, quantidade),
+                (
+                    usuario["id_usuario"], evento["id_evento"], rg, whatsapp, valor, quantidade,
+                    acompanhante_nome, acompanhante_email, acompanhante_rg, acompanhante_whatsapp,
+                ),
             )
             id_pedido = cur.fetchone()["id_pedido"]
 

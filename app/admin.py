@@ -29,7 +29,7 @@ def pedidos():
             cur.execute(
                 """
                 SELECT p.id_pedido, p.quantidade, p.valor, p.status_pedido, p.data_pedido,
-                       u.nome, u.email
+                       p.acompanhante_nome, u.nome, u.email
                 FROM pedido p
                 JOIN login_usuario u ON u.id_usuario = p.id_usuario
                 ORDER BY p.data_pedido DESC

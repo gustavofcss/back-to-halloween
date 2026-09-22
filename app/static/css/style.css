@@ -571,6 +571,17 @@ h1, h2, h3 {
   color: var(--label-muted);
 }
 
+.buy-section-label {
+  margin: 18px 0 10px;
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--accent-dark);
+  border-top: 1px dashed var(--border-parchment);
+  padding-top: 14px;
+}
+.buy-section-label:first-child { border-top: none; padding-top: 0; margin-top: 0; }
+
 .field input {
   width: 100%;
   box-sizing: border-box;
@@ -901,9 +912,10 @@ h1, h2, h3 {
   color: var(--accent-dark);
 }
 .ticket__holder {
-  padding: 0 26px 20px;
+  padding: 0 26px 14px;
   margin-top: -6px;
 }
+.ticket__holder + .ticket__holder { margin-top: 0; }
 .ticket__holder-name {
   margin: 0;
   font-weight: 700;
@@ -913,6 +925,13 @@ h1, h2, h3 {
 .ticket__holder-rg {
   margin: 2px 0 0;
   font-size: 12px;
+  color: var(--ink-muted);
+}
+.ticket__holder-tag {
+  font-size: 10.5px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .04em;
   color: var(--ink-muted);
 }
 .ticket__perforation {
@@ -2099,6 +2118,55 @@ h1, h2, h3 {
 }
 
 @media (max-width: 860px) {
-  .admin-shell { flex-direction: column; flex-wrap: nowrap; }
-  .admin-sidebar { position: static; width: 100%; flex: 1 1 auto; }
+  .admin-shell { flex-direction: column; flex-wrap: nowrap; padding: 12px; gap: 12px; }
+  /* .admin-shell tem align-items: flex-start (pro desktop, onde a sidebar
+     não deve esticar em altura) -- mas em flex-direction: column isso faz
+     os filhos encolherem pro tamanho do CONTEÚDO em vez da largura da tela,
+     que é o que causava a bagunça/desalinhamento no celular (achado real).
+     Força largura cheia nos dois blocos. */
+  .admin-sidebar,
+  .admin-main {
+    width: 100%;
+    flex: 1 1 auto;
+  }
+  .admin-sidebar {
+    position: static;
+    min-width: 0;
+    padding: 12px 14px;
+    border-radius: 18px;
+  }
+
+  /* Sidebar inteira empilhada (marca + menu vertical + usuário + sair)
+     ocupava a tela toda antes do conteúdo aparecer -- vira uma barra
+     compacta: marca sem subtítulo, menu em linha horizontal com scroll,
+     usuário/sair encolhidos. */
+  .admin-sidebar__brand { padding: 0 2px 10px; }
+  .admin-sidebar__brand-tag { display: none; }
+  .admin-sidebar__section-label { display: none; }
+  .admin-nav {
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    gap: 6px;
+    padding-bottom: 2px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .admin-nav__item {
+    flex: 0 0 auto;
+    width: auto;
+    white-space: nowrap;
+    padding: 9px 13px;
+  }
+  .admin-nav__dot { display: none; }
+  .admin-sidebar__user { margin-top: 12px; padding-top: 12px; }
+  .admin-sidebar__user-role { display: none; }
+  .admin-sidebar__logout { margin-top: 8px !important; }
+
+  .admin-header { padding: 14px 16px; }
+  .admin-header__title { font-size: 20px; }
+  .admin-kpis { grid-template-columns: 1fr 1fr; }
+}
+
+@media (max-width: 480px) {
+  .admin-kpis { grid-template-columns: 1fr; }
 }

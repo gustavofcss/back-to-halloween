@@ -58,7 +58,7 @@
       {% for p in pedidos %}
         <tr>
           <td>#{{ p.id_pedido }}</td>
-          <td>{{ p.nome }}</td>
+          <td>{{ p.nome }}{% if p.acompanhante_nome %}<br><span class="help-text" style="margin:0;">+ {{ p.acompanhante_nome }}</span>{% endif %}</td>
           <td>{{ p.email }}</td>
           <td>{{ p.quantidade }}</td>
           <td>R$ {{ p.valor }}</td>

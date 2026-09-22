@@ -52,10 +52,28 @@ def _enviar(destinatario: str, assunto: str, corpo: str, corpo_html: str | None 
     resposta.raise_for_status()
 
 
-def _ticket_html(pedido) -> str:
+def _ticket_html(pedido, nome_titular: str) -> str:
     # Mesmas cores/estrutura do "ingresso" mostrado na tela de pagamento
     # (ver .ticket* em style.css), só que com estilo inline -- cliente de
     # e-mail não carrega arquivo .css externo nem @font-face.
+    titulares_html = (
+        f'<p style="margin:0;font-weight:bold;font-size:14px;">{nome_titular} '
+        '<span style="font-size:10.5px;font-weight:600;text-transform:uppercase;'
+        f'color:#7a6a56;">(ingresso 1)</span></p>'
+        + (f'<p style="margin:2px 0 0;font-size:12px;color:#7a6a56;">RG {pedido["rg"]}</p>' if pedido.get("rg") else "")
+    )
+    if pedido.get("acompanhante_nome"):
+        titulares_html += (
+            f'<p style="margin:10px 0 0;font-weight:bold;font-size:14px;">{pedido["acompanhante_nome"]} '
+            '<span style="font-size:10.5px;font-weight:600;text-transform:uppercase;'
+            'color:#7a6a56;">(ingresso 2)</span></p>'
+            + (
+                f'<p style="margin:2px 0 0;font-size:12px;color:#7a6a56;">RG {pedido["acompanhante_rg"]}</p>'
+                if pedido.get("acompanhante_rg")
+                else ""
+            )
+        )
+
     return f"""
     <div style="max-width:420px;margin:20px auto;border-radius:16px;overflow:hidden;
                 background:linear-gradient(170deg,#fbf3e3 0%,#f3e7cf 100%);
@@ -74,6 +92,9 @@ def _ticket_html(pedido) -> str:
           <p style="margin:0;font-size:13px;color:#7a6a56;">Pedido #{pedido['id_pedido']}</p>
         </div>
         <p style="margin:0;font-weight:bold;font-size:28px;color:#e1690f;">R$ {pedido['valor']}</p>
+      </div>
+      <div style="padding:0 26px 20px;">
+        {titulares_html}
       </div>
       <div style="border-top:2px dashed #d8c7a3;margin:0 26px;"></div>
       <div style="padding:20px 26px 26px;">
@@ -102,12 +123,17 @@ def enviar_confirmacao_pedido(destinatario: str, nome: str, pedido) -> None:
         "Horror Night Party:\n\n"
         f"Pedido #{pedido['id_pedido']} — {pedido['quantidade']} ingresso(s) — "
         f"R$ {pedido['valor']}\n\n"
-        "Nos vemos na noite mais assustadora do ano!"
+        + (
+            f"Ingresso 2 pra {pedido['acompanhante_nome']}.\n\n"
+            if pedido.get("acompanhante_nome")
+            else ""
+        )
+        + "Nos vemos na noite mais assustadora do ano!"
     )
     corpo_html = (
         f"<p>Oi, {nome}! \U0001f383</p>"
         "<p>Seu pagamento foi confirmado! Seu ingresso pra Horror Night Party:</p>"
-        f"{_ticket_html(pedido)}"
+        f"{_ticket_html(pedido, nome)}"
         "<p>Nos vemos na noite mais assustadora do ano!</p>"
     )
     _enviar(
