@@ -11,11 +11,10 @@ que renderizam página continuam HTML normal, sem exigir o header."""
 from __future__ import annotations
 
 import logging
-import os
 from functools import wraps
 from urllib.parse import urlsplit
 
-from flask import Blueprint, abort, flash, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, abort, jsonify, redirect, render_template, request, session, url_for
 
 import db
 from auth import admin_required, current_user
@@ -886,25 +885,3 @@ def eventos_capacidade():
                     (capacidade_maxima, ultimo["id_evento"]),
                 )
     return redirect(url_for("admin.eventos"))
-
-
-@admin_bp.route("/_sincronizar-schema", methods=["POST"])
-@admin_required
-def sincronizar_schema():
-    # Esse projeto não tem migração automática -- toda mudança de schema
-    # precisa ser aplicada manualmente contra o banco (normalmente via psql
-    # direto). Só que a porta 5432 do Postgres do Render às vezes fica
-    # inacessível da rede/máquina local (achado real, aconteceu de novo
-    # nesta sessão), enquanto o próprio app rodando no Render sempre
-    # consegue falar com o banco dele. Essa rota deixa aplicar o
-    # schema.sql (tudo lá é IF NOT EXISTS/ADD COLUMN IF NOT EXISTS, então
-    # rodar de novo é seguro) só visitando essa URL uma vez, sem precisar
-    # de conexão direta.
-    caminho_schema = os.path.join(os.path.dirname(__file__), "schema.sql")
-    with open(caminho_schema, encoding="utf-8") as f:
-        sql = f.read()
-    with db.get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(sql)
-    flash("Schema sincronizado com sucesso.")
-    return redirect(url_for("admin.index"))
