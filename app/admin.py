@@ -415,6 +415,41 @@ def pedido_apagar(id_pedido: int):
     )
 
 
+@admin_bp.route("/pedidos/apagar-lote", methods=["POST"])
+@admin_required
+@_exigir_ajax
+def pedidos_apagar_lote():
+    # Existia apagar em lote pra hierarquia/cadastros mas não pra pedidos --
+    # o botão "Apagar selecionados" nunca chegou a existir na barra de lote
+    # de Pedidos (achado real, usuário reportou: marcava "selecionar todos"
+    # e só tinha Confirmar/Cancelar, sem jeito de apagar os cancelados de
+    # uma vez). Mesma guarda do single: só apaga quem já está cancelado.
+    ids = _ids_do_body()
+    if ids is None:
+        return _json_err("Lista de ids inválida.", "regra", 400)
+
+    elegiveis_ids: list[int] = []
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            if ids:
+                cur.execute(
+                    "DELETE FROM pedido WHERE id_pedido = ANY(%s) AND status_pedido = 'cancelado' "
+                    "RETURNING id_pedido",
+                    (ids,),
+                )
+                elegiveis_ids = [r["id_pedido"] for r in cur.fetchall()]
+            totais = _totais_pedidos(cur)
+
+    elegiveis_set = set(elegiveis_ids)
+    aplicados = [{"id": i} for i in ids if i in elegiveis_set]
+    ignorados = [
+        {"id": i, "motivo": "Só é possível apagar pedidos cancelados."}
+        for i in ids
+        if i not in elegiveis_set
+    ]
+    return _json_ok(aplicados=aplicados, ignorados=ignorados, totais=totais)
+
+
 @admin_bp.route("/hierarquia")
 @admin_required
 def hierarquia():
