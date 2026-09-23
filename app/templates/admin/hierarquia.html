@@ -23,20 +23,22 @@
     <div class="admin-group__list">
       {% for u in admins %}
       <div class="admin-group__row" data-row-id="{{ u.id_usuario }}">
-        <span class="admin-group__avatar">{{ initials(u.nome) }}</span>
-        <span class="admin-group__info">
-          <span class="admin-group__name">{{ u.nome }}</span>
-          <span class="admin-group__email">{{ u.email }}</span>
-        </span>
-        <span class="admin-group__action">
-          {% if eu and u.id_usuario != eu.id_usuario %}
-          <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/rebaixar" class="admin-ajax-form">
-            <button type="submit" class="admin-btn-outline">Rebaixar pra cliente</button>
-          </form>
-          {% else %}
-          <span class="help-text" style="margin: 0;">você</span>
-          {% endif %}
-        </span>
+        <div class="admin-group__row-inner">
+          <span class="admin-group__avatar">{{ initials(u.nome) }}</span>
+          <span class="admin-group__info">
+            <span class="admin-group__name">{{ u.nome }}</span>
+            <span class="admin-group__email">{{ u.email }}</span>
+          </span>
+          <span class="admin-group__action">
+            {% if eu and u.id_usuario != eu.id_usuario %}
+            <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/rebaixar" class="admin-ajax-form">
+              <button type="submit" class="admin-btn-outline">Rebaixar pra cliente</button>
+            </form>
+            {% else %}
+            <span class="help-text" style="margin: 0;">você</span>
+            {% endif %}
+          </span>
+        </div>
       </div>
       {% else %}
       <p class="help-text" style="margin: 14px 4px 4px;">Nenhum administrador cadastrado.</p>
@@ -65,16 +67,18 @@
       <div class="admin-group__list">
         {% for u in clientes %}
         <div class="admin-group__row" data-row-id="{{ u.id_usuario }}">
-          <input type="checkbox" name="ids" value="{{ u.id_usuario }}" class="clientes-check-item" aria-label="Selecionar {{ u.nome }}">
-          <span class="admin-group__avatar">{{ initials(u.nome) }}</span>
-          <span class="admin-group__info">
-            <span class="admin-group__name">{{ u.nome }}</span>
-            <span class="admin-group__email">{{ u.email }}</span>
-          </span>
-          <span class="admin-group__action admin-group__action--duplo">
-            <button type="submit" formaction="/admin/hierarquia/{{ u.id_usuario }}/promover" class="admin-btn-primary">Promover a admin</button>
-            <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/{{ u.id_usuario }}/remover', 'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.')">Apagar</button>
-          </span>
+          <div class="admin-group__row-inner">
+            <input type="checkbox" name="ids" value="{{ u.id_usuario }}" class="clientes-check-item" aria-label="Selecionar {{ u.nome }}">
+            <span class="admin-group__avatar">{{ initials(u.nome) }}</span>
+            <span class="admin-group__info">
+              <span class="admin-group__name">{{ u.nome }}</span>
+              <span class="admin-group__email">{{ u.email }}</span>
+            </span>
+            <span class="admin-group__action admin-group__action--duplo">
+              <button type="submit" formaction="/admin/hierarquia/{{ u.id_usuario }}/promover" class="admin-btn-primary">Promover a admin</button>
+              <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/{{ u.id_usuario }}/remover', 'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.')">Apagar</button>
+            </span>
+          </div>
         </div>
         {% endfor %}
       </div>
@@ -106,10 +110,14 @@
     if (!checkAll || !itens.length) { return; }
 
     function atualizar() {
+      // Total ao vivo, não itens.length (capturado uma vez no load) -- depois
+      // que promover/remover tira uma linha via admin:sucesso, o total real
+      // de caixinhas cai, mas itens.length continua com a antiga.
+      var total = document.querySelectorAll('.clientes-check-item').length;
       var marcados = document.querySelectorAll('.clientes-check-item:checked').length;
       bar.classList.toggle('admin-bulk-bar--visivel', marcados > 0);
       contagem.textContent = marcados + ' selecionado(s)';
-      checkAll.checked = marcados === itens.length;
+      checkAll.checked = total > 0 && marcados === total;
     }
     checkAll.addEventListener('change', function () {
       itens.forEach(function (item) { item.checked = checkAll.checked; });

@@ -111,10 +111,16 @@
     if (!checkAll || !itens.length) { return; }
 
     function atualizar() {
+      // Recalcula o total AO VIVO (não usa itens.length, capturado uma vez
+      // no load) -- depois que "Apagar" remove uma linha do DOM (via
+      // admin:sucesso), o total de caixinhas realmente presentes cai, mas
+      // itens.length continua contando a linha já removida. Sem isso,
+      // "Selecionar todos" nunca mais fica marcado depois do primeiro apagar.
+      var total = document.querySelectorAll('.pedidos-check-item').length;
       var marcados = document.querySelectorAll('.pedidos-check-item:checked').length;
       bar.classList.toggle('admin-bulk-bar--visivel', marcados > 0);
       contagem.textContent = marcados + ' selecionado(s)';
-      checkAll.checked = marcados === itens.length;
+      checkAll.checked = total > 0 && marcados === total;
     }
     checkAll.addEventListener('change', function () {
       itens.forEach(function (item) { item.checked = checkAll.checked; });

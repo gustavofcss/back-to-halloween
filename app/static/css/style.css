@@ -2035,9 +2035,6 @@ h1, h2, h3 {
   padding: 14px 4px 4px;
 }
 .admin-group__row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
   background: var(--a-cream-soft);
   border-radius: 14px;
   padding: 10px 12px;
@@ -2048,8 +2045,18 @@ h1, h2, h3 {
      certo no celular mas continuava sobrepondo avatar/nome/e-mail com os
      botões em larguras de desktop intermediárias (a mesma coluna do grid
      podia ficar tão estreita quanto uma tela de celular). Consultando a
-     largura da própria linha resolve os dois casos com uma regra só. */
+     largura da própria linha resolve os dois casos com uma regra só.
+     Um elemento não pode ser alvo de @container pelo container-type que
+     ELE MESMO declara -- só descendentes dele podem ser consultados. Por
+     isso o flex fica num wrapper interno (.admin-group__row-inner), e é
+     esse wrapper (descendente de .admin-group__row) que o @container
+     abaixo consegue de fato estilizar. */
   container-type: inline-size;
+}
+.admin-group__row-inner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 .admin-group__avatar {
   width: 32px;
@@ -2092,7 +2099,7 @@ h1, h2, h3 {
    ajuste anterior que só cobria <480px de viewport). Empilha em duas
    linhas: dados em cima, ações embaixo, ambas cabendo na própria linha. */
 @container (max-width: 480px) {
-  .admin-group__row { flex-wrap: wrap; }
+  .admin-group__row-inner { flex-wrap: wrap; }
   .admin-group__action {
     flex: 1 1 100%;
     margin-top: 8px;

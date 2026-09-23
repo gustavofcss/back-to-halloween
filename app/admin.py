@@ -72,7 +72,12 @@ def _exigir_ajax(view_func):
 
 
 def _ids_do_body() -> list[int] | None:
-    corpo = request.get_json(silent=True) or {}
+    corpo = request.get_json(silent=True)
+    if not isinstance(corpo, dict):
+        # corpo pode vir None (JSON ausente/inválido) ou um JSON válido que
+        # não é um objeto (lista, número, string...) -- nesses dois casos
+        # `.get("ids")` estouraria AttributeError antes desta checagem.
+        return None
     ids = corpo.get("ids")
     if not isinstance(ids, list):
         return None
@@ -237,12 +242,17 @@ def pedido_confirmar(id_pedido: int):
             if not pedido:
                 abort(404)
 
-            mudou = pedido["status_pedido"] != "confirmado"
-            if mudou:
-                cur.execute(
-                    "UPDATE pedido SET status_pedido = 'confirmado' WHERE id_pedido = %s",
-                    (id_pedido,),
-                )
+            # UPDATE com guarda no WHERE + rowcount (não o booleano lido no
+            # SELECT acima) -- mesma race que as rotas em lote corrigiam via
+            # RETURNING: sem a guarda aqui, dois admins confirmando o mesmo
+            # pedido ao mesmo tempo fariam os dois UPDATEs "sem condição"
+            # rodarem e os dois mandarem e-mail de confirmação duplicado.
+            cur.execute(
+                "UPDATE pedido SET status_pedido = 'confirmado' "
+                "WHERE id_pedido = %s AND status_pedido != 'confirmado'",
+                (id_pedido,),
+            )
+            mudou = cur.rowcount > 0
             totais = _totais_pedidos(cur)
 
     if not mudou:
@@ -309,9 +319,18 @@ def pedidos_confirmar_lote():
                 elegiveis = [p for p in encontrados.values() if p["status_pedido"] != "confirmado"]
                 if elegiveis:
                     cur.execute(
-                        "UPDATE pedido SET status_pedido = 'confirmado' WHERE id_pedido = ANY(%s)",
+                        "UPDATE pedido SET status_pedido = 'confirmado' "
+                        "WHERE id_pedido = ANY(%s) AND status_pedido != 'confirmado' "
+                        "RETURNING id_pedido",
                         ([p["id_pedido"] for p in elegiveis],),
                     )
+                    # Confere quem foi REALMENTE atualizado -- não quem tinha
+                    # sido considerado elegível no SELECT de alguns instantes
+                    # atrás. Sem isso, um pedido cancelado/confirmado por
+                    # outro admin bem no meio dessa janela entraria em
+                    # "aplicados" e receberia e-mail mesmo sem ter mudado.
+                    confirmados_ids = {r["id_pedido"] for r in cur.fetchall()}
+                    elegiveis = [p for p in elegiveis if p["id_pedido"] in confirmados_ids]
             totais = _totais_pedidos(cur)
 
     elegiveis_ids = {p["id_pedido"] for p in elegiveis}
@@ -350,16 +369,18 @@ def pedidos_cancelar_lote():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             if ids:
+                # UPDATE...RETURNING numa tacada só (em vez de SELECT elegíveis
+                # + UPDATE em dois passos): elimina a janela em que outro admin
+                # poderia mudar o status do pedido entre a checagem e a
+                # mutação, o que faria "aplicados" mentir sobre o que de fato
+                # aconteceu no banco.
                 cur.execute(
-                    "SELECT id_pedido FROM pedido WHERE id_pedido = ANY(%s) AND status_pedido != 'cancelado'",
+                    "UPDATE pedido SET status_pedido = 'cancelado' "
+                    "WHERE id_pedido = ANY(%s) AND status_pedido != 'cancelado' "
+                    "RETURNING id_pedido",
                     (ids,),
                 )
                 elegiveis_ids = [r["id_pedido"] for r in cur.fetchall()]
-                if elegiveis_ids:
-                    cur.execute(
-                        "UPDATE pedido SET status_pedido = 'cancelado' WHERE id_pedido = ANY(%s)",
-                        (elegiveis_ids,),
-                    )
             totais = _totais_pedidos(cur)
 
     elegiveis_set = set(elegiveis_ids)
@@ -482,16 +503,16 @@ def hierarquia_promover_lote():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             if ids:
+                # UPDATE...RETURNING direto (sem SELECT elegíveis + UPDATE em
+                # dois passos): fecha a janela em que outro admin poderia
+                # promover a mesma pessoa entre a checagem e a mutação.
                 cur.execute(
-                    "SELECT id_usuario FROM hierarquia WHERE id_usuario = ANY(%s) AND hierarquia != 'adm'",
+                    "UPDATE hierarquia SET hierarquia = 'adm' "
+                    "WHERE id_usuario = ANY(%s) AND hierarquia != 'adm' "
+                    "RETURNING id_usuario",
                     (ids,),
                 )
                 elegiveis_ids = [r["id_usuario"] for r in cur.fetchall()]
-                if elegiveis_ids:
-                    cur.execute(
-                        "UPDATE hierarquia SET hierarquia = 'adm' WHERE id_usuario = ANY(%s)",
-                        (elegiveis_ids,),
-                    )
             totais = _totais_hierarquia(cur)
 
     elegiveis_set = set(elegiveis_ids)
@@ -516,17 +537,21 @@ def hierarquia_remover_lote():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             if candidatos:
+                # DELETE...RETURNING direto: a checagem "hierarquia = cliente"
+                # já vinha embutida no próprio DELETE, mas "aplicados" antes
+                # era montado a partir de um SELECT feito ANTES do DELETE --
+                # se alguém promovesse um desses ids a admin bem nessa janela,
+                # o DELETE (corretamente) não apagava, mas a resposta ainda
+                # dizia "apagado". Usar as linhas que o próprio DELETE
+                # devolve garante que "aplicados" reflete o que aconteceu de
+                # verdade no banco.
                 cur.execute(
-                    "SELECT id_usuario FROM hierarquia WHERE id_usuario = ANY(%s) AND hierarquia = 'cliente'",
+                    "DELETE FROM login_usuario WHERE id_usuario = ANY(%s) AND id_usuario IN "
+                    "(SELECT id_usuario FROM hierarquia WHERE hierarquia = 'cliente') "
+                    "RETURNING id_usuario",
                     (candidatos,),
                 )
                 elegiveis_ids = [r["id_usuario"] for r in cur.fetchall()]
-                if elegiveis_ids:
-                    cur.execute(
-                        "DELETE FROM login_usuario WHERE id_usuario = ANY(%s) AND id_usuario IN "
-                        "(SELECT id_usuario FROM hierarquia WHERE hierarquia = 'cliente')",
-                        (elegiveis_ids,),
-                    )
             totais = _totais_hierarquia(cur)
 
     elegiveis_set = set(elegiveis_ids)
@@ -554,17 +579,18 @@ def cadastros():
 def cadastro_confirmar(id_usuario: int):
     with db.get_conn() as conn:
         with conn.cursor() as cur:
+            # UPDATE...RETURNING direto (em vez de SELECT + UPDATE em dois
+            # passos): fecha a mesma race que as rotas em lote corrigiam --
+            # sem a guarda "email_confirmado = FALSE" no WHERE, dois admins
+            # confirmando o mesmo cadastro ao mesmo tempo mandariam os dois
+            # e-mail de "cadastro aprovado" duplicado.
             cur.execute(
-                "SELECT nome, email FROM login_usuario WHERE id_usuario = %s AND email_confirmado = FALSE",
+                "UPDATE login_usuario SET email_confirmado = TRUE, data_atualizacao = now() "
+                "WHERE id_usuario = %s AND email_confirmado = FALSE "
+                "RETURNING nome, email",
                 (id_usuario,),
             )
             usuario = cur.fetchone()
-            if usuario:
-                cur.execute(
-                    "UPDATE login_usuario SET email_confirmado = TRUE, data_atualizacao = now() "
-                    "WHERE id_usuario = %s",
-                    (id_usuario,),
-                )
             totais = _totais_cadastros(cur)
 
     if not usuario:
@@ -616,18 +642,17 @@ def cadastros_confirmar_lote():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             if ids:
+                # UPDATE...RETURNING direto (dá pra buscar nome/email da
+                # própria linha atualizada, sem SELECT em separado): fecha a
+                # janela em que outro admin poderia confirmar o mesmo
+                # cadastro entre a checagem e a mutação.
                 cur.execute(
-                    "SELECT id_usuario, nome, email FROM login_usuario "
-                    "WHERE id_usuario = ANY(%s) AND email_confirmado = FALSE",
+                    "UPDATE login_usuario SET email_confirmado = TRUE, data_atualizacao = now() "
+                    "WHERE id_usuario = ANY(%s) AND email_confirmado = FALSE "
+                    "RETURNING id_usuario, nome, email",
                     (ids,),
                 )
                 elegiveis = cur.fetchall()
-                if elegiveis:
-                    cur.execute(
-                        "UPDATE login_usuario SET email_confirmado = TRUE, data_atualizacao = now() "
-                        "WHERE id_usuario = ANY(%s)",
-                        ([u["id_usuario"] for u in elegiveis],),
-                    )
             totais = _totais_cadastros(cur)
 
     elegiveis_set = {u["id_usuario"] for u in elegiveis}
@@ -660,16 +685,15 @@ def cadastros_recusar_lote():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             if ids:
+                # DELETE...RETURNING direto: fecha a janela em que outro
+                # admin poderia confirmar o cadastro entre a checagem e a
+                # mutação (o que faria "aplicados" mentir sobre o apagado).
                 cur.execute(
-                    "SELECT id_usuario FROM login_usuario WHERE id_usuario = ANY(%s) AND email_confirmado = FALSE",
+                    "DELETE FROM login_usuario WHERE id_usuario = ANY(%s) AND email_confirmado = FALSE "
+                    "RETURNING id_usuario",
                     (ids,),
                 )
                 elegiveis_ids = [r["id_usuario"] for r in cur.fetchall()]
-                if elegiveis_ids:
-                    cur.execute(
-                        "DELETE FROM login_usuario WHERE id_usuario = ANY(%s) AND email_confirmado = FALSE",
-                        (elegiveis_ids,),
-                    )
             totais = _totais_cadastros(cur)
 
     elegiveis_set = set(elegiveis_ids)

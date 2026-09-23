@@ -147,3 +147,65 @@ Decisões tomadas nesse passe, pra quem for mexer depois:
   mais arriscado de toda a mudança) e o handler de 500. Os caminhos que
   dependem de admin autenticado (403 proibido, 400 sem header, as próprias
   queries) foram revisados por leitura, não exercitados de ponta a ponta.
+
+## QA funcional (2026-09-23) -- passe de verificação em runtime
+
+Sem Postgres disponível nesta sessão também. Cobertura obtida:
+
+- **Import + registro de rotas**: `import app` limpo com `DATABASE_URL`/
+  `SECRET_KEY` fake; as 20 rotas de `/admin/*` registram sem erro.
+- **Flask test client, caminhos que não tocam o banco** (via
+  `auth.current_user` mockado pra pular a query de admin_required, já que
+  não há Postgres pra autenticar de verdade):
+  - GET anônimo nas 6 páginas do admin -> 302 pro login. OK.
+  - POST anônimo + `X-Requested-With` nas 15 rotas de mutação -> 401 JSON
+    `codigo: auth` + `login_url`. OK -- é o mecanismo mais arriscado da
+    fase anterior (`after_request` reescrevendo redirect em 401) e
+    funciona nas 15 rotas, não só numa amostra.
+  - POST anônimo SEM o header -> 302 clássico (não veio 401, correto --
+    o `after_request` só reescreve request AJAX).
+  - GET de página (não mutação) com header AJAX, anônimo -> também vira
+    401 JSON (o `after_request` é blueprint-wide, não só nas rotas com
+    `@_exigir_ajax`). Comportamento correto, verificado.
+  - 403 (autenticado, hierarquia cliente) e 400 sem header (autenticado
+    admin) -> corretos, com `auth.current_user` mockado.
+  - Guardas de auto-rebaixar/auto-apagar em `/hierarquia/<id>/rebaixar` e
+    `/remover` -> 400 `regra`, checados via `session["user_id"]` (sem
+    tocar banco). OK.
+  - Corpo malformado nas 6 rotas `*-lote` (JSON inválido, lista solta,
+    `ids` ausente, `ids` não-lista, itens não-numéricos, corpo vazio) ->
+    400 `codigo: regra` nas 6 rotas x 6 variações = 36 combinações, todas
+    OK, nenhuma vazou 500.
+  - **Achado sem severidade de bug**: `_ids_do_body` usa `int(i)` em cada
+    item de `ids` -- um float tipo `2.5` NÃO dá erro, vira `2` (trunca
+    silenciosamente, é o comportamento built-in de `int()`). Não é
+    alcançável pela UI real (os checkboxes sempre mandam
+    `parseInt(cb.value, 10)` de ids inteiros vindos do banco), documentado
+    aqui só pra quem for endurecer validação de API no futuro.
+- **Rastreamento JS <-> JSON do backend** (leitura cruzada de
+  `admin.py` contra os 4 templates): todos os shapes de `aplicados`
+  (`id` + `status`/`hierarquia` opcional) e todas as chaves de `totais`
+  batem exatamente com o que cada template lê via `data-admin-total` ou
+  `item.status`/`item.id`. Nenhum mismatch de campo encontrado -- a
+  reescrita das rotas em lote pra `UPDATE/DELETE ... RETURNING` (evitar
+  SELECT-then-mutate com janela de corrida) não alterou o formato do
+  envelope.
+- **CSS `@container` da Hierarquia**: `.admin-group__row-inner` no HTML
+  bate exatamente com o seletor usado no `@container (max-width: 480px)`
+  em `style.css` -- confirmado por leitura estrutural cruzada (não dá pra
+  screenshot sem servidor rodando com dado real, mas a estrutura de
+  aninhamento e as classes batem 1:1, então a regra não é um no-op
+  silencioso).
+- **Bug real encontrado e corrigido**: em `pedidos.html`, `cadastros.html`
+  e `hierarquia.html`, o contador "Selecionar todos" comparava
+  `marcados === itens.length`, onde `itens` é um `NodeList` estático
+  capturado UMA VEZ no load da página. Depois que `admin:sucesso` remove
+  uma linha do DOM (apagar pedido cancelado, confirmar/recusar cadastro,
+  promover/rebaixar/remover hierarquia), `itens.length` não diminui --
+  fica "preso" no total original. Resultado: depois da primeira remoção de
+  linha, "Selecionar todos" nunca mais marca como totalmente selecionado
+  mesmo com todas as caixinhas restantes marcadas (bug cosmético de
+  seleção múltipla, não afeta os dados enviados ao servidor). Corrigido
+  recalculando o total ao vivo via `document.querySelectorAll(...).length`
+  dentro de `atualizar()`, nas 3 páginas. Verificado: `node --check` nos
+  3 blocos de script depois da correção, sem erro de sintaxe.

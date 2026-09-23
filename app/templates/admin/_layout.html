@@ -167,13 +167,18 @@
             detail: { actionUrl: actionUrl, dados: dados, form: form }
           }));
 
+          // Os dois avisos são independentes (um lote pode ter itens
+          // ignorados E falha de e-mail ao mesmo tempo) -- concatena em vez
+          // de só mostrar um, senão o aviso de e-mail (que pede ação manual)
+          // podia sumir silenciosamente atrás do aviso de "já estava assim".
+          var partesAviso = [];
           if (dados.ignorados && dados.ignorados.length) {
             var motivos = dados.ignorados.map(function (i) { return i.motivo; });
             var extra = motivos.length > 1 ? ' (+' + (motivos.length - 1) + ')' : '';
-            mostrarToast(motivos[0] + extra, 'aviso');
-          } else if (dados.aviso) {
-            mostrarToast(dados.aviso, 'aviso');
+            partesAviso.push(motivos[0] + extra);
           }
+          if (dados.aviso) { partesAviso.push(dados.aviso); }
+          if (partesAviso.length) { mostrarToast(partesAviso.join(' '), 'aviso'); }
         })
         .catch(function () {
           mostrarToast('Falha de conexão. Verifique sua internet e tente de novo.', 'erro');
