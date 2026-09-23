@@ -873,3 +873,34 @@ def sincronizar_schema():
             cur.execute(sql)
     flash("Schema sincronizado com sucesso.")
     return redirect(url_for("admin.index"))
+
+
+@admin_bp.route("/_pedidos-duplicados")
+@admin_required
+def pedidos_duplicados():
+    # Diagnóstico temporário: o índice novo (ux_pedido_usuario_evento_ativo,
+    # "1 pedido ativo por pessoa por evento") não conseguiu ser criado
+    # porque já existe gente com mais de um pedido ativo pro mesmo evento no
+    # banco -- de antes dessa trava existir. Mostra quem são antes de
+    # qualquer ação (cancelar pedido é dado real de gente de verdade).
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT p.id_pedido, p.id_usuario, p.id_evento, p.quantidade, p.valor,
+                       p.status_pedido, p.data_pedido, p.rg, p.whatsapp,
+                       p.acompanhante_nome, u.nome, u.email
+                FROM pedido p
+                JOIN login_usuario u ON u.id_usuario = p.id_usuario
+                WHERE (p.id_usuario, p.id_evento) IN (
+                    SELECT id_usuario, id_evento
+                    FROM pedido
+                    WHERE status_pedido != 'cancelado'
+                    GROUP BY id_usuario, id_evento
+                    HAVING COUNT(*) > 1
+                )
+                ORDER BY p.id_usuario, p.id_evento, p.data_pedido
+                """
+            )
+            linhas = cur.fetchall()
+    return render_template("admin/pedidos_duplicados.html", linhas=linhas)

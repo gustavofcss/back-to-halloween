@@ -1,0 +1,40 @@
+{% extends "admin/_layout.html" %}
+{% set active_nav = "" %}
+{% block title %}Admin — Pedidos duplicados{% endblock %}
+{% block admin_title %}Pedidos duplicados{% endblock %}
+{% block admin_subtitle %}Diagnóstico temporário -- quem tem mais de um pedido ativo pro mesmo evento{% endblock %}
+{% block admin_body %}
+<section class="admin-panel">
+  {% if linhas %}
+  <div class="admin-table-scroll">
+    <table class="admin-table">
+      <thead>
+        <tr>
+          <th>Pedido</th><th>Usuário</th><th>Nome</th><th>E-mail</th><th>Evento</th>
+          <th>Qtd.</th><th>Valor</th><th>Status</th><th>Data</th><th>RG</th><th>Acompanhante</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for l in linhas %}
+        <tr>
+          <td>#{{ l.id_pedido }}</td>
+          <td>{{ l.id_usuario }}</td>
+          <td>{{ l.nome }}</td>
+          <td>{{ l.email }}</td>
+          <td>{{ l.id_evento }}</td>
+          <td>{{ l.quantidade }}</td>
+          <td>R$ {{ l.valor }}</td>
+          <td>{{ l.status_pedido }}</td>
+          <td>{{ l.data_pedido|data_hora_br }}</td>
+          <td>{{ l.rg or '--' }}</td>
+          <td>{{ l.acompanhante_nome or '--' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <p class="help-text">Nenhum pedido duplicado encontrado.</p>
+  {% endif %}
+</section>
+{% endblock %}
