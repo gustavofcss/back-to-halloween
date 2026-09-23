@@ -14,28 +14,25 @@
 
     <span class="a-nav-label">Operação</span>
     {#
-      Contagem por item (pílula) -- só fica disponível quando a PRÓPRIA
-      página já carrega essa lista (pedidos.html passa `pedidos`,
-      cadastros.html passa `pendentes`, etc; ver app/admin.py). Sem tocar em
-      app/admin.py pra buscar as 5 contagens em toda página (custaria uma
-      conexão/query nova a mais em TODA página do admin só pra preencher
-      pílulas que nem sempre estão olhando pra seção ativa), a pílula some
-      (`is defined` / `none`) nos itens que não são a página atual --
-      simplificação deliberada: só a seção ativa mostra número ao vivo.
+      Contador de cada item vem de nav_counts (injetado em toda página do
+      admin via @admin_bp.context_processor, ver app/admin.py) -- antes só
+      a seção ativa mostrava número, porque cada página só tinha a conta de
+      SI mesma (achado real, usuário queria ver o número mesmo fora da
+      aba). Agora as 5 pílulas aparecem sempre, em qualquer página.
     #}
     {% set admin_nav_items = [
-      ('pedidos', url_for('admin.pedidos'), 'Pedidos', 'deco-pumpkin-new.png', (pedidos|length if pedidos is defined else none)),
-      ('cadastros', url_for('admin.cadastros'), 'Cadastros', 'deco-eye.png', (pendentes|length if pendentes is defined else none)),
-      ('hierarquia', url_for('admin.hierarquia'), 'Hierarquia', 'deco-witch-hat.png', (usuarios|length if usuarios is defined else none)),
-      ('material', url_for('admin.material'), 'Material', 'deco-coffin.png', (materiais|length if materiais is defined else none)),
-      ('eventos', url_for('admin.eventos'), 'Lotes do evento', 'deco-trick-or-treat.png', (eventos|length if eventos is defined else none)),
+      ('pedidos', url_for('admin.pedidos'), 'Pedidos', 'deco-pumpkin-new.png'),
+      ('cadastros', url_for('admin.cadastros'), 'Cadastros', 'deco-eye.png'),
+      ('hierarquia', url_for('admin.hierarquia'), 'Hierarquia', 'deco-witch-hat.png'),
+      ('material', url_for('admin.material'), 'Material', 'deco-coffin.png'),
+      ('eventos', url_for('admin.eventos'), 'Lotes do evento', 'deco-trick-or-treat.png'),
     ] %}
     <nav class="a-nav">
-      {% for nav_id, nav_href, nav_label, nav_icon, nav_count in admin_nav_items %}
+      {% for nav_id, nav_href, nav_label, nav_icon in admin_nav_items %}
       <a class="a-nav__item {% if active_nav == nav_id %}a-nav__item--active{% endif %}" href="{{ nav_href }}">
         <img class="a-nav__icon" src="{{ url_for('static', filename='assets/' ~ nav_icon) }}" alt="">
         <span class="a-nav__label">{{ nav_label }}</span>
-        {% if nav_count is not none %}<span class="a-nav__count">{{ nav_count }}</span>{% endif %}
+        {% if nav_counts is defined %}<span class="a-nav__count">{{ nav_counts[nav_id] }}</span>{% endif %}
       </a>
       {% endfor %}
     </nav>
@@ -57,7 +54,6 @@
 
   <main class="a-main">
     <img class="deco a-deco--web inv" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true">
-    <div class="spider a-deco--spider" aria-hidden="true"><i></i><img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt=""></div>
 
     <header class="a-header">
       <div>

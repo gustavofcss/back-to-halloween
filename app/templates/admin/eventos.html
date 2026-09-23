@@ -77,6 +77,9 @@
       <span class="a-lote__meta">máx. {{ e.quantidade_max_ingressos }} por pessoa &middot; cadastrado por {{ e.cadastrado_por or '--' }}</span>
     </div>
     <span class="pill {{ 'pill--ativo' if ativo else 'pill--encerrado' }}">{{ 'Ativo' if ativo else 'Encerrado' }}</span>
+    <form method="post" action="/admin/eventos/{{ e.id_evento }}/apagar" class="admin-ajax-form" onsubmit="return confirmarAcao(this, 'Apagar esse lote? Só é possível se ele ainda não tiver nenhum pedido vinculado.')">
+      <button type="submit" class="admin-btn-outline">Apagar</button>
+    </form>
   </div>
   {% endfor %}
 </div>
@@ -95,5 +98,15 @@
       secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   })();
+
+  // Apagar o lote ativo faz o anterior (próximo da lista) virar o novo
+  // ativo sozinho -- mas isso só reflete na tela com uma releitura do
+  // servidor (quem é "ativo" é calculado no Jinja a partir da ordem da
+  // lista), por isso recarrega em vez de só tirar o card na hora.
+  document.addEventListener('admin:sucesso', function (evt) {
+    if (/\/eventos\/\d+\/apagar$/.test(evt.detail.actionUrl)) {
+      location.reload();
+    }
+  });
 </script>
 {% endblock %}

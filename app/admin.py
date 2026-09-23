@@ -14,6 +14,7 @@ import logging
 from functools import wraps
 from urllib.parse import urlsplit
 
+import psycopg2
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, session, url_for
 
 import db
@@ -128,6 +129,43 @@ def _erro_500(e):
         logger.exception("Erro não tratado numa rota AJAX do admin")
         return _json_err("Erro interno. Tente novamente.", "servidor", 500)
     return e
+
+
+@admin_bp.context_processor
+def _injetar_contadores_nav():
+    # Contador de cada item da sidebar sempre visível, não só na página ativa
+    # -- antes cada item só mostrava número quando a PRÓPRIA página já tinha
+    # carregado aquela lista (pedidos.html tem `pedidos`, cadastros.html tem
+    # `pendentes` etc.), então os outros 4 itens ficavam sem pílula (achado
+    # real, usuário reportou querendo ver o número mesmo fora da aba). 5
+    # COUNT(*) baratos (tabelas pequenas, um evento de festa só) resolvem sem
+    # duplicar as queries mais pesadas que cada página já faz pra montar sua
+    # própria lista.
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) AS n FROM pedido")
+            total_pedidos = cur.fetchone()["n"]
+            cur.execute("SELECT COUNT(*) AS n FROM login_usuario WHERE email_confirmado = FALSE")
+            total_cadastros = cur.fetchone()["n"]
+            cur.execute(
+                "SELECT COUNT(*) AS n FROM login_usuario u "
+                "JOIN hierarquia h ON h.id_usuario = u.id_usuario "
+                "WHERE u.email_confirmado = TRUE"
+            )
+            total_hierarquia = cur.fetchone()["n"]
+            cur.execute("SELECT COUNT(*) AS n FROM despesa_material")
+            total_material = cur.fetchone()["n"]
+            cur.execute("SELECT COUNT(*) AS n FROM evento")
+            total_eventos = cur.fetchone()["n"]
+    return {
+        "nav_counts": {
+            "pedidos": total_pedidos,
+            "cadastros": total_cadastros,
+            "hierarquia": total_hierarquia,
+            "material": total_material,
+            "eventos": total_eventos,
+        }
+    }
 
 
 # -------------------- totais recalculados após cada mutação --------------------
@@ -885,3 +923,39 @@ def eventos_capacidade():
                     (capacidade_maxima, ultimo["id_evento"]),
                 )
     return redirect(url_for("admin.eventos"))
+
+
+@admin_bp.route("/eventos/<int:id_evento>/apagar", methods=["POST"])
+@admin_required
+@_exigir_ajax
+def eventos_apagar(id_evento: int):
+    # "Ativo" (admin/eventos.html) é sempre o lote mais recente
+    # (ORDER BY data_cadastro DESC, loop.first) -- por isso apagar o lote
+    # ativo já faz o anterior virar o novo ativo sozinho, sem nenhuma lógica
+    # extra aqui: é só o próximo item da mesma lista ordenada (achado real,
+    # pedido do usuário: "apagar o lote, aí volta pro anterior"). Bloqueado
+    # se já existir pedido pra esse lote -- apagar destruiria uma venda de
+    # verdade (violação de FK vira aviso, não erro cru).
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            try:
+                cur.execute("DELETE FROM evento WHERE id_evento = %s", (id_evento,))
+                apagou = cur.rowcount > 0
+            except psycopg2.errors.ForeignKeyViolation:
+                # Precisa dar rollback ANTES de sair do `with db.get_conn()`
+                # -- sem isso, o commit automático dele na saída limpa
+                # estoura "current transaction is aborted" (a transação já
+                # tinha sido abortada pelo próprio erro de FK, e Postgres
+                # rejeita qualquer comando, inclusive commit, até um
+                # rollback explícito), substituindo esse _json_err por um
+                # 500 genérico em vez da mensagem amigável.
+                conn.rollback()
+                return _json_err(
+                    "Esse lote já tem pedido vinculado -- não dá pra apagar.",
+                    "regra",
+                    400,
+                )
+
+    if apagou:
+        return _json_ok(aplicados=[{"id": id_evento}])
+    return _json_ok(ignorados=[{"id": id_evento, "motivo": "Lote não encontrado."}])

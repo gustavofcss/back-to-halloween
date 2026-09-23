@@ -247,9 +247,15 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .invite__skeleton{left:3%;bottom:40px;height:clamp(90px,13vw,160px);opacity:.85;transform:rotate(-6deg);z-index:1}
 
 /* ============ ADMIN ============ */
-.a-shell{position:relative;display:flex;min-height:100vh;overflow:hidden;background:radial-gradient(ellipse 900px 500px at 70% -10%,#2c1a3a 0%,#120b1c 45%,#07050d 80%)}
-.a-sidebar{position:relative;flex:0 0 250px;display:flex;flex-direction:column;gap:22px;padding:26px 18px;background:rgba(10,6,14,.85);border-right:1px solid rgba(255,138,43,.18);overflow:hidden}
-.a-sidebar__tree{left:-70px;bottom:-40px;height:360px;opacity:.9}
+.a-shell{position:relative;display:flex;align-items:flex-start;min-height:100vh;background:radial-gradient(ellipse 900px 500px at 70% -10%,#2c1a3a 0%,#120b1c 45%,#07050d 80%)}
+/* Sticky, não parada no fluxo -- a sidebar é irmã flex de .a-main, e sem
+   sticky ela esticava junto quando o conteúdo principal ficava mais alto
+   que a tela (ex.: Hierarquia com muita gente), empurrando nav/avatar/sair
+   pra baixo do fold e exigindo rolar a PÁGINA pra ver o rodapé da sidebar
+   (achado real, usuário reportou). Com sticky ela fica colada na viewport
+   o tempo todo, independente de quanto o conteúdo principal rolar. */
+.a-sidebar{position:sticky;top:0;flex:0 0 250px;display:flex;flex-direction:column;gap:22px;padding:26px 18px;height:100vh;overflow:hidden;background:rgba(10,6,14,.85);border-right:1px solid rgba(255,138,43,.18)}
+.a-sidebar__tree{position:absolute;left:-70px;bottom:-40px;height:360px;opacity:.9;pointer-events:none}
 .a-brand{position:relative;display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
 .a-brand__icon{width:40px;height:40px}
 .a-brand__text{display:flex;flex-direction:column}
@@ -271,7 +277,13 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .a-logout{width:100%}
 .avatar{flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--line-2);color:var(--orange-2);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
 .avatar--me{width:38px;height:38px;background:var(--orange);color:#2a1503}
-.a-main{position:relative;flex:1;min-width:0;padding:30px 36px 80px;display:flex;flex-direction:column;gap:24px}
+/* min-height:100vh explícito -- .a-shell agora usa align-items:flex-start
+   (pra sidebar sticky não esticar), então .a-main não ganha mais altura de
+   graça esticando junto com a sidebar; sem isso, numa página com pouco
+   conteúdo (ex.: Lotes do evento com 1-2 lotes) a mão decorativa ancorada
+   no rodapé (bottom:0) caía em cima do próprio conteúdo em vez de ficar
+   depois dele (achado real, usuário mandou print). */
+.a-main{position:relative;flex:1;min-width:0;min-height:100vh;padding:30px 36px 80px;display:flex;flex-direction:column;gap:24px}
 .a-deco--web{top:0;right:0;width:170px;opacity:.14}
 .a-deco--spider{right:150px}
 .a-deco--spider.spider i{height:70px}
@@ -390,7 +402,8 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 /* ============ RESPONSIVO ============ */
 @media (max-width:860px){
   .a-shell{flex-direction:column}
-  .a-sidebar{flex:none;padding:18px}
+  .a-sidebar{position:static;flex:none;height:auto;padding:18px}
+  .a-main{min-height:0}
   .a-sidebar__tree{display:none}
   .a-nav{flex-direction:row;flex-wrap:wrap}
   .a-nav-label{width:100%}

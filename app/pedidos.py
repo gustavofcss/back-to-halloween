@@ -66,6 +66,15 @@ def _criar_pagamento_pix(pedido, usuario) -> dict:
         "description": f"Ingresso Horror Night Party -- pedido #{pedido['id_pedido']}",
         "payment_method_id": "pix",
         "payer": {"email": usuario["email"], "first_name": usuario["nome"]},
+        # Pede pro Mercado Pago avisar esse endpoint sozinho assim que o
+        # status do pagamento mudar -- antes a confirmação só acontecia se
+        # o cliente ficasse com a tela de pagamento aberta (polling de
+        # 5 em 5s por até 5 minutos) ou reabrisse ela depois. Só funciona
+        # com BASE_URL público (Render), não em localhost -- Mercado Pago
+        # não consegue chamar de volta um endereço que só existe na rede
+        # local (achado real, pedido do usuário: quer confirmação
+        # automática de verdade pela API, não só enquanto a aba tá aberta).
+        "notification_url": f"{config.BASE_URL}/pagamento/webhook/mercadopago",
     }
     resultado = _sdk().payment().create(payment_data)
     return resultado["response"]
@@ -367,6 +376,50 @@ def pagamento_verificar(id_pedido: int):
             status_atual = _verificar_e_confirmar_pagamento(cur, pedido, usuario)
 
     return jsonify({"status": status_atual})
+
+
+@pedidos_bp.route("/pagamento/webhook/mercadopago", methods=["POST"])
+def webhook_mercadopago():
+    # Mercado Pago chama essa rota sozinho assim que o status de um
+    # pagamento muda de verdade (registrada via `notification_url` na
+    # criação do Pix, ver _criar_pagamento_pix) -- sem login, então NUNCA
+    # confia em nada que vem no corpo além do id do pagamento; o status
+    # real sempre é reconsultado na API deles com nosso próprio access
+    # token (_verificar_e_confirmar_pagamento), nunca lido do payload do
+    # webhook em si -- um POST forjado nessa rota só desperdiça uma consulta
+    # à API, nunca confirma um pedido sem o Mercado Pago ter aprovado de
+    # verdade. Responde 200 mesmo quando não há nada a fazer, pra Mercado
+    # Pago não ficar reenviando a notificação.
+    corpo = request.get_json(silent=True) or {}
+    tipo = corpo.get("type") or request.args.get("type") or request.args.get("topic")
+    mp_payment_id = None
+    if tipo == "payment":
+        dados = corpo.get("data") or {}
+        mp_payment_id = str(
+            dados.get("id") or request.args.get("data.id") or request.args.get("id") or ""
+        ).strip()
+
+    if not mp_payment_id:
+        return jsonify({"ok": True}), 200
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT p.*, u.nome, u.email
+                FROM pedido p
+                JOIN login_usuario u ON u.id_usuario = p.id_usuario
+                WHERE p.mp_payment_id = %s
+                """,
+                (mp_payment_id,),
+            )
+            pedido = cur.fetchone()
+            if not pedido:
+                return jsonify({"ok": True}), 200
+            usuario = {"nome": pedido["nome"], "email": pedido["email"]}
+            _verificar_e_confirmar_pagamento(cur, pedido, usuario)
+
+    return jsonify({"ok": True}), 200
 
 
 @pedidos_bp.route("/pagamento/<int:id_pedido>/cartao", methods=["POST"])
