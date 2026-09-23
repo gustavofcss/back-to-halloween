@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import re
 
 import mercadopago
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, url_for
@@ -13,6 +14,39 @@ from email_utils import enviar_confirmacao_pedido
 
 pedidos_bp = Blueprint("pedidos", __name__)
 logger = logging.getLogger(__name__)
+
+# RG varia de formato por estado (sem dígito verificador padrão nacional,
+# diferente do CPF) -- só números, com um X opcional no fim (dígito
+# verificador usado em alguns estados, ex. SP). WhatsApp brasileiro: DDD (2)
+# + número (8 ou 9) = 10 ou 11 dígitos. Antes não validava nada além de
+# "não vazio" -- aceitava letra em qualquer posição e qualquer tamanho
+# (achado real, usuário reportou).
+#
+# Duas etapas, não uma só: primeiro confere que o valor CRU só tem dígito +
+# pontuação de formatação (nada de letra escondida no meio -- ex.
+# "abc11987654321" não pode virar válido só porque, depois de tirar as
+# letras, sobra um número de 11 dígitos); só DEPOIS de passar nisso é que
+# tira a pontuação e confere o tamanho final.
+_RG_CARACTERES_RE = re.compile(r"^[\d.\-/\sXx]+$")
+_RG_RE = re.compile(r"^\d{5,12}X?$")
+_WHATSAPP_CARACTERES_RE = re.compile(r"^[\d()\-+\s]+$")
+_WHATSAPP_RE = re.compile(r"^\d{10,11}$")
+
+
+def _validar_rg(bruto: str | None) -> str | None:
+    bruto = (bruto or "").strip()
+    if not bruto or not _RG_CARACTERES_RE.match(bruto):
+        return None
+    limpo = re.sub(r"[.\-/\s]", "", bruto).upper()
+    return limpo if _RG_RE.match(limpo) else None
+
+
+def _validar_whatsapp(bruto: str | None) -> str | None:
+    bruto = (bruto or "").strip()
+    if not bruto or not _WHATSAPP_CARACTERES_RE.match(bruto):
+        return None
+    limpo = re.sub(r"\D", "", bruto)
+    return limpo if _WHATSAPP_RE.match(limpo) else None
 
 
 def _sdk() -> "mercadopago.SDK":
@@ -64,6 +98,49 @@ def _pedido_do_usuario(cur, id_pedido: int, id_usuario: int):
     return cur.fetchone()
 
 
+def _confirmar_se_aprovado(cur, pedido: dict, usuario: dict, pagamento_mp: dict) -> str:
+    """Dado um resultado JÁ CONSULTADO na API do Mercado Pago, confirma o
+    pedido no banco se status == approved. Devolve o status do MP (ou o
+    status atual do pedido, se o MP não devolveu nada útil). Centraliza a
+    trava "AND status_pedido != 'confirmado'" + rowcount (nunca otimismo) e
+    o try/except no envio de e-mail -- sem o try/except, uma falha
+    transitória no Brevo estourava a exceção DENTRO do `with db.get_conn()`
+    e desfazia (rollback) a própria confirmação do pagamento que já tinha
+    acabado de ser aprovada pelo Mercado Pago (achado real nesta revisão)."""
+    status_mp = pagamento_mp.get("status")
+    if status_mp != "approved":
+        return status_mp or pedido["status_pedido"]
+
+    cur.execute(
+        "UPDATE pedido SET status_pedido = 'confirmado' WHERE id_pedido = %s AND status_pedido != 'confirmado'",
+        (pedido["id_pedido"],),
+    )
+    if cur.rowcount > 0:
+        try:
+            enviar_confirmacao_pedido(usuario["email"], usuario["nome"], pedido)
+        except Exception:
+            logger.warning("Falha ao enviar e-mail de confirmação de pedido", exc_info=True)
+    return "confirmado"
+
+
+def _verificar_e_confirmar_pagamento(cur, pedido: dict, usuario: dict) -> str:
+    """Consulta o pagamento de verdade na API do Mercado Pago (não confia
+    num clique) e confirma via _confirmar_se_aprovado. Usado tanto pelo
+    botão "Já paguei, confirmar" quanto pelo polling automático da tela de
+    pagamento -- nenhum dos dois marca como confirmado sem checar a API."""
+    status_atual = pedido["status_pedido"]
+    if status_atual == "confirmado" or not config.MERCADOPAGO_ACCESS_TOKEN or not pedido["mp_payment_id"]:
+        return status_atual
+
+    try:
+        pagamento_mp = _consultar_pagamento(pedido["mp_payment_id"])
+    except Exception:
+        logger.warning("Falha ao verificar pagamento no Mercado Pago", exc_info=True)
+        return status_atual
+
+    return _confirmar_se_aprovado(cur, pedido, usuario, pagamento_mp)
+
+
 @pedidos_bp.route("/comprar", methods=["GET", "POST"])
 @login_required
 def comprar():
@@ -75,11 +152,16 @@ def comprar():
             if not evento:
                 return render_template("comprar.html", sem_evento=True)
 
+            # Um pedido por pessoa -- não é "até quantidade_max_ingressos ao
+            # longo do tempo" (isso já tinha sido comprado antes e deixava
+            # comprar de novo depois, achado real, usuário reportou). O
+            # limite de quantidade_max_ingressos vale só DENTRO de um mesmo
+            # pedido (você + 1 acompanhante no mesmo checkout).
             ja_comprados = _ingressos_comprados(cur, usuario["id_usuario"], evento["id_evento"])
-            max_permitido = evento["quantidade_max_ingressos"] - ja_comprados
+            if ja_comprados > 0:
+                return render_template("comprar.html", ja_tem_pedido=True)
 
-            if max_permitido <= 0:
-                return render_template("comprar.html", limite_atingido=True)
+            max_permitido = evento["quantidade_max_ingressos"]
 
             vagas_restantes = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)
             max_permitido = max(0, min(max_permitido, vagas_restantes))
@@ -92,8 +174,8 @@ def comprar():
                     "comprar.html", usuario=usuario, evento=evento, max_permitido=max_permitido
                 )
 
-            rg = (request.form.get("rg") or "").strip()
-            whatsapp = (request.form.get("whatsapp") or "").strip()
+            rg = _validar_rg(request.form.get("rg"))
+            whatsapp = _validar_whatsapp(request.form.get("whatsapp"))
             try:
                 quantidade = int(request.form.get("quantidade") or 0)
             except ValueError:
@@ -109,7 +191,7 @@ def comprar():
                 or quantidade > max_permitido
                 or quantidade > vagas_restantes_atual
             ):
-                erro = "Preencha RG, WhatsApp e uma quantidade válida."
+                erro = "Preencha RG (só números) e WhatsApp (DDD + número, só números) válidos, e uma quantidade válida."
 
             # O 2º ingresso pode ser pra um acompanhante -- não precisa ser
             # a mesma pessoa logada comprando. Só exige esses dados quando
@@ -118,15 +200,15 @@ def comprar():
             if not erro and quantidade == 2:
                 acompanhante_nome = (request.form.get("acompanhante_nome") or "").strip()
                 acompanhante_email = (request.form.get("acompanhante_email") or "").strip().lower()
-                acompanhante_rg = (request.form.get("acompanhante_rg") or "").strip()
-                acompanhante_whatsapp = (request.form.get("acompanhante_whatsapp") or "").strip()
+                acompanhante_rg = _validar_rg(request.form.get("acompanhante_rg"))
+                acompanhante_whatsapp = _validar_whatsapp(request.form.get("acompanhante_whatsapp"))
                 if (
                     not acompanhante_nome
                     or not EMAIL_RE.match(acompanhante_email)
                     or not acompanhante_rg
                     or not acompanhante_whatsapp
                 ):
-                    erro = "Preencha nome, e-mail, RG e WhatsApp válidos do acompanhante."
+                    erro = "Preencha nome, e-mail, RG (só números) e WhatsApp (só números) válidos do acompanhante."
 
             if erro:
                 return render_template(
@@ -184,11 +266,23 @@ def pagamento(id_pedido: int):
                             "UPDATE pedido SET mp_payment_id = %s WHERE id_pedido = %s",
                             (str(pagamento_mp["id"]), id_pedido),
                         )
-                    transacao = (pagamento_mp.get("point_of_interaction") or {}).get(
-                        "transaction_data"
-                    ) or {}
-                    qr_code_base64 = transacao.get("qr_code_base64")
-                    qr_code = transacao.get("qr_code")
+
+                    # Reconsulta e confirma aqui também (não só no botão/
+                    # polling) -- sem isso, quem saísse da tela de pagamento
+                    # e voltasse depois de 5+ minutos (o polling em JS já
+                    # tinha parado) continuava vendo o QR Code de um pedido
+                    # que na verdade já tinha sido aprovado pelo Mercado
+                    # Pago (achado real nesta revisão).
+                    status_atual = _confirmar_se_aprovado(cur, pedido, usuario, pagamento_mp)
+                    if status_atual == "confirmado":
+                        pedido = dict(pedido)
+                        pedido["status_pedido"] = "confirmado"
+                    else:
+                        transacao = (pagamento_mp.get("point_of_interaction") or {}).get(
+                            "transaction_data"
+                        ) or {}
+                        qr_code_base64 = transacao.get("qr_code_base64")
+                        qr_code = transacao.get("qr_code")
                 except Exception:
                     logger.warning(
                         "Falha ao criar/consultar pagamento Pix no Mercado Pago", exc_info=True
@@ -209,13 +303,26 @@ def pagamento(id_pedido: int):
 @pedidos_bp.route("/pagamento/<int:id_pedido>/confirmar", methods=["POST"])
 @login_required
 def pagamento_confirmar(id_pedido: int):
+    # "Já paguei, confirmar" consulta a API do Mercado Pago na hora -- não é
+    # só um botão que mostra "aguardando" e espera o polling em background
+    # pegar depois (achado real, usuário pediu confirmação de verdade pela
+    # API aqui, não só client-side).
     usuario = current_user()
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             pedido = _pedido_do_usuario(cur, id_pedido, usuario["id_usuario"])
-    if not pedido:
-        abort(404)
-    return render_template("pagamento.html", pedido=pedido, pix_key=config.PIX_KEY, aguardando=True)
+            if not pedido:
+                abort(404)
+            status_atual = _verificar_e_confirmar_pagamento(cur, pedido, usuario)
+            pedido = dict(pedido)
+            pedido["status_pedido"] = status_atual
+
+    return render_template(
+        "pagamento.html",
+        pedido=pedido,
+        pix_key=config.PIX_KEY,
+        aguardando=(status_atual != "confirmado"),
+    )
 
 
 @pedidos_bp.route("/pagamento/<int:id_pedido>/verificar", methods=["POST"])
@@ -227,28 +334,7 @@ def pagamento_verificar(id_pedido: int):
             pedido = _pedido_do_usuario(cur, id_pedido, usuario["id_usuario"])
             if not pedido:
                 abort(404)
-
-            status_atual = pedido["status_pedido"]
-
-            if (
-                status_atual != "confirmado"
-                and config.MERCADOPAGO_ACCESS_TOKEN
-                and pedido["mp_payment_id"]
-            ):
-                try:
-                    resultado = _consultar_pagamento(pedido["mp_payment_id"])
-                    status_mp = resultado.get("status")
-                    if status_mp == "approved":
-                        cur.execute(
-                            "UPDATE pedido SET status_pedido = 'confirmado' WHERE id_pedido = %s",
-                            (id_pedido,),
-                        )
-                        enviar_confirmacao_pedido(usuario["email"], usuario["nome"], pedido)
-                        status_atual = "confirmado"
-                    else:
-                        status_atual = status_mp or status_atual
-                except Exception:
-                    logger.warning("Falha ao verificar pagamento no Mercado Pago", exc_info=True)
+            status_atual = _verificar_e_confirmar_pagamento(cur, pedido, usuario)
 
     return jsonify({"status": status_atual})
 
@@ -286,13 +372,16 @@ def meus_pedidos():
             )
             pedidos = cur.fetchall()
 
+            # Mesma regra de "um pedido por pessoa" do /comprar: só mostra o
+            # link de comprar mais quando o usuário ainda não tem NENHUM
+            # pedido ativo (não é mais quantidade_max_ingressos - ja_comprados,
+            # que reabria a compra depois de já ter um pedido).
             pode_comprar_mais = 0
             evento = _evento_ativo(cur)
             if evento:
                 ja_comprados = _ingressos_comprados(cur, usuario["id_usuario"], evento["id_evento"])
-                vagas_restantes = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)
-                pode_comprar_mais = max(
-                    0, min(evento["quantidade_max_ingressos"] - ja_comprados, vagas_restantes)
-                )
+                if ja_comprados == 0:
+                    vagas_restantes = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)
+                    pode_comprar_mais = max(0, min(evento["quantidade_max_ingressos"], vagas_restantes))
 
     return render_template("meus_pedidos.html", pedidos=pedidos, pode_comprar_mais=pode_comprar_mais)

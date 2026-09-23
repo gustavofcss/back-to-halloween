@@ -32,8 +32,8 @@
       <p class="help-text">Nenhum evento disponível no momento.</p>
     {% elif esgotado %}
       <div class="alert-error">Ingressos esgotados! A Horror Night Party atingiu a capacidade máxima.</div>
-    {% elif limite_atingido %}
-      <div class="alert-error">Você já atingiu o limite de ingressos para este evento.</div>
+    {% elif ja_tem_pedido %}
+      <div class="alert-error">Você já tem um pedido pra esse evento -- não dá pra comprar outro em separado.</div>
       <p class="card-footer"><a href="/meus-pedidos">Ver meus pedidos</a></p>
     {% else %}
       <p class="card-subtitle buy-price-highlight">{{ evento.nome_evento }} — Lote {{ evento.numero_lote }} — R$ {{ evento.valor_entrada }} por ingresso.</p>
@@ -56,11 +56,11 @@
         </div>
         <div class="field">
           <label for="rg">RG</label>
-          <input id="rg" name="rg" placeholder="00.000.000-0" required>
+          <input id="rg" name="rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)" required>
         </div>
         <div class="field">
           <label for="whatsapp">WhatsApp</label>
-          <input id="whatsapp" name="whatsapp" placeholder="(00) 00000-0000" required>
+          <input id="whatsapp" name="whatsapp" placeholder="DDD + número, só números" inputmode="numeric" pattern="[0-9]{10,11}" maxlength="11" title="DDD + número, só números (10 ou 11 dígitos)" required>
         </div>
 
         <input type="hidden" id="quantidade" name="quantidade" value="1">
@@ -81,11 +81,11 @@
           </div>
           <div class="field">
             <label for="acompanhante_rg">RG do acompanhante</label>
-            <input id="acompanhante_rg" name="acompanhante_rg" placeholder="00.000.000-0">
+            <input id="acompanhante_rg" name="acompanhante_rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)">
           </div>
           <div class="field">
             <label for="acompanhante_whatsapp">WhatsApp do acompanhante</label>
-            <input id="acompanhante_whatsapp" name="acompanhante_whatsapp" placeholder="(00) 00000-0000">
+            <input id="acompanhante_whatsapp" name="acompanhante_whatsapp" placeholder="DDD + número, só números" inputmode="numeric" pattern="[0-9]{10,11}" maxlength="11" title="DDD + número, só números (10 ou 11 dígitos)">
           </div>
         </div>
         {% endif %}
@@ -145,7 +145,7 @@
       </script>
     {% endif %}
 
-    {% if tem_pedido %}
+    {% if tem_pedido and not ja_tem_pedido %}
     <p class="card-footer"><a href="/meus-pedidos">Meus pedidos</a></p>
     {% endif %}
   </div>

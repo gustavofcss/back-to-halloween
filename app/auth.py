@@ -97,9 +97,6 @@ def _destino_pos_login(id_usuario: int, next_url: str | None = None) -> str:
     if row and row["hierarquia"] == "adm":
         return url_for("admin.index")
 
-    if next_url:
-        return next_url
-
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -107,6 +104,18 @@ def _destino_pos_login(id_usuario: int, next_url: str | None = None) -> str:
                 (id_usuario,),
             )
             tem_pedido = cur.fetchone() is not None
+
+    # Quem já tem pedido nunca deve cair em /comprar, nem por um `next`
+    # antigo -- sem essa checagem, alguém que clicou "Comprar ingresso"
+    # deslogado (next=/comprar), fez login e JÁ tinha um pedido de antes
+    # continuava caindo direto na tela de comprar de novo (achado real,
+    # usuário reportou; /comprar em si também bloqueia, mas cair já na tela
+    # certa evita o "quique" visual). Qualquer outro `next` (ex.: voltar
+    # pra um /pagamento/<id> específico) continua respeitado normalmente.
+    comprar_url = url_for("pedidos.comprar")
+    if next_url and not (tem_pedido and next_url.split("?", 1)[0] == comprar_url):
+        return next_url
+
     return url_for("pedidos.meus_pedidos") if tem_pedido else url_for("pedidos.comprar")
 
 
