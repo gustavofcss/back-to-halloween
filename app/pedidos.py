@@ -390,11 +390,21 @@ def webhook_mercadopago():
     # à API, nunca confirma um pedido sem o Mercado Pago ter aprovado de
     # verdade. Responde 200 mesmo quando não há nada a fazer, pra Mercado
     # Pago não ficar reenviando a notificação.
-    corpo = request.get_json(silent=True) or {}
+    corpo = request.get_json(silent=True)
+    if not isinstance(corpo, dict):
+        # corpo pode vir None (JSON ausente/inválido) ou um JSON válido que
+        # não é um objeto (lista, número, string, bool...) -- nesses casos
+        # `.get("type")` estouraria AttributeError e virava 500 (achado real
+        # nesta revisão, reproduzido com corpo `[1,2,3]`/`"x"`/`42`/`true`).
+        corpo = {}
     tipo = corpo.get("type") or request.args.get("type") or request.args.get("topic")
     mp_payment_id = None
     if tipo == "payment":
-        dados = corpo.get("data") or {}
+        dados = corpo.get("data")
+        if not isinstance(dados, dict):
+            # Mesmo risco de `corpo`: um payload tipo
+            # `{"type":"payment","data":"x"}` faria `dados.get("id")` estourar.
+            dados = {}
         mp_payment_id = str(
             dados.get("id") or request.args.get("data.id") or request.args.get("id") or ""
         ).strip()

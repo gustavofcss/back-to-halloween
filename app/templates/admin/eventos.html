@@ -77,7 +77,24 @@
       <span class="a-lote__meta">máx. {{ e.quantidade_max_ingressos }} por pessoa &middot; cadastrado por {{ e.cadastrado_por or '--' }}</span>
     </div>
     <span class="pill {{ 'pill--ativo' if ativo else 'pill--encerrado' }}">{{ 'Ativo' if ativo else 'Encerrado' }}</span>
-    <form method="post" action="/admin/eventos/{{ e.id_evento }}/apagar" class="admin-ajax-form" onsubmit="return confirmarAcao(this, 'Apagar esse lote? Só é possível se ele ainda não tiver nenhum pedido vinculado.')">
+    {#
+      SEM class="admin-ajax-form" de propósito -- esse form já usa
+      onsubmit="confirmarAcao(...)" (mesmo padrão de material.html) pra
+      abrir o modal de confirmação. Se também tivesse admin-ajax-form, o
+      querySelectorAll('form.admin-ajax-form') de _layout.html anexaria UM
+      SEGUNDO listener de 'submit' no mesmo form -- e um segundo listener
+      não é cancelado pelo `return false` do onsubmit (isso só chama
+      preventDefault(), não stopImmediatePropagation()) -- então o fetch()
+      de apagar disparava IMEDIATAMENTE no clique em "Apagar", antes do
+      usuário sequer ver o modal, e clicar em "Confirmar" mandava uma
+      SEGUNDA requisição idêntica. Bug real, confirmado num Chromium
+      headless de verdade (QA 2026-09-23): 1 clique em Apagar = fetch já
+      disparado; clicar Confirmar = 2º fetch. "Cancelar" no modal não
+      desfazia nada, porque a 1ª requisição já tinha sido mandada. Fix:
+      tirar a classe -- só o mecanismo confirmarAcao->modal->enviarAcaoAdmin
+      (usado no clique em "Confirmar") continua ativo, igual material.html.
+    #}
+    <form method="post" action="/admin/eventos/{{ e.id_evento }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse lote? Só é possível se ele ainda não tiver nenhum pedido vinculado.')">
       <button type="submit" class="admin-btn-outline">Apagar</button>
     </form>
   </div>

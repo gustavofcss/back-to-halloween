@@ -413,6 +413,73 @@ linhas).
   cosmético de apagar CSS morto que não é servido a lugar nenhum).
   Dívida de limpeza documentada pro próximo passe que mexer em
   `style.css`.
+## Revisão de segurança do webhook do Mercado Pago + rotas novas do admin (2026-09-23)
+
+Sem Postgres disponível (mesma limitação de sempre). Escopo: `POST
+/pagamento/webhook/mercadopago` (novo), `@admin_bp.context_processor
+_injetar_contadores_nav` (novo), `POST /admin/eventos/<id>/apagar` (novo).
+
+- **Webhook: claim "nunca confia no status do payload, sempre reconsulta a
+  API do MP" verificado e confirmado, sem exceção em nenhum caminho.** A
+  rota só extrai `mp_payment_id` do corpo/query string; o status real vem
+  sempre de `_consultar_pagamento` (nosso próprio `access_token`) via
+  `_verificar_e_confirmar_pagamento` -> `_confirmar_se_aprovado`, que só
+  faz `UPDATE ... status_pedido = 'confirmado'` quando
+  `pagamento_mp.get("status") == "approved"` (valor que VEIO da API do MP,
+  nunca do JSON que o atacante mandou). Um POST forjado com `mp_payment_id`
+  de um pedido real só desencadeia uma reconsulta de verdade -- nunca
+  confirma nada que o MP não tenha aprovado de fato. Se `mp_payment_id` não
+  bate com nenhum pedido, responde `200 {"ok": true}` sem tocar em nada
+  (nem chega a chamar a API do MP). Resposta nunca vaza dado sensível (só
+  `{"ok": true}` sempre, em qualquer caminho).
+- **`notification_url` em `_criar_pagamento_pix`**: `config.BASE_URL` vem
+  só de variável de ambiente (`config.py`), sem nenhum input de usuário
+  envolvido -- não dá pra injetar URL nem vazar nada por aí.
+- **Bug real encontrado e corrigido**: ver gotcha "`request.get_json
+  (silent=True) or {}` não garante um dict" -- corpo JSON válido mas não-
+  objeto (lista/string/número/bool no topo, ou em `data`) estourava
+  `AttributeError` -> 500 em `webhook_mercadopago`. Contradizia o próprio
+  comentário da rota ("Responde 200 mesmo quando não há nada a fazer, pra
+  Mercado Pago não ficar reenviando"). Fix: `isinstance(corpo, dict)` /
+  `isinstance(dados, dict)` explícitos em vez de `or {}`. Reproduzido e
+  reverificado com Flask test client, 10 variações de corpo, todas 200
+  depois do fix (nenhuma toca o banco quando `mp_payment_id` fica vazio).
+- **`_injetar_contadores_nav` (context_processor do admin)**: as 5
+  `COUNT(*)` batem exatamente com a regra de negócio de cada página (mesmo
+  `WHERE`/`JOIN` que `pedidos()`, `cadastros()`, `hierarquia()`,
+  `material()`, `eventos()` já usam pra montar suas próprias listas --
+  comparado campo a campo, nenhum drift). Confirmado que só roda em
+  `render_template` de verdade: toda rota AJAX-only do admin devolve
+  `jsonify`/`_json_ok`/`_json_err` sem nunca chamar `render_template`, e os
+  `errorhandler`s (403/404/400/500) devolvem `jsonify` (ajax) ou `e` cru
+  (não-ajax, sem template) -- então o context_processor nunca roda em cima
+  de uma resposta JSON, só nas 6 páginas GET reais do admin. **Achado sem
+  severidade de bug, mas vale registrar**: o processor abre sua PRÓPRIA
+  conexão (`with db.get_conn()`) separada da conexão que a própria rota já
+  abre pra montar a página -- ou seja, toda página GET do admin agora abre
+  pelo menos +1 conexão Postgres a mais do que antes (a regra de ouro do
+  passe anterior, "agrupe tudo de uma rota em um único `with`", não dá pra
+  aplicar aqui porque um `context_processor` não tem como compartilhar o
+  cursor da view). Sem pool, isso soma a mais uma conexão nova por render
+  de página admin -- inofensivo pro volume de uso real deste projeto (uma
+  festa só, tráfego baixíssimo), mas é dívida se o padrão de "processor com
+  query própria" for copiado pra outro contexto com mais tráfego.
+- **`/admin/eventos/<id>/apagar`**: `@admin_required` + `@_exigir_ajax` na
+  mesma ordem de decorator das outras 15 rotas de mutação (auth primeiro,
+  convenção AJAX depois) -- testado com Flask test client (POST anônimo
+  com/sem header AJAX), resultado idêntico ao das rotas já existentes (401
+  JSON `codigo:auth` com header, 302 pro login sem header). `id_evento` não
+  é dado de usuário (evento é global, não por-dono) -- sem risco de IDOR,
+  confirmado por leitura. **Rollback antes do `return` em
+  `ForeignKeyViolation` verificado como correto**: `conn.rollback()`
+  explícito devolve a conexão pro estado `IDLE`; o `return` dentro do
+  `with db.get_conn()` faz o generator retomar depois do `yield` sem
+  exceção, chamando `conn.commit()` -- que em cima de uma conexão sem
+  transação aberta é no-op (comportamento documentado do psycopg2/Postgres,
+  não "commita" nada porque não há nada pendente). Não reproduzido com
+  Postgres real nesta sessão (sem banco disponível), mas o mecanismo
+  bate com a documentação oficial do psycopg2 pra `rollback()`/`commit()`
+  em conexão fora de transação.
 - **Validado sem Postgres** (mesma limitação de sempre): `jinja2.Environment().parse()`
   nos 7 templates, `render_template()` de verdade (Flask test_request_context +
   `auth.current_user` mockado) com dado fake cobrindo os ramos vazio/não-vazio
@@ -427,3 +494,80 @@ linhas).
   igual), e todo id referenciado por `getElementById`/`querySelector` nos
   6 arquivos com `<script>` (todos resolvem pra um elemento real depois da
   reescrita). Balanço de chaves do CSS conferido (708 abre / 708 fecha).
+
+## QA funcional pós-commit a361861 (2026-09-23) -- nav_counts, apagar lote, webhook MP
+
+Primeira vez nesta série de QA com Chromium headless de verdade disponível
+(Playwright Python instalado, `p.chromium.launch()` funciona neste
+ambiente -- MCP `playwright`/`superpowers-chrome` não estavam disponíveis,
+mas o pacote Python + browser sim). Ainda sem Postgres/Mercado Pago reais.
+
+- **Bug real encontrado e corrigido**: ver `.dev-squad/gotchas.md`,
+  "`onsubmit=confirmarAcao` + classe `admin-ajax-form` no mesmo form" --
+  botão "Apagar" de `admin/eventos.html` disparava o DELETE ANTES do
+  usuário confirmar o modal (dois listeners de `submit` no mesmo form, o
+  `preventDefault()` do primeiro não impede o segundo). Reproduzido e
+  corrigido com um Chromium headless real rodando o HTML+JS exato do
+  projeto -- é a primeira vez que um bug deste tipo (race de listener DOM)
+  foi pego neste projeto; passes anteriores só liam o JS, nunca executaram
+  num motor de browser de verdade. `material.html` já tinha o padrão
+  correto (mesmo `onsubmit=confirmarAcao`, sem a classe) -- comparação
+  cruzada entre os dois é que revelou a diferença.
+- **`eventos_apagar` (rollback de FK)**: testado com cursor/conexão fake
+  (rowcount controlado, exceção `psycopg2.errors.ForeignKeyViolation`
+  forçada) -- `conn.rollback()` roda exatamente 1x antes do `return`,
+  o commit automático do `with db.get_conn()` na saída ainda roda depois
+  (transação já limpa, sem "current transaction is aborted"), resposta
+  400 `codigo:regra` com mensagem amigável, nunca 500. Caminho feliz
+  (apagou) e não-encontrado (rowcount 0) também testados. Confirmado por
+  `schema.sql` que `pedido.id_evento` referencia `evento` SEM `ON DELETE
+  CASCADE` (nem SET NULL) -- então a FK realmente bloqueia, não faz
+  cascade silencioso destruindo pedidos reais.
+- **Webhook `/pagamento/webhook/mercadopago`**: 8 cenários com
+  cursor/`_consultar_pagamento`/`enviar_confirmacao_pedido` mockados, todos
+  OK -- corpo JSON malformado (200, sem tocar banco), `type` != "payment"
+  (200, sem tocar banco), `data.id` ausente (200, sem tocar banco), id via
+  query string (`?data.id=`) com pedido não encontrado (200), pedido já
+  `confirmado` (NÃO reconsulta a API do MP de novo), aprovado com
+  rowcount=1 (e-mail enviado 1x, guarda `AND status_pedido != 'confirmado'`
+  presente no UPDATE), RACE com rowcount=0 simulando outro caminho
+  (polling/botão/GET) já ter confirmado no meio do caminho (sem e-mail
+  duplicado), falha da API do MP não propaga exceção (200 mesmo assim).
+  Confirma que os 4 caminhos de confirmação (GET /pagamento, botão
+  "confirmar", polling "/verificar", webhook) realmente compartilham a
+  MESMA guarda via `_confirmar_se_aprovado`, sem duplicação de lógica.
+- **nav_counts (sidebar) fica desatualizado sem reload, achado sem
+  correção aplicada (comportamento, não bug de dado)**: os 5 contadores da
+  sidebar só são recalculados no load da página (context_processor);
+  nenhuma das 5 páginas atualiza `nav_counts` via JS depois de uma mutação
+  AJAX -- `atualizarTotais()` só escreve em `[data-admin-total]`, que usa
+  chaves diferentes (`total_pedidos`, `pendentes` etc.), nunca as chaves de
+  `nav_counts` (`pedidos`, `cadastros`, ...). Único mitigador: o
+  `setInterval` de 60s em `_layout.html` faz `location.reload()`
+  periodicamente. `eventos.html` é a ÚNICA página que força reload
+  imediato no próprio `admin:sucesso` (só pra ação de apagar lote, por
+  causa do recálculo de "ativo"). Nas outras 4 páginas (pedidos, cadastros,
+  hierarquia, material), apagar/confirmar/recusar/remover deixa a pílula
+  daquele item -- e de qualquer OUTRA aba/página aberta simultaneamente --
+  com número desatualizado por até 60s. Documentado aqui como achado
+  aceito (já era decisão deliberada de simplificação de passes anteriores,
+  ver "Nav-count da sidebar" acima), não uma regressão nova -- não
+  corrigido nesta sessão por não ter sido pedido e por ser puramente
+  cosmético (a contagem se corrige sozinha em até 60s ou na próxima
+  navegação).
+- **Não verificado nesta sessão (faltou tempo/orçamento de turnos)**:
+  render_template() de ponta a ponta do golden path completo (convite ->
+  login/signup -> comprar -> pagamento -> meus_pedidos) com dado fake fiel
+  (Decimal/datetime) não foi refeito nesta sessão -- a última verificação
+  documentada é a de "QA funcional do fluxo de compra (commit 02b0ab5)"
+  acima, anterior ao reimplante completo do front (66e02f3) e ao commit
+  a361861. Não foi feito spot-check da wiring AJAX de
+  pedidos.html/cadastros.html/hierarquia.html além do grep de presença já
+  citado -- dado o bug real achado em eventos.html (mesma família de
+  padrão: form com confirmação), vale re-examinar se algum OUTRO form
+  combina `onsubmit=confirmarAcao` com `admin-ajax-form` num passe futuro
+  (a checagem feita agora foi especificamente sobre esse par nos 7
+  templates do admin -- grep confirma que só eventos.html tinha as duas
+  coisas juntas, os outros usos de `confirmarAcao`/`confirmarAcaoLote` são
+  ou via `onclick` em `<button type="button">` -- que nunca dispara
+  `submit` -- ou (material.html) já sem a classe).

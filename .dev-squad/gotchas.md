@@ -122,3 +122,76 @@ inteira, sempre, não só em alguns dados. `jinja2.Environment().parse()`
 (checagem de sintaxe) NUNCA pega isso -- só renderizar de verdade com dados
 reais (ou um harness de render com contexto fake fiel ao que a rota passa)
 encontra.
+
+## `onsubmit="return confirmarAcao(...)"` + classe `admin-ajax-form` no MESMO form dispara o fetch ANTES do usuário confirmar o modal
+
+**Sintoma**: em `admin/eventos.html`, o botão "Apagar" lote mostrava o modal
+de confirmação, mas a requisição de DELETE já tinha sido enviada ao
+servidor no instante do clique em "Apagar" -- antes do usuário decidir
+"Confirmar" ou "Cancelar". Clicar "Cancelar" não desfazia nada (tarde
+demais); clicar "Confirmar" mandava uma SEGUNDA requisição idêntica.
+Confirmado num Chromium headless real (Playwright Python, sem MCP
+disponível nesta sessão) reproduzindo o HTML+JS exato de `_layout.html` --
+grep/parse estático NUNCA pegaria isso, é comportamento de runtime de DOM.
+
+**Causa raiz**: o form tinha DOIS listeners de `submit` ao mesmo tempo --
+(1) o atributo `onsubmit="return confirmarAcao(this, ...)"`, que só chama
+`event.preventDefault()` (via `return false`) e mostra o modal, sem
+`stopImmediatePropagation()`; (2) o `document.querySelectorAll('form.admin-
+ajax-form').forEach(f => f.addEventListener('submit', ...))` de
+`_layout.html`, que dispara incondicionalmente `enviarAcaoAdmin` pra
+QUALQUER form com essa classe. `preventDefault()` só cancela a submissão
+NATIVA do form -- não impede outros listeners de `submit` no MESMO elemento
+de rodarem. Os dois handlers executam no MESMO evento, o segundo não sabe
+que o primeiro "quis" esperar confirmação.
+
+**Fix**: tirar a classe `admin-ajax-form` do form que usa
+`onsubmit="confirmarAcao(...)"` -- mesmo padrão já usado (corretamente) em
+`admin/material.html`, cujo form de apagar NUNCA teve essa classe. Sem a
+classe, o único caminho de disparo é `confirmarAcao` -> modal -> clique em
+"Confirmar" -> `enviarAcaoAdmin` (chamado manualmente pelo `btnOk.
+addEventListener('click', ...)` de `_layout.html`), que já dispara
+`admin:sucesso` normalmente no final.
+
+**Como recorre**: qualquer form NOVO do admin que precise de modal de
+confirmação (`onsubmit="return confirmarAcao(this, ...)"`) NÃO PODE também
+ter `class="admin-ajax-form"` -- essa classe é exclusiva do padrão "clique
+único, sem confirmação" (`confirmarAcaoLote` via `<button type="button"
+onclick="confirmarAcaoLote(...)">`, que nem dispara evento de `submit`,
+já que não é `type="submit"`). Antes de adicionar `onsubmit=confirmarAcao`
+num form, checar se ele NÃO tem `admin-ajax-form` -- as duas coisas juntas
+sempre disparam a ação duas vezes (uma cedo demais, sem confirmação; outra
+duplicada no clique real). Só testar isso de verdade (clique real em
+navegador/headless) pega -- ler o código dá a impressão de que o modal
+bloqueia, porque `return false` PARECE que devia impedir tudo.
+
+## `request.get_json(silent=True) or {}` não garante um dict -- só cobre None
+
+**Sintoma**: `POST /pagamento/webhook/mercadopago` (rota pública, sem login,
+chamada pelo Mercado Pago) devolvia 500 quando o corpo era um JSON
+sintaticamente válido mas cujo valor de topo não era um objeto -- `[1,2,3]`,
+`"x"`, `42`, `true` (todos truthy em Python). O mesmo valia pra
+`corpo.get("data")` quando `data` vinha como string em vez de objeto (ex.
+`{"type":"payment","data":"x"}`). Reproduzido com Flask test client, achado
+em revisão de segurança (2026-09-23), sem precisar de Postgres (o crash
+acontece antes de qualquer `db.get_conn()`).
+
+**Causa raiz**: `corpo = request.get_json(silent=True) or {}` só troca por
+`{}` quando o retorno é `None`/`[]`/`""`/`0` (falsy) -- um JSON válido só
+protege contra corpo AUSENTE ou INVÁLIDO, não contra corpo do TIPO ERRADO.
+Um valor de topo truthy não-dict (lista não vazia, string não vazia, número
+!= 0, `true`) passa reto pro `or {}` e todo `.get(...)` seguinte estoura
+`AttributeError`.
+
+**Fix**: checar `isinstance(corpo, dict)` explicitamente em vez de confiar
+em truthiness, tanto no valor de topo quanto em qualquer sub-objeto lido com
+`.get()` em seguida (`dados = corpo.get("data")`, idem). Aplicado em
+`app/pedidos.py` (`webhook_mercadopago`). `app/admin.py` já fazia isso
+direito em `_ids_do_body` (`if not isinstance(corpo, dict): return None`) --
+o padrão certo já existia no projeto, só não tinha sido copiado pra essa
+rota nova.
+
+**Como recorre**: qualquer rota pública/sem-login que aceita JSON de
+terceiro (webhook) e faz `.get()` encadeado (corpo -> sub-objeto -> valor)
+precisa de `isinstance(x, dict)` em CADA nível antes do `.get()`, não só no
+nível de topo -- `or {}`/truthiness não substitui checagem de tipo.
