@@ -1,27 +1,19 @@
 {% extends "base.html" %}
 {% block title %}Entrar — Horror Night Party{% endblock %}
 {% block content %}
-<div class="auth-wrap">
-  {% for n in range(1, 6) %}
-  <div class="spider-deco spider-deco--{{ n }}" aria-hidden="true">
-    <img class="spider-deco__web" src="{{ url_for('static', filename='assets/deco-spiderweb.png') }}" alt="">
-    <div class="spider-deco__hang">
-      <div class="spider-deco__thread"></div>
-      <div class="spider-deco__spider-box">
-        <img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt="">
-        <div class="spider-deco__blink"></div>
-      </div>
-    </div>
+<div class="screen">
+  <img class="deco sil lg-tree" src="{{ url_for('static', filename='assets/lTree.svg') }}" alt="" aria-hidden="true">
+  <div class="spider deco lg-spider" aria-hidden="true">
+    <i></i>
+    <img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt="">
   </div>
-  {% endfor %}
-  <img class="auth-deco-hand" src="{{ url_for('static', filename='assets/deco-zombie-hand.png') }}" alt="" aria-hidden="true">
-  <div class="card-parchment card-parchment--dark">
-    <span class="login-zombie" aria-hidden="true"></span>
-    <div class="card-title">
-      <img src="{{ url_for('static', filename='assets/pumpkin.svg') }}" alt="">
-      <h1>Entrar</h1>
-    </div>
-    <p class="card-subtitle">Acesse sua conta pra garantir seu ingresso.</p>
+  <img class="deco sil lg-hand" src="{{ url_for('static', filename='assets/deco-zombie-hand.png') }}" alt="" aria-hidden="true">
+
+  <p class="eyebrow">Horror Night Party</p>
+  <h1 class="display auth-title">ENTRAR</h1>
+
+  <div class="card">
+    <p class="card-lead">Acesse sua conta pra garantir seu ingresso.</p>
 
     {% if erro %}
     <div class="alert-error">{{ erro }}</div>
@@ -31,20 +23,20 @@
       <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
       <div class="field">
         <label for="email">E-mail</label>
-        <input id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email">
+        <input id="email" name="email" type="email" class="input" placeholder="voce@email.com" required autocomplete="email">
       </div>
       <div class="field">
         <label for="senha">Senha</label>
-        <input id="senha" name="senha" type="password" placeholder="Sua senha" required autocomplete="current-password">
+        <input id="senha" name="senha" type="password" class="input" placeholder="Sua senha" required autocomplete="current-password">
       </div>
-      <button type="submit" class="btn-primary">Entrar</button>
+      <button type="submit" class="btn btn-primary btn-block">Entrar</button>
     </form>
 
     <div class="divider">ou</div>
 
-    <a href="/auth/google{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}" class="btn-outline">Entrar com Google</a>
+    <a href="/auth/google{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}" class="btn btn-ghost btn-block">Entrar com Google</a>
 
-    <p class="card-footer">Não tem conta? <a href="/signup">Criar conta</a></p>
+    <p class="auth-footer">Não tem conta? <a href="/signup">Criar conta</a></p>
   </div>
 </div>
 {% endblock %}
