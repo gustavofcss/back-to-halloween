@@ -711,6 +711,163 @@ h1, h2, h3 {
 .card-footer__link-btn--purple { color: #6B4A8A; }
 .card-footer__link-btn--purple:hover { color: #4A2358; }
 
+/* -------------------- cartão de auth ESCURO (login/signup/comprar) --------------------
+   Mudança real do mockup "entrega/Telas Halloween v2.dc.html" (telas 1a/1b/1c): o card de
+   autenticação deixava de ser o único elemento pergaminho claro numa página que já era toda
+   escura -- inconsistente com o resto do site. Modificador .card-parchment--dark ao lado de
+   .card-parchment (mesma técnica de override escopado que o .admin-shell já usa mais abaixo),
+   sem tocar a regra base .card-parchment nem em .ticket -- classe totalmente separada, usada só
+   por pagamento.html/meus_pedidos.html, que continua clara (o mockup já mostra ela assim). */
+.card-parchment--dark {
+  background: rgba(15, 10, 20, .92);
+  border: 1px solid rgba(255, 138, 43, .28);
+  color: var(--ink-light);
+}
+.card-parchment--dark .card-subtitle,
+.card-parchment--dark .help-text {
+  color: var(--purple-soft);
+}
+.card-parchment--dark .field label {
+  color: var(--accent);
+}
+.card-parchment--dark .field input {
+  background: #07050d;
+  border-color: #3a2d4a;
+  color: var(--ink-light);
+}
+.card-parchment--dark .field input::placeholder {
+  color: #6f6284;
+}
+.card-parchment--dark .field input:disabled {
+  background: #0d0912;
+  color: var(--purple-mute);
+}
+.card-parchment--dark .buy-price-highlight {
+  display: block;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(255, 138, 43, .1);
+  border: 1px solid rgba(255, 138, 43, .25);
+  color: var(--accent-hover);
+}
+.card-parchment--dark .buy-section-label {
+  color: var(--purple-soft);
+  border-top-color: #3a2d4a;
+}
+.card-parchment--dark .qty-row {
+  background: rgba(255, 138, 43, .08);
+  border: 1px solid rgba(255, 138, 43, .16);
+}
+.card-parchment--dark .qty-row__hint {
+  color: var(--purple-mute);
+}
+.card-parchment--dark .qty-btn {
+  background: transparent;
+  border-color: #5a4a70;
+  color: var(--ink-light);
+}
+.card-parchment--dark .qty-btn:hover {
+  background: rgba(255, 255, 255, .06);
+}
+.card-parchment--dark .divider {
+  color: var(--purple-mute);
+}
+.card-parchment--dark .divider::before,
+.card-parchment--dark .divider::after {
+  background: #3a2d4a;
+}
+.card-parchment--dark .btn-outline {
+  border-color: #5a4a70;
+  color: var(--ink-light);
+}
+.card-parchment--dark .btn-outline:hover {
+  background: rgba(255, 255, 255, .06);
+}
+.card-parchment--dark .card-footer {
+  color: var(--purple-soft);
+}
+.card-parchment--dark .card-footer a {
+  color: var(--accent);
+}
+.card-parchment--dark .card-footer a:hover {
+  color: var(--accent-hover);
+}
+.card-parchment--dark .card-footer__link-btn--purple {
+  color: var(--purple-soft);
+}
+.card-parchment--dark .card-footer__link-btn--purple:hover {
+  color: var(--ink-light);
+}
+
+/* -------------------- tela "aguardando" sem card (cadastro-pendente / verifique-email) --------------------
+   Mockup (tela 1f) mostra essa tela SEM nenhum card -- só o olho brilhando com um glow radial,
+   título e texto direto sobre o gradiente da página. Escolha consciente: aqui a página não pede
+   nenhum dado (é só um aviso), então o card-pergaminho fazia menos sentido do que nas telas de
+   formulário -- por isso não virou .card-parchment--dark como login/signup/comprar, e sim esse
+   bloco próprio sem container. */
+.pending-icon {
+  position: relative;
+  width: 140px;
+  height: 140px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.pending-icon__glow {
+  position: absolute;
+  inset: -30px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 160, 60, .35), rgba(0, 0, 0, 0) 70%);
+  pointer-events: none;
+}
+.pending-icon img {
+  position: relative;
+  width: 120px;
+  height: auto;
+  animation: hwFloat 6s ease-in-out infinite;
+}
+.pending-ghost {
+  position: absolute;
+  width: 70px;
+  filter: invert(1);
+  opacity: .16;
+  pointer-events: none;
+  animation: hwFloat 8s ease-in-out infinite;
+}
+.pending-ghost--1 { top: 90px; left: 40px; }
+.pending-ghost--2 { top: 180px; right: 50px; width: 46px; opacity: .12; animation-duration: 11s; animation-delay: -3s; }
+.pending-title {
+  margin: 34px 0 0;
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: 28px;
+  color: var(--ink-light);
+  text-align: center;
+}
+.pending-text {
+  margin: 12px 0 0;
+  max-width: 320px;
+  font-size: 14px;
+  line-height: 1.65;
+  color: var(--purple-soft);
+  text-align: center;
+}
+.pending-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 28px;
+  padding: 14px 26px;
+  border-radius: 999px;
+  border: 1px solid #5a4a70;
+  color: var(--ink-light);
+  font-weight: 600;
+  font-size: 14px;
+  text-decoration: none;
+  transition: background .15s;
+}
+.pending-btn:hover { background: rgba(255, 255, 255, .06); }
+
 .flash-messages {
   width: 100%;
   max-width: 640px;
@@ -1434,27 +1591,53 @@ h1, h2, h3 {
   z-index: 3;
 }
 
-.info-date {
-  margin: 0;
-  font-size: clamp(20px, 5.4vw, 26px);
+/* Grid de 3 cards (Quando/Onde/Traje) -- troca dos parágrafos empilhados antigos
+   (.info-date/.info-place/.info-dress) pelo layout do mockup novo, que lê muito
+   mais rápido: um rótulo pequeno, um valor em destaque e um subtexto por card,
+   lado a lado. Empilha em 1 coluna no mobile (telas < 480px). */
+.info-cards {
+  margin-top: 40px;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1px;
+  background: rgba(255, 138, 43, .28);
+  border: 1px solid rgba(255, 138, 43, .28);
+  border-radius: 16px;
+  overflow: hidden;
+}
+@media (min-width: 480px) {
+  .info-cards { grid-template-columns: repeat(3, 1fr); }
+}
+.info-card {
+  background: #0f0a14;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.info-card__label {
+  font-size: 11px;
   font-weight: 600;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.info-card__value {
+  font-family: var(--font-heading);
+  font-weight: 800;
+  font-size: clamp(18px, 4.6vw, 22px);
   color: #ffffff;
-  letter-spacing: .01em;
 }
-
-.info-place {
-  margin: 14px 0 0;
-  font-size: clamp(15px, 4vw, 18px);
-  font-weight: 400;
-  color: #e7dccd;
-  line-height: 1.5;
-}
-
-.info-dress {
-  margin: 18px 0 0;
-  font-size: 13.5px;
+.info-card__sub {
+  font-size: 14px;
   color: var(--purple-soft);
-  line-height: 1.6;
+}
+
+.info-cta-note {
+  margin: 14px 0 0;
+  font-size: 13px;
+  color: var(--purple-mute);
 }
 
 .cta-button {

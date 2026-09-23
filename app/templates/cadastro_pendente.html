@@ -2,19 +2,18 @@
 {% block title %}Cadastro em análise — Horror Night Party{% endblock %}
 {% block content %}
 <div class="auth-wrap">
-  <img class="auth-deco-eye" src="{{ url_for('static', filename='assets/deco-eye.png') }}" alt="" aria-hidden="true">
+  <img class="pending-ghost pending-ghost--1" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="" aria-hidden="true">
+  <img class="pending-ghost pending-ghost--2" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="" aria-hidden="true">
   <p class="auth-brand">Horror Night Party</p>
-  <div class="card-parchment">
-    <div class="card-title">
-      <img src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="">
-      <h2>Cadastro em análise</h2>
-    </div>
-    <p class="help-text">
-      Seu cadastro ainda está em análise. Você vai receber um e-mail assim
-      que o administrador confirmar — aí é só entrar normalmente.
-    </p>
-
-    <a href="/login" class="btn-outline" style="margin-top: 14px;">Voltar pro login</a>
+  <div class="pending-icon">
+    <span class="pending-icon__glow" aria-hidden="true"></span>
+    <img src="{{ url_for('static', filename='assets/deco-eye.png') }}" alt="">
   </div>
+  <h2 class="pending-title">Cadastro em análise</h2>
+  <p class="pending-text">
+    Seu cadastro ainda está em análise. Você vai receber um e-mail assim
+    que o administrador confirmar — aí é só entrar normalmente.
+  </p>
+  <a href="/login" class="pending-btn">Voltar pro login</a>
 </div>
 {% endblock %}

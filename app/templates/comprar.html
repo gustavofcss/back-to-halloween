@@ -22,7 +22,7 @@
     </div>
   </div>
 
-  <div class="card-parchment">
+  <div class="card-parchment card-parchment--dark">
     <div class="card-title">
       <img src="{{ url_for('static', filename='assets/witch.svg') }}" alt="">
       <h1>Seus dados</h1>
@@ -65,6 +65,18 @@
 
         <input type="hidden" id="quantidade" name="quantidade" value="1">
 
+        <div class="qty-row">
+          <div>
+            <p class="qty-row__label">Ingressos</p>
+            <p class="qty-row__hint">Máx. {{ max_permitido }} por pessoa</p>
+          </div>
+          <div class="qty-controls">
+            <button type="button" class="qty-btn" id="qty-dec" aria-label="Diminuir quantidade">&minus;</button>
+            <span class="qty-value" id="qty-display">1</span>
+            <button type="button" class="qty-btn" id="qty-inc" aria-label="Aumentar quantidade">+</button>
+          </div>
+        </div>
+
         {% if max_permitido > 1 %}
         <div id="acompanhante-fields" style="display: none;">
           <p class="buy-section-label">Ingresso 2 (acompanhante)</p>
@@ -89,18 +101,6 @@
           </div>
         </div>
         {% endif %}
-
-        <div class="qty-row">
-          <div>
-            <p class="qty-row__label">Ingressos</p>
-            <p class="qty-row__hint">Máx. {{ max_permitido }} por pessoa</p>
-          </div>
-          <div class="qty-controls">
-            <button type="button" class="qty-btn" id="qty-dec" aria-label="Diminuir quantidade">&minus;</button>
-            <span class="qty-value" id="qty-display">1</span>
-            <button type="button" class="qty-btn" id="qty-inc" aria-label="Aumentar quantidade">+</button>
-          </div>
-        </div>
 
         <button type="submit" class="btn-primary">Continuar &middot; R$ <span id="total-display">{{ evento.valor_entrada }}</span></button>
       </form>

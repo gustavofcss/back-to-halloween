@@ -114,13 +114,29 @@
     <img class="margin-dino margin-dino--2" src="{{ url_for('static', filename='assets/deco-dino-bones.webp') }}" alt="" aria-hidden="true">
 
     <div class="info-panel-inner">
-      <p class="info-date">{{ data_formatada or "Data a definir" }}</p>
-      <p class="info-place">Rua Mário Bhering, 171<br>Tamarineira</p>
-      <p class="info-dress">Traje a rigor: quanto mais assustador, melhor. Vagas limitadas.</p>
+      {% set partes_data = (data_formatada or "Data a definir").split(' | ') %}
+      <div class="info-cards">
+        <div class="info-card">
+          <span class="info-card__label">Quando</span>
+          <span class="info-card__value">{{ partes_data[0] }}{% if partes_data|length > 1 %} · {{ partes_data[1] }}{% endif %}</span>
+          {% if partes_data|length > 2 %}<span class="info-card__sub">a partir das {{ partes_data[2] }}</span>{% endif %}
+        </div>
+        <div class="info-card">
+          <span class="info-card__label">Onde</span>
+          <span class="info-card__value">Rua Mário Bhering, 171</span>
+          <span class="info-card__sub">Tamarineira</span>
+        </div>
+        <div class="info-card">
+          <span class="info-card__label">Traje</span>
+          <span class="info-card__value">A rigor</span>
+          <span class="info-card__sub">quanto mais assustador, melhor</span>
+        </div>
+      </div>
 
       <a class="cta-button" href="{% if not usuario %}/login?next=/comprar{% elif usuario.hierarquia == 'adm' %}/admin{% elif tem_pedido %}/meus-pedidos{% else %}/comprar{% endif %}">
         <span>Comprar ingresso</span>
       </a>
+      <p class="info-cta-note">Vagas limitadas · Pagamento via Pix</p>
     </div>
   </div>
 
