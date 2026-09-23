@@ -10,3 +10,8 @@ venv/
 # os SVGs já foram copiados pra app/static/assets)
 front/
 Untitled-*.png
+
+# Telemetria interna do dev-squad (log de chamadas de ferramenta) -- não é
+# documentação, não interessa versionar. .dev-squad/memory.md continua
+# rastreado (registra decisões de arquitetura de verdade).
+.dev-squad/observations.jsonl

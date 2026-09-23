@@ -75,17 +75,114 @@
       </div>
     </div>
   </div>
+
+  <div class="admin-toast" id="admin-toast" role="status" aria-live="polite"></div>
 </div>
 <script>
+  // Convenção AJAX do admin (ver .dev-squad/memory.md): toda mutação vira
+  // fetch() com o header X-Requested-With, envelope JSON único
+  // {ok, aplicados, ignorados, totais, aviso} -- sem isso a página inteira
+  // recarregava a cada confirmar/cancelar/apagar (achado real reportado
+  // pelo usuário: lentidão sentida na parte de admin).
   (function () {
     var overlay = document.getElementById('confirm-overlay');
     var textEl = document.getElementById('confirm-modal-text');
     var btnOk = document.getElementById('confirm-modal-ok');
     var btnCancel = document.getElementById('confirm-modal-cancel');
+    var toast = document.getElementById('admin-toast');
+    var toastTimer = null;
     var formPendente = null;
+    var actionPendente = null;
+
+    function mostrarToast(msg, tipo) {
+      if (!toast || !msg) { return; }
+      toast.textContent = msg;
+      toast.className = 'admin-toast admin-toast--visivel' + (tipo ? ' admin-toast--' + tipo : '');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () {
+        toast.className = 'admin-toast';
+      }, 5000);
+    }
+
+    function atualizarTotais(totais) {
+      if (!totais) { return; }
+      Object.keys(totais).forEach(function (chave) {
+        document.querySelectorAll('[data-admin-total="' + chave + '"]').forEach(function (el) {
+          el.textContent = totais[chave];
+        });
+      });
+    }
+
+    function desmarcarSelecao(form) {
+      if (!form) { return; }
+      form.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
+        if (cb.checked) {
+          cb.checked = false;
+          cb.dispatchEvent(new Event('change'));
+        }
+      });
+    }
+
+    // Envia uma ação de mutação do admin via fetch() -- cada página escuta
+    // o evento 'admin:sucesso' pra decidir o que fazer na tela (tirar uma
+    // linha, trocar um selo de status etc.), porque só a própria página
+    // sabe como sua lista deve reagir a cada rota.
+    window.enviarAcaoAdmin = function (form, actionUrl) {
+      var lote = /-lote$/.test(actionUrl);
+      var headers = { 'X-Requested-With': 'XMLHttpRequest' };
+      var corpo = null;
+      if (lote) {
+        var ids = Array.prototype.map.call(
+          form.querySelectorAll('input[name="ids"]:checked'),
+          function (cb) { return parseInt(cb.value, 10); }
+        );
+        headers['Content-Type'] = 'application/json';
+        corpo = JSON.stringify({ ids: ids });
+      }
+
+      return fetch(actionUrl, { method: 'POST', headers: headers, body: corpo, credentials: 'same-origin' })
+        .then(function (resp) {
+          return resp.json()
+            .catch(function () { return null; })
+            .then(function (dados) { return { status: resp.status, dados: dados }; });
+        })
+        .then(function (resultado) {
+          var dados = resultado.dados;
+          if (!dados) {
+            mostrarToast('Falha inesperada. Recarregue a página e tente de novo.', 'erro');
+            return;
+          }
+          if (!dados.ok) {
+            if (dados.codigo === 'auth' && dados.login_url) {
+              window.location.href = dados.login_url;
+              return;
+            }
+            mostrarToast(dados.erro || 'Não foi possível concluir a ação.', 'erro');
+            return;
+          }
+
+          atualizarTotais(dados.totais);
+          if (lote) { desmarcarSelecao(form); }
+          document.dispatchEvent(new CustomEvent('admin:sucesso', {
+            detail: { actionUrl: actionUrl, dados: dados, form: form }
+          }));
+
+          if (dados.ignorados && dados.ignorados.length) {
+            var motivos = dados.ignorados.map(function (i) { return i.motivo; });
+            var extra = motivos.length > 1 ? ' (+' + (motivos.length - 1) + ')' : '';
+            mostrarToast(motivos[0] + extra, 'aviso');
+          } else if (dados.aviso) {
+            mostrarToast(dados.aviso, 'aviso');
+          }
+        })
+        .catch(function () {
+          mostrarToast('Falha de conexão. Verifique sua internet e tente de novo.', 'erro');
+        });
+    };
 
     window.confirmarAcao = function (form, mensagem) {
       formPendente = form;
+      actionPendente = form.getAttribute('action');
       textEl.textContent = mensagem;
       overlay.style.display = 'flex';
       return false;
@@ -93,10 +190,10 @@
 
     // Igual confirmarAcao, mas pra ação em lote: o form tem vários botões
     // de submit com formaction diferente (confirmar/cancelar/apagar em
-    // lote), então precisa trocar o action do form antes de confirmar.
+    // lote), então recebe a action certa por fora em vez de ler do form.
     window.confirmarAcaoLote = function (form, action, mensagem) {
       formPendente = form;
-      formPendente.setAttribute('action', action);
+      actionPendente = action;
       textEl.textContent = mensagem;
       overlay.style.display = 'flex';
       return false;
@@ -104,30 +201,56 @@
 
     btnOk.addEventListener('click', function () {
       overlay.style.display = 'none';
-      if (formPendente) { formPendente.submit(); }
+      if (formPendente) { window.enviarAcaoAdmin(formPendente, actionPendente); }
       formPendente = null;
+      actionPendente = null;
     });
     btnCancel.addEventListener('click', function () {
       overlay.style.display = 'none';
       formPendente = null;
+      actionPendente = null;
     });
     overlay.addEventListener('click', function (e) {
       if (e.target === overlay) {
         overlay.style.display = 'none';
         formPendente = null;
+        actionPendente = null;
       }
+    });
+
+    // Botões de ação direta (Confirmar, Promover, Rebaixar...) continuam
+    // <button type="submit" formaction="...">, sem onclick nenhum -- só
+    // precisam que o form tenha a classe admin-ajax-form pra virar fetch()
+    // em vez de navegação cheia.
+    document.querySelectorAll('form.admin-ajax-form').forEach(function (form) {
+      form.addEventListener('submit', function (evt) {
+        evt.preventDefault();
+        var submitter = evt.submitter;
+        var actionUrl = (submitter && submitter.getAttribute('formaction')) || form.getAttribute('action');
+        if (!actionUrl) { return; }
+        window.enviarAcaoAdmin(form, actionUrl);
+      });
     });
   })();
 
   // Atualiza a aba sozinha a cada 60s (pedidos/cadastros novos aparecem sem
   // precisar recarregar na mão) -- pausa se o admin estiver digitando em
-  // algum campo, pra não perder o que já tava escrevendo.
+  // algum campo, com o modal de confirmação aberto, ou com alguma seleção
+  // em lote marcada (um reload do zero perderia a seleção sem necessidade,
+  // já que a ação em si não recarrega mais nada).
   (function () {
+    // achado real (nesta revisão): "overlay" aqui referenciava a variável
+    // declarada dentro do outro IIFE acima, fora de escopo -- o
+    // auto-refresh de 60s vinha lançando ReferenceError toda vez e nunca
+    // recarregava nada de verdade. Busca o elemento de novo, no escopo
+    // certo.
+    var overlayEl = document.getElementById('confirm-overlay');
     setInterval(function () {
       var ativo = document.activeElement;
       var editando = ativo && ['INPUT', 'TEXTAREA', 'SELECT'].indexOf(ativo.tagName) !== -1;
-      var modalAberto = overlay.style.display === 'flex';
-      if (!editando && !modalAberto) {
+      var modalAberto = overlayEl && overlayEl.style.display === 'flex';
+      var algumaSelecao = document.querySelector('input[name="ids"]:checked');
+      if (!editando && !modalAberto && !algumaSelecao) {
         location.reload();
       }
     }, 60000);

@@ -18,11 +18,11 @@
   <div class="admin-group">
     <div class="admin-group__header">
       <span class="admin-pill admin-pill--accent">Adm</span>
-      <span class="admin-group__title">Administradores<span class="admin-group__count">{{ admins|length }} pessoa(s)</span></span>
+      <span class="admin-group__title">Administradores<span class="admin-group__count"><span data-admin-total="admins">{{ admins|length }}</span> pessoa(s)</span></span>
     </div>
     <div class="admin-group__list">
       {% for u in admins %}
-      <div class="admin-group__row">
+      <div class="admin-group__row" data-row-id="{{ u.id_usuario }}">
         <span class="admin-group__avatar">{{ initials(u.nome) }}</span>
         <span class="admin-group__info">
           <span class="admin-group__name">{{ u.nome }}</span>
@@ -30,7 +30,7 @@
         </span>
         <span class="admin-group__action">
           {% if eu and u.id_usuario != eu.id_usuario %}
-          <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/rebaixar">
+          <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/rebaixar" class="admin-ajax-form">
             <button type="submit" class="admin-btn-outline">Rebaixar pra cliente</button>
           </form>
           {% else %}
@@ -47,22 +47,24 @@
   <div class="admin-group">
     <div class="admin-group__header">
       <span class="admin-pill admin-pill--neutral">Cliente</span>
-      <span class="admin-group__title">Clientes<span class="admin-group__count">{{ clientes|length }} pessoa(s)</span></span>
+      <span class="admin-group__title">Clientes<span class="admin-group__count"><span data-admin-total="clientes">{{ clientes|length }}</span> pessoa(s)</span></span>
+      {% if clientes %}
+      <label class="admin-group__select-all">
+        <input type="checkbox" id="clientes-check-all">
+        <span>Selecionar todos</span>
+      </label>
+      {% endif %}
     </div>
     {% if clientes %}
-    <form method="post" id="clientes-lote-form">
+    <form method="post" id="clientes-lote-form" class="admin-ajax-form">
       <div class="admin-bulk-bar" id="clientes-bulk-bar">
         <span class="admin-bulk-bar__count" id="clientes-bulk-count">0 selecionado(s)</span>
         <button type="submit" formaction="/admin/hierarquia/promover-lote" class="admin-btn-primary">Promover selecionados</button>
         <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/remover-lote', 'Apagar os clientes selecionados? Isso também apaga os pedidos deles. Não tem como desfazer.')">Apagar selecionados</button>
       </div>
       <div class="admin-group__list">
-        <label class="admin-group__row" style="cursor:pointer;">
-          <input type="checkbox" id="clientes-check-all" aria-label="Selecionar todos">
-          <span class="admin-group__info"><span class="admin-group__name">Selecionar todos</span></span>
-        </label>
         {% for u in clientes %}
-        <div class="admin-group__row">
+        <div class="admin-group__row" data-row-id="{{ u.id_usuario }}">
           <input type="checkbox" name="ids" value="{{ u.id_usuario }}" class="clientes-check-item" aria-label="Selecionar {{ u.nome }}">
           <span class="admin-group__avatar">{{ initials(u.nome) }}</span>
           <span class="admin-group__info">
@@ -115,5 +117,17 @@
     });
     itens.forEach(function (item) { item.addEventListener('change', atualizar); });
   })();
+
+  // Promover/rebaixar/remover sempre tiram a pessoa do grupo em que ela
+  // estava (cliente promovido some da lista de Clientes, admin rebaixado
+  // some da lista de Administradores) -- por isso um único handler genérico
+  // (tirar a linha da tela) cobre as 5 rotas de mutação da Hierarquia, single
+  // e em lote. A pessoa aparece no grupo novo no próximo refresh da página.
+  document.addEventListener('admin:sucesso', function (evt) {
+    evt.detail.dados.aplicados.forEach(function (item) {
+      var linha = document.querySelector('.admin-group__row[data-row-id="' + item.id + '"]');
+      if (linha) { linha.remove(); }
+    });
+  });
 </script>
 {% endblock %}

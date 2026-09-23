@@ -1866,6 +1866,30 @@ h1, h2, h3 {
   margin-right: auto;
 }
 
+/* -------------------- aviso flutuante (fetch das ações do admin) -------------------- */
+
+.admin-toast {
+  display: none;
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  z-index: 60;
+  max-width: min(420px, calc(100vw - 32px));
+  background: var(--a-ink);
+  color: #FFF3E2;
+  font-family: var(--a-font-body);
+  font-weight: 600;
+  font-size: 13.5px;
+  line-height: 1.4;
+  padding: 12px 18px;
+  border-radius: 12px;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, .28);
+}
+.admin-toast--visivel { display: block; }
+.admin-toast--erro { background: #7A2222; }
+.admin-toast--aviso { background: #8A5A16; }
+
 .admin-pill {
   display: inline-block;
   font-size: 12px;
@@ -1992,6 +2016,18 @@ h1, h2, h3 {
   color: var(--a-ink-muted-2);
   margin-left: 6px;
 }
+.admin-group__select-all {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-family: var(--a-font-body);
+  font-weight: 600;
+  font-size: 12.5px;
+  color: var(--a-ink-muted-2);
+  cursor: pointer;
+  white-space: nowrap;
+}
 .admin-group__list {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
@@ -2005,6 +2041,15 @@ h1, h2, h3 {
   background: var(--a-cream-soft);
   border-radius: 14px;
   padding: 10px 12px;
+  /* Cada linha vira seu próprio container de tamanho -- o card-grid acima
+     usa auto-fit, então a largura real de uma linha depende de QUANTAS
+     colunas cabem no momento, não da largura da janela. Um @media baseado
+     em viewport (achado real, corrigido antes só pra <480px) empilhava
+     certo no celular mas continuava sobrepondo avatar/nome/e-mail com os
+     botões em larguras de desktop intermediárias (a mesma coluna do grid
+     podia ficar tão estreita quanto uma tela de celular). Consultando a
+     largura da própria linha resolve os dois casos com uma regra só. */
+  container-type: inline-size;
 }
 .admin-group__avatar {
   width: 32px;
@@ -2039,21 +2084,21 @@ h1, h2, h3 {
 .admin-group__action form { margin: 0; }
 .admin-group__action--duplo { display: flex; gap: 8px; }
 
-/* No celular a linha (avatar + nome/e-mail + botões) não tinha como
-   encolher e os 2 botões do cliente ("Promover a admin" + "Apagar")
-   estouravam a largura da tela -- achado real, usuário reportou a aba de
-   Hierarquia especificamente "bugada" no celular mesmo já com o resto do
-   admin corrigido. Quebra em duas linhas: dados em cima, ações embaixo. */
-@media (max-width: 480px) {
+/* Quando a própria linha (não a janela) fica estreita demais pro avatar +
+   nome/e-mail + os botões de ação caberem lado a lado -- acontecia tanto no
+   celular quanto numa coluna de desktop intermediária do card-grid acima
+   (achado real: o usuário reportou a aba de Hierarquia "bugada" com os
+   botões sobrepondo o nome/e-mail numa janela de ~1080px, bem depois do
+   ajuste anterior que só cobria <480px de viewport). Empilha em duas
+   linhas: dados em cima, ações embaixo, ambas cabendo na própria linha. */
+@container (max-width: 480px) {
   .admin-group__row { flex-wrap: wrap; }
   .admin-group__action {
     flex: 1 1 100%;
     margin-top: 8px;
   }
-  .admin-group__action form { width: 100%; }
   .admin-group__action .admin-btn-primary,
   .admin-group__action .admin-btn-outline { width: 100%; }
-  .admin-group__action--duplo form { flex: 1; width: auto; }
 }
 
 /* -------------------- eventos: cards de lote -------------------- */

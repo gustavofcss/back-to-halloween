@@ -7,11 +7,11 @@
 <section class="admin-panel">
   <div class="admin-panel__head">
     <h2 class="admin-panel__title">Cadastros pendentes</h2>
-    <span class="admin-panel__count">{{ pendentes|length }} resultado(s)</span>
+    <span class="admin-panel__count"><span data-admin-total="pendentes">{{ pendentes|length }}</span> resultado(s)</span>
   </div>
 
   {% if pendentes %}
-  <form method="post" id="cadastros-lote-form">
+  <form method="post" id="cadastros-lote-form" class="admin-ajax-form">
     <div class="admin-bulk-bar" id="cadastros-bulk-bar">
       <span class="admin-bulk-bar__count" id="cadastros-bulk-count">0 selecionado(s)</span>
       <button type="submit" formaction="/admin/cadastros/confirmar-lote" class="admin-btn-primary">Confirmar selecionados</button>
@@ -67,5 +67,13 @@
     });
     itens.forEach(function (item) { item.addEventListener('change', atualizar); });
   })();
+
+  // Confirmar e recusar sempre tiram o cadastro da lista de pendentes.
+  document.addEventListener('admin:sucesso', function (evt) {
+    evt.detail.dados.aplicados.forEach(function (item) {
+      var checkbox = document.querySelector('.cadastros-check-item[value="' + item.id + '"]');
+      if (checkbox) { checkbox.closest('tr').remove(); }
+    });
+  });
 </script>
 {% endblock %}

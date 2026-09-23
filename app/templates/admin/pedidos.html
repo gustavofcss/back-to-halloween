@@ -19,31 +19,31 @@
 <div class="admin-kpis">
   <div class="admin-kpi">
     <div class="admin-kpi__label">Total de pedidos</div>
-    <div class="admin-kpi__value">{{ pedidos|length }}</div>
+    <div class="admin-kpi__value"><span data-admin-total="total_pedidos">{{ pedidos|length }}</span></div>
   </div>
   <div class="admin-kpi">
     <div class="admin-kpi__label">Valor total</div>
-    <div class="admin-kpi__value">R$ {{ ns.total_valor }}</div>
+    <div class="admin-kpi__value">R$ <span data-admin-total="valor_total">{{ ns.total_valor }}</span></div>
   </div>
   <div class="admin-kpi">
     <div class="admin-kpi__label">Confirmados</div>
-    <div class="admin-kpi__value">{{ ns.confirmados }}</div>
-    <div class="admin-kpi__delta">{{ ns.pendentes }} pendente(s)</div>
+    <div class="admin-kpi__value"><span data-admin-total="confirmados">{{ ns.confirmados }}</span></div>
+    <div class="admin-kpi__delta"><span data-admin-total="pendentes">{{ ns.pendentes }}</span> pendente(s)</div>
   </div>
   <div class="admin-kpi">
     <div class="admin-kpi__label">Vagas do evento</div>
-    <div class="admin-kpi__value">{{ ingressos_vendidos_total }} / {{ capacidade_maxima }}</div>
+    <div class="admin-kpi__value"><span data-admin-total="ingressos_vendidos_total">{{ ingressos_vendidos_total }}</span> / <span data-admin-total="capacidade_maxima">{{ capacidade_maxima }}</span></div>
   </div>
 </div>
 
 <section class="admin-panel">
   <div class="admin-panel__head">
     <h2 class="admin-panel__title">Pedidos</h2>
-    <span class="admin-panel__count">{{ pedidos|length }} resultado(s)</span>
+    <span class="admin-panel__count"><span data-admin-total="total_pedidos">{{ pedidos|length }}</span> resultado(s)</span>
   </div>
 
   {% if pedidos %}
-  <form method="post" id="pedidos-lote-form">
+  <form method="post" id="pedidos-lote-form" class="admin-ajax-form">
     <div class="admin-bulk-bar" id="pedidos-bulk-bar">
       <span class="admin-bulk-bar__count" id="pedidos-bulk-count">0 selecionado(s)</span>
       <button type="submit" formaction="/admin/pedidos/confirmar-lote" class="admin-btn-primary">Confirmar selecionados</button>
@@ -122,5 +122,31 @@
     });
     itens.forEach(function (item) { item.addEventListener('change', atualizar); });
   })();
+
+  // Confirmar/cancelar trocam o selo de status e os botões da linha;
+  // apagar tira a linha da tabela -- sem isso a tela só refletia a mutação
+  // depois de um reload inteiro da página.
+  document.addEventListener('admin:sucesso', function (evt) {
+    var pillClasses = { confirmado: 'admin-pill--ok', pendente: 'admin-pill--warn', cancelado: 'admin-pill--bad' };
+    evt.detail.dados.aplicados.forEach(function (item) {
+      var checkbox = document.querySelector('.pedidos-check-item[value="' + item.id + '"]');
+      if (!checkbox) { return; }
+      var linha = checkbox.closest('tr');
+      if (!item.status) { linha.remove(); return; }
+
+      var pill = linha.querySelector('.admin-pill');
+      pill.className = 'admin-pill ' + (pillClasses[item.status] || 'admin-pill--neutral');
+      pill.textContent = item.status;
+
+      var celulaAcoes = linha.querySelector('td:last-child');
+      if (item.status === 'confirmado') {
+        celulaAcoes.innerHTML =
+          '<button type="submit" formaction="/admin/pedidos/' + item.id + '/cancelar" class="admin-btn-outline">Cancelar</button>';
+      } else if (item.status === 'cancelado') {
+        celulaAcoes.innerHTML =
+          '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'pedidos-lote-form\'), \'/admin/pedidos/' + item.id + '/apagar\', \'Apagar esse pedido cancelado? Não tem como desfazer.\')">Apagar</button>';
+      }
+    });
+  });
 </script>
 {% endblock %}

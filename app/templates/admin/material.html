@@ -12,15 +12,15 @@
 <div class="admin-kpis">
   <div class="admin-kpi">
     <div class="admin-kpi__label">Total arrecadado</div>
-    <div class="admin-kpi__value">R$ {{ total_arrecadado }}</div>
+    <div class="admin-kpi__value">R$ <span data-admin-total="total_arrecadado">{{ total_arrecadado }}</span></div>
   </div>
   <div class="admin-kpi">
     <div class="admin-kpi__label">Total gasto em material</div>
-    <div class="admin-kpi__value">R$ {{ total_gasto }}</div>
+    <div class="admin-kpi__value">R$ <span data-admin-total="total_gasto">{{ total_gasto }}</span></div>
   </div>
   <div class="admin-kpi">
     <div class="admin-kpi__label">Saldo disponível</div>
-    <div class="admin-kpi__value">R$ {{ saldo }}</div>
+    <div class="admin-kpi__value">R$ <span data-admin-total="saldo">{{ saldo }}</span></div>
   </div>
 </div>
 
@@ -48,7 +48,7 @@
 {% if materiais %}
 <div class="admin-grid">
   {% for m in materiais %}
-  <div class="admin-card">
+  <div class="admin-card" data-material-id="{{ m.id }}">
     <div class="admin-material-card__head">
       <div style="flex: 1; min-width: 0;">
         <div class="admin-material-card__name">{{ m.nome_material }}</div>
@@ -76,5 +76,12 @@
       secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   })();
+
+  document.addEventListener('admin:sucesso', function (evt) {
+    evt.detail.dados.aplicados.forEach(function (item) {
+      var card = document.querySelector('[data-material-id="' + item.id + '"]');
+      if (card) { card.remove(); }
+    });
+  });
 </script>
 {% endblock %}
