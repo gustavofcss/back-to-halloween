@@ -2727,3 +2727,78 @@ input::placeholder{color:#6f6284}
 /* ---------- 4.7 cadastro_pendente.html + verifique_email.html ---------- */
 .pending-h2{margin-top:34px;text-align:center}
 .pending-text{color:var(--ink-2)}
+
+/* ---------- 4.4 comprar.html -- "Seus dados" ---------- */
+.buy-web{top:0;right:0;width:140px;filter:invert(1);opacity:.18}
+.buy-treat{left:20px;bottom:18px;height:80px;filter:drop-shadow(0 0 16px rgba(255,120,20,.5));animation:flicker 3s ease-in-out infinite}
+
+.buy-price{display:flex;justify-content:space-between;align-items:center;gap:12px;
+  padding:12px 14px;border-radius:12px;background:rgba(255,138,43,.1);border:1px solid rgba(255,138,43,.25);
+  font-size:13px;color:var(--ink-2)}
+.buy-price__value{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:20px;color:var(--orange-2);white-space:nowrap}
+
+.buy-section-label{margin:0;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+
+.buy-qty-row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.buy-qty-row__label{display:block;font-size:14px;font-weight:600;color:var(--ink)}
+.buy-qty-row__hint{display:block;font-size:12px;color:var(--ink-4)}
+.buy-qty-controls{display:flex;align-items:center;gap:12px}
+.buy-qty-btn{width:40px;height:40px;padding:0;font-size:18px;line-height:1}
+.buy-qty-value{min-width:16px;text-align:center;font-weight:700;font-size:17px;color:var(--ink)}
+
+.buy-companion{display:flex;flex-direction:column;gap:12px;padding-top:14px;border-top:1px dashed var(--line)}
+.buy-companion__label{font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3)}
+.buy-companion__hint{margin:-4px 0 0}
+
+.buy-actions{display:flex;gap:10px;margin-top:4px}
+.buy-actions__submit{flex:1}
+.buy-logout{margin:4px 0 0;text-align:center}
+
+/* ---------- 4.5 pagamento.html + _ticket_topo.html ---------- */
+.pay-witch{right:-30px;top:70px;width:170px}
+
+/* Selo de conteúdo do topo do ingresso quando não há status pra mostrar
+   (contexto de pagamento -- o estado real já aparece em .ticket__banner
+   logo abaixo, então aqui é só um rótulo fixo, igual ao mockup). */
+.ticket__top-tag{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--orange)}
+
+.ticket__row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:20px 22px 12px}
+.ticket__row--compact{padding:16px 18px;align-items:center}
+.ticket__qty{margin:0;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:20px}
+.ticket__qty--sm{font-size:18px}
+.ticket__meta{margin:2px 0 0;font-size:12px;color:var(--paper-mute)}
+
+.ticket__holders{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 22px 18px}
+.ticket__holder-name{margin:0;font-size:13px;font-weight:600}
+.ticket__holder-rg{margin:0;font-size:11px;color:var(--paper-mute)}
+
+/* Bandeiras de status (confirmado/cancelado/aguardando/erro) dentro do
+   ingresso de papel -- claro demais pro par translúcido de .alert-error/
+   .alert-success (pensado pra cartão ESCURO); aqui usa texto escuro
+   saturado sobre o mesmo wash de cor, que mantém contraste no papel claro. */
+.ticket__banner{margin:0;padding:16px 22px;text-align:center;font-size:14px;font-weight:600;line-height:1.5}
+.ticket__banner--ok{background:rgba(122,209,79,.22);color:#2f6a1c}
+.ticket__banner--bad{background:rgba(220,70,70,.2);color:#7a2323}
+.ticket__banner--left{text-align:left}
+
+.pay-pix{padding:22px;display:flex;flex-direction:column;align-items:center;gap:14px}
+.pay-pix-label{margin:0;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#8a7760}
+.pay-qr{width:170px;height:170px;border-radius:12px;border:8px solid #fffdf8;box-shadow:0 0 0 1px #dccdae;display:block;object-fit:cover}
+.pay-copy-row{width:100%;box-sizing:border-box;display:flex;gap:8px;align-items:center;padding:10px 12px;border-radius:10px;background:#efe2c8}
+.pay-copy-value{flex:1;min-width:0;margin:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pay-copy-btn{border:none;cursor:pointer;padding:8px 12px;border-radius:8px;background:#241a14;color:var(--glow);font:600 12px 'Poppins',sans-serif}
+.pay-key{width:100%;box-sizing:border-box;margin:0;padding:10px 12px;border-radius:10px;background:#efe2c8;font-size:13px;text-align:center}
+.pay-how{margin:0;font-size:12px;color:#6a5a48;text-align:center}
+.pay-actions{display:flex;gap:10px;padding:0 22px 22px}
+.pay-actions__confirm{flex:1;margin:0}
+
+/* ---------- 4.6 meus_pedidos.html ---------- */
+.mp-bg{background:radial-gradient(circle at 50% 0%,#2c1a3a 0%,#120b1c 40%,#0a060e 75%)}
+.mp-wrap{position:relative;width:100%;max-width:720px;display:flex;flex-direction:column;gap:20px}
+.mp-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
+.mp-skeleton{right:10px;bottom:10px;height:130px;opacity:.8;transform:rotate(6deg)}
+
+@media (max-width:480px){
+  .buy-actions{flex-direction:column}
+  .ticket__holders{grid-template-columns:1fr}
+}

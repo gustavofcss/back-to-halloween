@@ -1,55 +1,67 @@
 {% extends "base.html" %}
 {% block title %}Pagamento — Horror Night Party{% endblock %}
 {% block content %}
-<div class="auth-wrap">
-  <img class="auth-deco-skull" src="{{ url_for('static', filename='assets/deco-skull.png') }}" alt="" aria-hidden="true">
-  <img class="auth-deco-broom" src="{{ url_for('static', filename='assets/deco-broom.png') }}" alt="" aria-hidden="true">
-  <div class="progress-steps">
-    <div class="progress-step">
-      <div class="progress-step__circle progress-step__circle--done">1</div>
-      <span class="progress-step__label">Convite</span>
-    </div>
-    <div class="progress-divider"></div>
-    <div class="progress-step">
-      <div class="progress-step__circle progress-step__circle--done">2</div>
-      <span class="progress-step__label">Seus dados</span>
-    </div>
-    <div class="progress-divider"></div>
-    <div class="progress-step">
-      <div class="progress-step__circle progress-step__circle--done">3</div>
-      <span class="progress-step__label">Pagamento</span>
-    </div>
+<div class="screen screen--top">
+  <img class="deco sil pay-witch" src="{{ url_for('static', filename='assets/witch-flying.png') }}" alt="" aria-hidden="true">
+
+  <div class="steps">
+    <div class="step done"><b>1</b><span>Convite</span></div>
+    <div class="step-line done"></div>
+    <div class="step done"><b>2</b><span>Seus dados</span></div>
+    <div class="step-line done"></div>
+    <div class="step on"><b>3</b><span>Pagamento</span></div>
   </div>
 
   <div class="ticket">
     {% include "_ticket_topo.html" %}
 
-    <div class="ticket__section">
-      {% if pedido.status_pedido == 'confirmado' %}
-        <div class="alert-success" style="text-align: center;">Pagamento confirmado! Seu ingresso já está garantido.</div>
-      {% elif pedido.status_pedido == 'cancelado' %}
-        <div class="alert-error" style="text-align: center;">Esse pedido foi cancelado.</div>
-      {% elif aguardando %}
-        <div class="alert-success" style="text-align: center;">Ingresso reservado, aguardando confirmação do pagamento.</div>
-      {% else %}
-        {% if mp_erro %}
-        <div class="alert-error">{{ mp_erro }}</div>
-        {% endif %}
+    <div class="ticket__row">
+      <div>
+        <p class="ticket__qty">{{ pedido.quantidade }} &times; Entrada</p>
+        <p class="ticket__meta">Pedido #{{ pedido.id_pedido }}</p>
+      </div>
+      <p class="ticket__price">R$ {{ pedido.valor }}</p>
+    </div>
+
+    {% if usuario %}
+    <div class="ticket__holders">
+      <div>
+        <p class="ticket__holder-name">{{ usuario.nome }}</p>
+        {% if pedido.rg %}<p class="ticket__holder-rg">RG {{ pedido.rg }}</p>{% endif %}
+      </div>
+      {% if pedido.acompanhante_nome %}
+      <div>
+        <p class="ticket__holder-name">{{ pedido.acompanhante_nome }}</p>
+        {% if pedido.acompanhante_rg %}<p class="ticket__holder-rg">RG {{ pedido.acompanhante_rg }}</p>{% endif %}
+      </div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <div class="ticket__cut"></div>
+
+    {% if pedido.status_pedido == 'confirmado' %}
+      <p class="ticket__banner ticket__banner--ok">Pagamento confirmado! Seu ingresso já está garantido.</p>
+    {% elif pedido.status_pedido == 'cancelado' %}
+      <p class="ticket__banner ticket__banner--bad">Esse pedido foi cancelado.</p>
+    {% elif aguardando %}
+      <p class="ticket__banner ticket__banner--ok">Ingresso reservado, aguardando confirmação do pagamento.</p>
+    {% else %}
+      {% if mp_erro %}
+      <p class="ticket__banner ticket__banner--bad ticket__banner--left">{{ mp_erro }}</p>
+      {% endif %}
+
+      <div class="pay-pix">
+        <p class="pay-pix-label">Pague com Pix</p>
 
         {% if qr_code_base64 %}
-        <div class="ticket__pix-box ticket__pix-box--center">
-          <p class="ticket__pix-label">QR Code Pix</p>
-          <img class="ticket__qr" src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code para pagamento Pix">
-        </div>
+        <img class="pay-qr" src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code para pagamento Pix">
         {% endif %}
 
         {% if qr_code %}
-        <div class="ticket__pix-box">
-          <p class="ticket__pix-label">Pix copia e cola</p>
-          <div class="ticket__pix-copy-row">
-            <p class="ticket__pix-value ticket__pix-value--clip" id="pix-copia-cola">{{ qr_code }}</p>
-            <button type="button" class="ticket__pix-copy-btn" id="btn-copiar-pix">Copiar</button>
-          </div>
+        <div class="pay-copy-row">
+          <p class="pay-copy-value" id="pix-copia-cola">{{ qr_code }}</p>
+          <button type="button" class="pay-copy-btn" id="btn-copiar-pix">Copiar</button>
         </div>
         <script>
           (function () {
@@ -66,50 +78,44 @@
           })();
         </script>
         {% else %}
-        <div class="ticket__pix-box">
-          <p class="ticket__pix-label">Chave Pix</p>
-          <p class="ticket__pix-value">{{ pix_key }}</p>
-        </div>
+        <p class="pay-key">Chave Pix: {{ pix_key }}</p>
         {% endif %}
 
-        <div>
-          <p class="ticket__pix-label">Como funciona</p>
-          <p class="ticket__how-text">Faça o Pix no valor acima e depois clique em confirmar. Você recebe a confirmação por e-mail.</p>
-        </div>
+        <p class="pay-how">A confirmação chega por e-mail assim que o pagamento cair.</p>
+      </div>
 
-        <div class="ticket__actions">
-          <a href="/comprar" class="btn-outline">Voltar</a>
-          <form method="post" action="/pagamento/{{ pedido.id_pedido }}/confirmar">
-            <button type="submit" class="btn-primary">Já paguei, confirmar</button>
-          </form>
-        </div>
+      <div class="pay-actions">
+        <a href="/comprar" class="btn btn-ghost">Voltar</a>
+        <form method="post" action="/pagamento/{{ pedido.id_pedido }}/confirmar" class="pay-actions__confirm">
+          <button type="submit" class="btn btn-primary btn-block">Já paguei, confirmar</button>
+        </form>
+      </div>
 
-        {% if qr_code_base64 or qr_code or pedido.mp_payment_id %}
-        <script>
-          (function () {
-            var tentativas = 0;
-            var maxTentativas = 60; // 60 x 5s ~= 5 minutos
-            var intervalo = setInterval(function () {
-              tentativas += 1;
-              if (tentativas > maxTentativas) {
-                clearInterval(intervalo);
-                return;
-              }
-              fetch('/pagamento/{{ pedido.id_pedido }}/verificar', { method: 'POST' })
-                .then(function (resp) { return resp.json(); })
-                .then(function (data) {
-                  if (data.status === 'confirmado') {
-                    clearInterval(intervalo);
-                    window.location.reload();
-                  }
-                })
-                .catch(function () {});
-            }, 5000);
-          })();
-        </script>
-        {% endif %}
+      {% if qr_code_base64 or qr_code or pedido.mp_payment_id %}
+      <script>
+        (function () {
+          var tentativas = 0;
+          var maxTentativas = 60; // 60 x 5s ~= 5 minutos
+          var intervalo = setInterval(function () {
+            tentativas += 1;
+            if (tentativas > maxTentativas) {
+              clearInterval(intervalo);
+              return;
+            }
+            fetch('/pagamento/{{ pedido.id_pedido }}/verificar', { method: 'POST' })
+              .then(function (resp) { return resp.json(); })
+              .then(function (data) {
+                if (data.status === 'confirmado') {
+                  clearInterval(intervalo);
+                  window.location.reload();
+                }
+              })
+              .catch(function () {});
+          }, 5000);
+        })();
+      </script>
       {% endif %}
-    </div>
+    {% endif %}
   </div>
 </div>
 {% endblock %}

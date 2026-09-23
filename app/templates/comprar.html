@@ -1,42 +1,33 @@
 {% extends "base.html" %}
 {% block title %}Comprar ingresso — Horror Night Party{% endblock %}
 {% block content %}
-<div class="auth-wrap">
-  <img class="buy-deco-web" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true">
-  <img class="buy-deco-cat" src="{{ url_for('static', filename='assets/deco-evil-cat.png') }}" alt="" aria-hidden="true">
-  <img class="buy-deco-treat" src="{{ url_for('static', filename='assets/deco-trick-or-treat.png') }}" alt="" aria-hidden="true">
-  <div class="progress-steps">
-    <div class="progress-step">
-      <div class="progress-step__circle progress-step__circle--done">1</div>
-      <span class="progress-step__label">Convite</span>
-    </div>
-    <div class="progress-divider"></div>
-    <div class="progress-step">
-      <div class="progress-step__circle progress-step__circle--done">2</div>
-      <span class="progress-step__label">Seus dados</span>
-    </div>
-    <div class="progress-divider"></div>
-    <div class="progress-step">
-      <div class="progress-step__circle">3</div>
-      <span class="progress-step__label">Pagamento</span>
-    </div>
+<div class="screen screen--top">
+  <img class="deco buy-web" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true">
+  <img class="deco buy-treat" src="{{ url_for('static', filename='assets/deco-trick-or-treat.png') }}" alt="" aria-hidden="true">
+
+  <div class="steps">
+    <div class="step done"><b>1</b><span>Convite</span></div>
+    <div class="step-line done"></div>
+    <div class="step on"><b>2</b><span>Seus dados</span></div>
+    <div class="step-line"></div>
+    <div class="step"><b>3</b><span>Pagamento</span></div>
   </div>
 
-  <div class="card-parchment card-parchment--dark">
-    <div class="card-title">
-      <img src="{{ url_for('static', filename='assets/witch.svg') }}" alt="">
-      <h1>Seus dados</h1>
-    </div>
+  <div class="card">
+    <h2 class="h2">Seus dados</h2>
 
     {% if sem_evento %}
-      <p class="help-text">Nenhum evento disponível no momento.</p>
+      <p class="muted">Nenhum evento disponível no momento.</p>
     {% elif esgotado %}
       <div class="alert-error">Ingressos esgotados! A Horror Night Party atingiu a capacidade máxima.</div>
     {% elif ja_tem_pedido %}
       <div class="alert-error">Você já tem um pedido pra esse evento -- não dá pra comprar outro em separado.</div>
-      <p class="card-footer"><a href="/meus-pedidos">Ver meus pedidos</a></p>
+      <a href="/meus-pedidos" class="auth-footer">Ver meus pedidos</a>
     {% else %}
-      <p class="card-subtitle buy-price-highlight">{{ evento.nome_evento }} — Lote {{ evento.numero_lote }} — R$ {{ evento.valor_entrada }} por ingresso.</p>
+      <div class="buy-price">
+        <span>{{ evento.nome_evento }} — Lote {{ evento.numero_lote }}</span>
+        <span class="buy-price__value">R$ {{ evento.valor_entrada }}</span>
+      </div>
 
       {% if erro %}
       <div class="alert-error">{{ erro }}</div>
@@ -48,65 +39,68 @@
         {% endif %}
         <div class="field">
           <label>Nome</label>
-          <input value="{{ usuario.nome }}" disabled>
+          <input class="input" value="{{ usuario.nome }}" disabled>
         </div>
         <div class="field">
           <label>E-mail</label>
-          <input value="{{ usuario.email }}" disabled>
+          <input class="input" value="{{ usuario.email }}" disabled>
         </div>
         <div class="field">
           <label for="rg">RG</label>
-          <input id="rg" name="rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)" required>
+          <input class="input" id="rg" name="rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)" required>
         </div>
         <div class="field">
           <label for="whatsapp">WhatsApp</label>
-          <input id="whatsapp" name="whatsapp" placeholder="DDD + número, só números" inputmode="numeric" pattern="[0-9]{10,11}" maxlength="11" title="DDD + número, só números (10 ou 11 dígitos)" required>
+          <input class="input" id="whatsapp" name="whatsapp" placeholder="DDD + número, só números" inputmode="numeric" pattern="[0-9]{10,11}" maxlength="11" title="DDD + número, só números (10 ou 11 dígitos)" required>
         </div>
 
         <input type="hidden" id="quantidade" name="quantidade" value="1">
 
-        <div class="qty-row">
+        <div class="buy-qty-row">
           <div>
-            <p class="qty-row__label">Ingressos</p>
-            <p class="qty-row__hint">Máx. {{ max_permitido }} por pessoa</p>
+            <span class="buy-qty-row__label">Ingressos</span>
+            <span class="buy-qty-row__hint">Máx. {{ max_permitido }} por pessoa</span>
           </div>
-          <div class="qty-controls">
-            <button type="button" class="qty-btn" id="qty-dec" aria-label="Diminuir quantidade">&minus;</button>
-            <span class="qty-value" id="qty-display">1</span>
-            <button type="button" class="qty-btn" id="qty-inc" aria-label="Aumentar quantidade">+</button>
+          <div class="buy-qty-controls">
+            <button type="button" class="btn btn-ghost buy-qty-btn" id="qty-dec" aria-label="Diminuir quantidade">&minus;</button>
+            <span class="buy-qty-value" id="qty-display">1</span>
+            <button type="button" class="btn btn-ghost buy-qty-btn" id="qty-inc" aria-label="Aumentar quantidade">+</button>
           </div>
         </div>
 
         {% if max_permitido > 1 %}
-        <div id="acompanhante-fields" style="display: none;">
-          <p class="buy-section-label">Ingresso 2 (acompanhante)</p>
-          <p class="help-text" style="margin-top: -8px;">
-            Pode ser pra outra pessoa: preenche os dados de quem vai usar esse ingresso.
+        <div id="acompanhante-fields" class="buy-companion" style="display: none;">
+          <span class="buy-companion__label">Acompanhante</span>
+          <p class="muted buy-companion__hint">
+            Pode ser pra outra pessoa: preenche os dados de quem vai usar o ingresso 2.
           </p>
           <div class="field">
             <label for="acompanhante_nome">Nome do acompanhante</label>
-            <input id="acompanhante_nome" name="acompanhante_nome" placeholder="Nome completo">
+            <input class="input" id="acompanhante_nome" name="acompanhante_nome" placeholder="Nome completo">
           </div>
           <div class="field">
             <label for="acompanhante_email">E-mail do acompanhante</label>
-            <input id="acompanhante_email" name="acompanhante_email" type="email" placeholder="acompanhante@email.com">
+            <input class="input" id="acompanhante_email" name="acompanhante_email" type="email" placeholder="acompanhante@email.com">
           </div>
           <div class="field">
             <label for="acompanhante_rg">RG do acompanhante</label>
-            <input id="acompanhante_rg" name="acompanhante_rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)">
+            <input class="input" id="acompanhante_rg" name="acompanhante_rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)">
           </div>
           <div class="field">
             <label for="acompanhante_whatsapp">WhatsApp do acompanhante</label>
-            <input id="acompanhante_whatsapp" name="acompanhante_whatsapp" placeholder="DDD + número, só números" inputmode="numeric" pattern="[0-9]{10,11}" maxlength="11" title="DDD + número, só números (10 ou 11 dígitos)">
+            <input class="input" id="acompanhante_whatsapp" name="acompanhante_whatsapp" placeholder="DDD + número, só números" inputmode="numeric" pattern="[0-9]{10,11}" maxlength="11" title="DDD + número, só números (10 ou 11 dígitos)">
           </div>
         </div>
         {% endif %}
 
-        <button type="submit" class="btn-primary">Continuar &middot; R$ <span id="total-display">{{ evento.valor_entrada }}</span></button>
+        <div class="buy-actions">
+          <a href="/" class="btn btn-ghost">Voltar</a>
+          <button type="submit" class="btn btn-primary buy-actions__submit">Continuar &middot; R$ <span id="total-display">{{ evento.valor_entrada }}</span></button>
+        </div>
       </form>
 
-      <form method="post" action="/logout" class="card-footer">
-        <button type="submit" class="card-footer__link-btn card-footer__link-btn--purple">Sair</button>
+      <form method="post" action="/logout" class="buy-logout">
+        <button type="submit" class="btn btn-ghost btn-sm">Sair</button>
       </form>
 
       <script>
@@ -146,7 +140,7 @@
     {% endif %}
 
     {% if tem_pedido and not ja_tem_pedido %}
-    <p class="card-footer"><a href="/meus-pedidos">Meus pedidos</a></p>
+    <a href="/meus-pedidos" class="auth-footer">Meus pedidos</a>
     {% endif %}
   </div>
 </div>

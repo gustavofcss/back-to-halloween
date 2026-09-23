@@ -1,47 +1,47 @@
 {% extends "base.html" %}
 {% block title %}Meus pedidos — Horror Night Party{% endblock %}
 {% block content %}
-{% set status_pill = {'confirmado': 'admin-pill--ok', 'pendente': 'admin-pill--warn', 'cancelado': 'admin-pill--bad'} %}
-<div class="admin-shell" style="justify-content: center;">
-  <main class="admin-main" style="max-width: 480px; margin: 0 auto;">
-    <header class="admin-header">
-      <div class="admin-header__text">
-        <div class="admin-header__title">Meus pedidos</div>
-        <div class="admin-header__subtitle">Seus ingressos pra Horror Night Party</div>
+<div class="screen screen--top mp-bg">
+  <img class="deco mp-skeleton" src="{{ url_for('static', filename='assets/deco-skeleton.webp') }}" alt="" aria-hidden="true">
+
+  <div class="mp-wrap">
+    <div class="mp-header">
+      <div>
+        <h2 class="h2">Meus pedidos</h2>
+        <p class="muted">Seus ingressos pra Horror Night Party</p>
       </div>
-      <div class="admin-header__actions" style="display: flex; align-items: center; gap: 14px;">
-        {% if pode_comprar_mais > 0 %}
-        <a href="/comprar" class="admin-cta">Comprar mais {{ pode_comprar_mais }} ingresso(s)</a>
-        {% endif %}
-        <form method="post" action="/logout" style="margin: 0;">
-          <button type="submit" class="admin-btn-outline">Sair</button>
-        </form>
-      </div>
-    </header>
+      <form method="post" action="/logout" style="margin: 0;">
+        <button type="submit" class="btn btn-ghost btn-sm">Sair</button>
+      </form>
+    </div>
 
     {% if pedidos %}
-    <div style="display: flex; flex-direction: column; gap: 20px;">
       {% for p in pedidos %}
-      <div class="ticket" style="max-width: none;">
+      <div class="ticket">
         {% set pedido = p %}
+        {% set ticket_status = true %}
         {% include "_ticket_topo.html" %}
-        <div class="ticket__section" style="flex-direction: row; align-items: center; justify-content: space-between;">
+        <div class="ticket__row ticket__row--compact">
           <div>
-            <span class="admin-pill {{ status_pill.get(p.status_pedido, 'admin-pill--neutral') }}">{{ p.status_pedido }}</span>
-            <p class="help-text" style="margin: 6px 0 0;">{{ p.data_pedido|data_hora_br }}</p>
+            <p class="ticket__qty ticket__qty--sm">{{ p.quantidade }} &times; Entrada</p>
+            <p class="ticket__meta">Pedido #{{ p.id_pedido }} · {{ p.data_pedido|data_hora_br }}</p>
           </div>
+          <p class="ticket__price">R$ {{ p.valor }}</p>
         </div>
       </div>
       {% endfor %}
-    </div>
-    {% else %}
-    <section class="admin-panel">
-      <p class="help-text admin-empty-text">Você ainda não tem pedidos.</p>
+
       {% if pode_comprar_mais > 0 %}
-      <a href="/comprar" class="admin-btn-primary" style="text-decoration: none; display: inline-block;">Comprar ingresso</a>
+      <a href="/comprar" class="btn btn-primary" style="align-self: flex-start;">Comprar mais {{ pode_comprar_mais }} ingresso(s)</a>
       {% endif %}
-    </section>
+    {% else %}
+    <div class="card">
+      <p class="muted">Você ainda não tem pedidos.</p>
+      {% if pode_comprar_mais > 0 %}
+      <a href="/comprar" class="btn btn-primary btn-block">Comprar ingresso</a>
+      {% endif %}
+    </div>
     {% endif %}
-  </main>
+  </div>
 </div>
 {% endblock %}

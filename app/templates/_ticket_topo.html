@@ -1,32 +1,17 @@
-{# Cabeçalho + resumo do "ingresso" -- reaproveitado por pagamento.html e
-   meus_pedidos.html. Espera uma variável `pedido` no escopo. #}
-<div class="ticket__header">
-  <div class="ticket__header-brand">
+{# Barra de topo do "ingresso" -- reaproveitada por pagamento.html e
+   meus_pedidos.html. Espera uma variável `pedido` no escopo; quando
+   `ticket_status` é verdadeiro, mostra a pílula de status do pedido
+   (usado em meus_pedidos.html); caso contrário mostra o rótulo fixo
+   "Ingresso" (usado em pagamento.html, que já mostra o status como um
+   banner maior logo abaixo). #}
+<div class="ticket__top">
+  <div class="ticket__brand">
     <img src="{{ url_for('static', filename='assets/pumpkin.svg') }}" alt="">
-    <p>Horror Night</p>
+    <span>Horror Night</span>
   </div>
-  <p class="ticket__header-tag">Ingresso</p>
+  {% if ticket_status %}
+  <span class="pill pill--{{ pedido.status_pedido }}">{{ pedido.status_pedido }}</span>
+  {% else %}
+  <span class="ticket__top-tag">Ingresso</span>
+  {% endif %}
 </div>
-
-<div class="ticket__summary">
-  <div>
-    <p class="ticket__summary-qty">{{ pedido.quantidade }} &times; Entrada</p>
-    <p class="ticket__summary-name">Pedido #{{ pedido.id_pedido }}</p>
-  </div>
-  <p class="ticket__summary-total">R$ {{ pedido.valor }}</p>
-</div>
-
-{% if usuario %}
-<div class="ticket__holder">
-  <p class="ticket__holder-name">{{ usuario.nome }}{% if pedido.acompanhante_nome %} <span class="ticket__holder-tag">(ingresso 1)</span>{% endif %}</p>
-  {% if pedido.rg %}<p class="ticket__holder-rg">RG {{ pedido.rg }}</p>{% endif %}
-</div>
-{% if pedido.acompanhante_nome %}
-<div class="ticket__holder">
-  <p class="ticket__holder-name">{{ pedido.acompanhante_nome }} <span class="ticket__holder-tag">(ingresso 2)</span></p>
-  {% if pedido.acompanhante_rg %}<p class="ticket__holder-rg">RG {{ pedido.acompanhante_rg }}</p>{% endif %}
-</div>
-{% endif %}
-{% endif %}
-
-<div class="ticket__perforation"></div>
