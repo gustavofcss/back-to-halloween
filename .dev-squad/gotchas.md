@@ -90,3 +90,35 @@ globais (não prefixadas com o namespace da área, tipo `.admin-*`) precisa
 auditar TODA classe global usada dentro dela, não só as regras já
 prefixadas/escopadas -- um grep por `class="` nos templates da área listando
 classes SEM o prefixo do namespace acha essas antes de virarem bug visual.
+
+## Comparar `>=`/`<=` num valor formatado como string em Jinja quebra a página inteira (500)
+
+**Sintoma**: `/admin/material` estourava `TypeError: '>=' not supported
+between instances of 'str' and 'int'` em TODO carregamento da página (não é
+edge case -- é o caminho normal), achado no QA runtime do passe 3/3 do
+redesign (`df76d9c`, 2026-09-23). `jinja2.Environment().parse()` não pega
+isso -- é erro de tipo em RUNTIME, só aparece renderizando de verdade com
+`render_template()`.
+
+**Causa raiz**: `admin/material.html` (novo, do handoff) tinha
+`{{ 'var(--ok)' if saldo >= 0 else 'var(--bad)' }}`, mas `saldo` chega do
+backend como STRING já formatada -- `_totais_material()` em `app/admin.py`
+faz `f"{saldo:.2f}"` (pensado só pra exibição, não pra comparação). Comparar
+`str >= int` é `TypeError` em Python 3 (não faz coerção silenciosa como
+JS faria).
+
+**Fix**: template-only (`app/admin.py` é frontend-off-limits por regra do
+handoff) -- `saldo|float >= 0` em vez de `saldo >= 0`. Qualquer outro valor
+formatado como string vindo do backend (`total_arrecadado`, `total_gasto`,
+`valor_total` etc.) que um dia precise de comparação numérica no template
+tem o mesmo risco -- sempre `|float` ou `|int` antes de comparar.
+
+**Como recorre**: sempre que um redesign de template usa uma variável só
+pra EXIBIÇÃO ("R$ {{ x }}") e o mockup pede também uma DECISÃO condicional
+sobre ela (cor verde/vermelho, `{% if %}`), checar no código Python de onde
+a variável vem -- se foi formatada com `f"{...:.2f}"` ou similar, ela virou
+string e qualquer comparação numérica direta no Jinja quebra a página
+inteira, sempre, não só em alguns dados. `jinja2.Environment().parse()`
+(checagem de sintaxe) NUNCA pega isso -- só renderizar de verdade com dados
+reais (ou um harness de render com contexto fake fiel ao que a rota passa)
+encontra.

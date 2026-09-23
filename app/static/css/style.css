@@ -2234,6 +2234,21 @@ input::placeholder{color:#6f6284}
 .input{width:100%;min-width:0;padding:13px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);
   color:var(--ink);font:400 15px 'Poppins',sans-serif;letter-spacing:0;text-transform:none}
 .input:focus{outline:none;border-color:var(--orange)}
+/* Sobrescreve `.field label`/`.field input` (regra antiga do card CLARO,
+   pergaminho -- ver .dev-squad/gotchas.md "reskin claro->escuro"). Essa
+   regra antiga (linhas ~566/585/596/601) tem a MESMA especificidade
+   (classe + tipo) que estas daqui, então quem ganha é a ORDEM no arquivo --
+   ficando depois delas aqui garante que todo `.field` das telas novas
+   (login/signup/comprar e admin material/eventos, que reusam a mesma
+   estrutura `.field > label + input.input`) usa a paleta escura nova, não o
+   branco/creme órfão da versão anterior (bug real: caixa de input branca
+   dentro do card escuro). Não apaga nem edita a regra antiga -- só some do
+   cascade pra quem usa `.field` hoje, que são só telas já migradas. */
+.field label{color:var(--orange)}
+.field input{width:100%;min-width:0;padding:13px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);
+  color:var(--ink);font:400 15px 'Poppins',sans-serif;letter-spacing:0;text-transform:none}
+.field input:focus{outline:none;border-color:var(--orange)}
+.field input:disabled{background:var(--bg);color:var(--ink-4);cursor:not-allowed}
 .row-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
 
 /* Botões */

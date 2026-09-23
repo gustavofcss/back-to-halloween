@@ -15,7 +15,7 @@
   </div>
   <div class="a-card">
     <span class="a-kpi__label">Saldo disponível</span>
-    <span class="a-kpi__value" style="color: {{ 'var(--ok)' if saldo >= 0 else 'var(--bad)' }};">R$ <span data-admin-total="saldo">{{ saldo }}</span></span>
+    <span class="a-kpi__value" style="color: {{ 'var(--ok)' if saldo|float >= 0 else 'var(--bad)' }};">R$ <span data-admin-total="saldo">{{ saldo }}</span></span>
   </div>
 </div>
 

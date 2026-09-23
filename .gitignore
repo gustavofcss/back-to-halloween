@@ -16,3 +16,7 @@ Untitled-*.png
 # documentação, não interessa versionar. .dev-squad/memory.md continua
 # rastreado (registra decisões de arquitetura de verdade).
 .dev-squad/observations.jsonl
+
+# Memória própria de cada subagente (gerada automaticamente pelo harness do
+# Claude Code) -- estado interno da ferramenta, não do projeto.
+.claude/agent-memory/
