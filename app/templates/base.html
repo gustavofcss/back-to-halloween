@@ -1,5 +1,5 @@
-<!doctype html>
-<html lang="pt-br">
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -9,18 +9,14 @@
   {% block head %}{% endblock %}
 </head>
 <body>
-  <div class="page">
-    {% with mensagens = get_flashed_messages() %}
-      {% if mensagens %}
-        <div class="flash-messages">
-          {% for mensagem in mensagens %}
-            <div class="alert-error flash-message">{{ mensagem }}</div>
-          {% endfor %}
-        </div>
-      {% endif %}
-    {% endwith %}
-    {% block content %}{% endblock %}
-  </div>
+  {% with mensagens = get_flashed_messages() %}
+    {% if mensagens %}
+      <div class="flash-wrap">
+        {% for mensagem in mensagens %}<div class="flash">{{ mensagem }}</div>{% endfor %}
+      </div>
+    {% endif %}
+  {% endwith %}
+  {% block content %}{% endblock %}
   <script>
     // Trava o botão de submit assim que o form é enviado, pra clique duplo
     // (ou duplo toque no celular) não mandar a mesma requisição 2x -- achado

@@ -1,18 +1,17 @@
 {% extends "base.html" %}
 {% block title %}Cadastro em análise — Horror Night Party{% endblock %}
 {% block content %}
-<div class="screen">
-  <img class="pending-ghost pending-ghost--1" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="" aria-hidden="true">
-  <img class="pending-ghost pending-ghost--2" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="" aria-hidden="true">
-  <div class="pending-icon">
-    <span class="pending-icon__glow" aria-hidden="true"></span>
-    <img src="{{ url_for('static', filename='assets/deco-eye.png') }}" alt="">
+<div class="screen" style="background:radial-gradient(circle at 50% 40%,#3d2440 0%,#1c1230 35%,#0a060e 75%)">
+  <img class="deco inv" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="" aria-hidden="true" style="left:10%;top:12%;width:70px;opacity:.2;animation:float 8s ease-in-out infinite">
+  <img class="deco inv" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="" aria-hidden="true" style="right:12%;top:24%;width:46px;opacity:.14;animation:float 11s ease-in-out -3s infinite">
+  <div class="content center">
+    <div style="position:relative;width:140px;height:140px;display:flex;align-items:center;justify-content:center">
+      <div style="position:absolute;inset:-30px;border-radius:50%;background:radial-gradient(circle,rgba(255,160,60,.35),rgba(0,0,0,0) 70%)"></div>
+      <img src="{{ url_for('static', filename='assets/deco-eye.png') }}" alt="" aria-hidden="true" style="position:relative;width:120px;animation:float 6s ease-in-out infinite">
+    </div>
+    <h1 class="h2" style="margin-top:34px">Cadastro em análise</h1>
+    <p class="lead" style="margin-top:12px;max-width:320px;line-height:1.65">Estamos de olho. Você recebe um e-mail assim que o administrador confirmar seu cadastro — aí é só entrar.</p>
+    <a href="/login" class="btn btn-ghost" style="margin-top:28px">Voltar pro login</a>
   </div>
-  <h2 class="h2 pending-h2">Cadastro em análise</h2>
-  <p class="pending-text">
-    Seu cadastro ainda está em análise. Você vai receber um e-mail assim
-    que o administrador confirmar — aí é só entrar normalmente.
-  </p>
-  <a href="/login" class="btn btn-ghost">Voltar pro login</a>
 </div>
 {% endblock %}

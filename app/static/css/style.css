@@ -1,2481 +1,409 @@
-/* Horror Night Party -- estilo compartilhado.
-   Paleta, fontes e animações extraídas de
-   "front/Festa de Halloween - Convite.dc.html" (mockup de design). */
-
-:root {
-  --bg-void: #05040c;
-  --bg-gradient: radial-gradient(ellipse 900px 620px at 62% -10%, #241a44 0%, #150f31 32%, #0a0720 62%, #05040c 100%);
-
-  --ink-light: #f4ece0;
-  --purple-soft: #cbbfe2;
-  --purple-mute: #9a8db8;
-
-  --accent: #ff8a2b;
-  --accent-hover: #ffb15e;
-  --accent-dark: #e1690f;
-
-  --parchment-1: #fbf3e3;
-  --parchment-2: #f3e7cf;
-  --ink-dark: #241a14;
-  --ink-muted: #7a6a56;
-  --label-muted: #8a7760;
-  --border-parchment: #dccdae;
-  --input-bg: #fffdf8;
-  --panel-tan: #efe2c8;
-
-  --font-display: 'Nosifer', cursive;
-  --font-heading: 'Baloo 2', sans-serif;
-  --font-body: 'Poppins', sans-serif;
-}
-
-/* -------------------- fontes locais --------------------
-   Servidas de /static/fonts em vez do CDN do Google Fonts,
-   pra não depender de rede externa no carregamento da página. */
-
-@font-face {
-  font-family: 'Nosifer';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("../fonts/nosifer.ttf") format('truetype');
-}
-@font-face {
-  font-family: 'Baloo 2';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("../fonts/baloo2-600.ttf") format('truetype');
-}
-@font-face {
-  font-family: 'Baloo 2';
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url("../fonts/baloo2-800.ttf") format('truetype');
-}
-@font-face {
-  font-family: 'Poppins';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("../fonts/poppins-400.ttf") format('truetype');
-}
-@font-face {
-  font-family: 'Poppins';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("../fonts/poppins-500.ttf") format('truetype');
-}
-@font-face {
-  font-family: 'Poppins';
-  font-style: normal;
-  font-weight: 600;
-  font-display: swap;
-  src: url("../fonts/poppins-600.ttf") format('truetype');
-}
-@font-face {
-  font-family: 'Poppins';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("../fonts/poppins-700.ttf") format('truetype');
-}
-
-/* Fontes do painel admin -- também self-hosted (mesmo motivo das de cima:
-   não depender do Google Fonts CDN, que já se mostrou instável nesse
-   projeto). Primeira tentativa usou UM arquivo de fonte variável cobrindo
-   toda a faixa de peso (500-800) via `font-weight: 500 800` -- só o peso
-   800 (usado nos títulos) renderizava certo, o 700 (usado nos labels dos
-   cards) caía visualmente pra um sans genérico (achado real, print do
-   usuário mostrando "Painel admin" certo mas "Pedidos"/"Material" errado).
-   Trocado pra um arquivo ESTÁTICO por peso (mesmo padrão já comprovado do
-   Poppins/Baloo 2 acima), sem depender de interpolação de fonte variável. */
-@font-face {
-  font-family: 'Bricolage Grotesque';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("../fonts/bricolage-grotesque-500-latin.woff2") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Bricolage Grotesque';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("../fonts/bricolage-grotesque-500-latin-ext.woff2") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Bricolage Grotesque';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("../fonts/bricolage-grotesque-700-latin.woff2") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Bricolage Grotesque';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("../fonts/bricolage-grotesque-700-latin-ext.woff2") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'Bricolage Grotesque';
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url("../fonts/bricolage-grotesque-800-latin.woff2") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'Bricolage Grotesque';
-  font-style: normal;
-  font-weight: 800;
-  font-display: swap;
-  src: url("../fonts/bricolage-grotesque-800-latin-ext.woff2") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'DM Sans';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("../fonts/dm-sans-400-latin.woff2") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'DM Sans';
-  font-style: normal;
-  font-weight: 400;
-  font-display: swap;
-  src: url("../fonts/dm-sans-400-latin-ext.woff2") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'DM Sans';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("../fonts/dm-sans-500-latin.woff2") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'DM Sans';
-  font-style: normal;
-  font-weight: 500;
-  font-display: swap;
-  src: url("../fonts/dm-sans-500-latin-ext.woff2") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-@font-face {
-  font-family: 'DM Sans';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("../fonts/dm-sans-700-latin.woff2") format('woff2');
-  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
-}
-@font-face {
-  font-family: 'DM Sans';
-  font-style: normal;
-  font-weight: 700;
-  font-display: swap;
-  src: url("../fonts/dm-sans-700-latin-ext.woff2") format('woff2');
-  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+1E00-1E9F, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
-}
-
-*, *::before, *::after { box-sizing: border-box; }
-
-html, body {
-  margin: 0;
-  padding: 0;
-  background: var(--bg-void);
-}
-
-body {
-  font-family: var(--font-body);
-  color: var(--ink-light);
-  min-height: 100vh;
-}
-
-a {
-  color: var(--accent);
-  text-decoration: none;
-}
-a:hover { color: var(--accent-hover); }
-
-input, button {
-  font-family: var(--font-body);
-}
-
-h1, h2, h3 {
-  margin: 0;
-}
-
-/* -------------------- keyframes -------------------- */
-
-@keyframes hwSwing { 0% { transform: rotate(8deg); } 50% { transform: rotate(-7deg); } 100% { transform: rotate(8deg); } }
-@keyframes hwFlicker { 0%, 100% { opacity: .85; } 18% { opacity: .55; } 32% { opacity: 1; } 55% { opacity: .68; } 74% { opacity: .95; } }
-@keyframes hwTwinkle { 0%, 100% { opacity: .15; } 50% { opacity: 1; } }
-@keyframes hwDrift { from { transform: translateX(-40%); } to { transform: translateX(140%); } }
-@keyframes hwFog { from { transform: translateX(-30%); } to { transform: translateX(30%); } }
-@keyframes hwFloat { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(18px, -14px); } }
-@keyframes hwFly { from { transform: translateX(-80px) translateY(0) scaleX(1); } 50% { transform: translateX(50vw) translateY(-26px) scaleX(1); } to { transform: translateX(105vw) translateY(10px) scaleX(1); } }
-@keyframes hwFly2 { from { transform: translateX(-70px) translateY(12px); } 50% { transform: translateX(45vw) translateY(-30px); } to { transform: translateX(104vw) translateY(-4px); } }
-@keyframes hwBuzz { 0%, 88%, 100% { opacity: 1; } 89% { opacity: .18; } 90% { opacity: 1; } 91.5% { opacity: .18; } 93% { opacity: 1; } 94% { opacity: .3; } 95% { opacity: 1; } }
-@keyframes hwBuzz2 { 0%, 70%, 100% { opacity: 1; } 71% { opacity: .2; } 72.5% { opacity: 1; } 73.5% { opacity: .2; } 76% { opacity: 1; } }
-@keyframes hwBulb { 0%, 100% { opacity: 1; } 50% { opacity: .45; } }
-@keyframes hwLamp { 0%, 7%, 100% { opacity: 1; filter: none; } 7.6% { opacity: .12; } 8.2% { opacity: 1; } 9% { opacity: .2; } 9.6% { opacity: 1; } 41% { opacity: 1; } 41.5% { opacity: .15; } 42.3% { opacity: 1; } 43% { opacity: .35; } 43.6% { opacity: 1; } 74% { opacity: 1; } 74.6% { opacity: .12; } 75.4% { opacity: 1; } }
-@keyframes hwWiggle { 0%, 100% { transform: rotate(-8deg); } 50% { transform: rotate(10deg); } }
-@keyframes hwRise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-
-@media (prefers-reduced-motion: reduce) {
-  * { animation: none !important; }
-}
-
-/* -------------------- layout base -------------------- */
-
-.page {
-  width: 100%;
-  min-height: 100vh;
-  background-image: var(--bg-gradient);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-/* -------------------- cartão "pergaminho" (formulários) -------------------- */
-
-.auth-wrap {
-  width: 100%;
-  min-height: 100vh;
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 20px;
-}
-
-/* aranhas decorativas paradas no topo das páginas de auth -- só os olhos
-   piscam de vez em quando (um retângulo escuro cobrindo os pontinhos
-   brancos por uma fração de segundo); o corpo fica parado, sem o
-   sobe-desce de antes (o usuário achou que mexia rápido/muito demais). */
-.spider-deco {
-  position: absolute;
-  top: -8px;
-  width: 34px;
-  pointer-events: none;
-  z-index: 2;
-}
-.spider-deco__web {
-  display: block;
-  width: 100%;
-  height: auto;
-  opacity: .5;
-}
-/* Balanço sutil tipo pêndulo, girando a partir do ponto onde o fio encosta
-   na teia (topo) -- pedido do usuário: "deixa as aranhas com uma animação
-   sutil de ta balançando". thread + spider-box ficam dentro desse wrapper
-   pra girarem juntos como um bloco só. */
-.spider-deco__hang {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  transform-origin: 50% 22px;
-  animation: spiderSway 4.5s ease-in-out infinite;
-}
-@keyframes spiderSway {
-  0%, 100% { transform: rotate(-4deg); }
-  50% { transform: rotate(4deg); }
-}
-.spider-deco__thread {
-  position: absolute;
-  top: 22px;
-  left: 50%;
-  width: 1px;
-  height: 22px;
-  background: rgba(244, 236, 224, .3);
-  transform: translateX(-50%);
-}
-.spider-deco__spider-box {
-  position: absolute;
-  top: 39px;
-  left: 50%;
-  width: 18px;
-  transform: translateX(-50%);
-}
-.spider-deco__spider-box img {
-  display: block;
-  width: 100%;
-  height: auto;
-  filter: drop-shadow(0 0 3px rgba(244, 236, 224, .25));
-}
-.spider-deco__blink {
-  position: absolute;
-  left: 37%;
-  top: 74%;
-  width: 28%;
-  height: 13%;
-  background: #000;
-  border-radius: 50%;
-  opacity: 0;
-  animation: spiderBlink 5.5s ease-in-out infinite;
-}
-@keyframes spiderBlink {
-  0%, 92%, 100% { opacity: 0; }
-  95% { opacity: 1; }
-}
-
-.spider-deco--1 { left: 6%; top: -8px; }
-.spider-deco--1 .spider-deco__hang { animation-delay: -.5s; }
-.spider-deco--2 { left: 22%; top: 8px; transform: scale(.8); }
-.spider-deco--2 .spider-deco__blink { animation-delay: -1.4s; }
-.spider-deco--2 .spider-deco__hang { animation-delay: -2.1s; }
-.spider-deco--3 { left: 42%; top: -10px; transform: scale(1.1); }
-.spider-deco--3 .spider-deco__blink { animation-delay: -2.8s; }
-.spider-deco--3 .spider-deco__hang { animation-delay: -3.4s; }
-.spider-deco--4 { left: 64%; top: 4px; transform: scale(.9); }
-.spider-deco--4 .spider-deco__blink { animation-delay: -3.6s; }
-.spider-deco--4 .spider-deco__hang { animation-delay: -1.2s; }
-.spider-deco--5 { left: 84%; top: -6px; }
-.spider-deco--5 .spider-deco__blink { animation-delay: -.8s; }
-.spider-deco--5 .spider-deco__hang { animation-delay: -4.0s; }
-
-/* acentos atmosféricos extras nas telas de auth -- um por tela, discreto,
-   sem competir com o card. Os já pretos (mão, gato) só reduzem opacidade;
-   os coloridos (olho, abóbora, caixão) viram silhueta escura (brightness(0))
-   pra combinar com a paleta noturna do site em vez de aparecer como sticker
-   colorido solto. */
-.auth-deco-hand {
-  position: absolute;
-  bottom: 0;
-  left: -8px;
-  width: 56px;
-  height: auto;
-  opacity: .45;
-  transform: rotate(-6deg);
-  pointer-events: none;
-}
-.auth-deco-cat {
-  position: absolute;
-  bottom: 0;
-  right: 4%;
-  width: 50px;
-  height: auto;
-  opacity: .45;
-  pointer-events: none;
-}
-.auth-deco-eye {
-  position: absolute;
-  top: 8%;
-  left: 6%;
-  width: 34px;
-  height: auto;
-  opacity: .16;
-  filter: brightness(0);
-  pointer-events: none;
-}
-.auth-deco-pumpkin {
-  position: absolute;
-  bottom: 5%;
-  right: 6%;
-  width: 40px;
-  height: auto;
-  opacity: .2;
-  filter: brightness(0);
-  pointer-events: none;
-}
-.auth-deco-coffin {
-  position: absolute;
-  bottom: 5%;
-  right: 6%;
-  width: 34px;
-  height: auto;
-  opacity: .22;
-  filter: brightness(0);
-  pointer-events: none;
-}
-
-/* mais variedade -- ícones que estavam prontos em app/static/assets/ mas
-   nunca tinham sido usados em nenhuma página. Mesma lógica de sempre:
-   absolute, pequeno, opacidade baixa, pointer-events:none. Os já escuros
-   (bruxa, morcego, gato) só reduzem opacidade; os coloridos (vassoura,
-   doce-ou-travessura) ganham brightness(0) pra virar silhueta escura. */
-.auth-deco-witch-static {
-  position: absolute;
-  top: 60px;
-  left: 4%;
-  width: 34px;
-  height: auto;
-  opacity: .16;
-  pointer-events: none;
-}
-.auth-deco-bat {
-  position: absolute;
-  top: 90px;
-  right: 5%;
-  width: 30px;
-  height: auto;
-  opacity: .18;
-  pointer-events: none;
-}
-
-/* Ícones da tela de "Seus dados" (comprar.html) -- 2ª rodada: os 4 cantos
-   com ícones pequenos (42-58px) ficaram espalhados/perdidos (achado real).
-   Agora só 3, bem maiores e concentrados: teia gigante no canto (textura de
-   fundo, opacidade baixa) + gato e balde de doces grandes embaixo. */
-.buy-deco-web {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 220px;
-  height: auto;
-  opacity: .5;
-  filter: brightness(0) invert(1);
-  pointer-events: none;
-}
-.buy-deco-cat {
-  position: absolute;
-  bottom: -4px;
-  left: -6px;
-  width: 100px;
-  height: auto;
-  opacity: .7;
-  pointer-events: none;
-}
-.buy-deco-treat {
-  position: absolute;
-  bottom: 0;
-  right: 2%;
-  width: 84px;
-  height: auto;
-  opacity: .75;
-  pointer-events: none;
-}
-.auth-deco-skull {
-  position: absolute;
-  top: 70px;
-  right: 4%;
-  width: 30px;
-  height: auto;
-  opacity: .16;
-  filter: brightness(0);
-  pointer-events: none;
-}
-.auth-deco-broom {
-  position: absolute;
-  bottom: 8%;
-  left: 3%;
-  width: 34px;
-  height: auto;
-  opacity: .18;
-  filter: brightness(0);
-  pointer-events: none;
-}
-.auth-deco-cat-static {
-  position: absolute;
-  top: 50px;
-  left: 4%;
-  width: 32px;
-  height: auto;
-  opacity: .18;
-  pointer-events: none;
-}
-.auth-deco-treat {
-  position: absolute;
-  bottom: 8%;
-  right: 4%;
-  width: 30px;
-  height: auto;
-  opacity: .18;
-  filter: brightness(0);
-  pointer-events: none;
-}
-.auth-deco-ghost-static {
-  position: absolute;
-  top: 8%;
-  left: 6%;
-  width: 30px;
-  height: auto;
-  opacity: .16;
-  filter: brightness(0) invert(1);
-  pointer-events: none;
-}
-
-.auth-brand {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: 13px;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  color: var(--accent);
-  margin-bottom: 22px;
-  text-align: center;
-}
-
-.card-parchment {
-  position: relative;
-  width: 100%;
-  max-width: 420px;
-  background: linear-gradient(170deg, var(--parchment-1) 0%, var(--parchment-2) 100%);
-  border-radius: 16px;
-  padding: 30px 26px;
-  box-shadow: 0 24px 54px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .7);
-  color: var(--ink-dark);
-  animation: hwRise .5s ease-out both;
-}
-
-.card-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 3px;
-}
-.card-title img { width: 28px; flex: 0 0 auto; }
-.card-title h1, .card-title h2 {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: 22px;
-}
-
-.card-subtitle {
-  margin: 0 0 22px;
-  font-size: 13px;
-  color: var(--ink-muted);
-}
-.buy-price-highlight {
-  font-size: 15.5px;
-  font-weight: 700;
-  color: var(--accent-dark);
-}
-
-.field {
-  display: flex;
-  flex-direction: column;
-  gap: 7px;
-  margin-bottom: 16px;
-}
-
-.field label {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  color: var(--label-muted);
-}
-
-.buy-section-label {
-  margin: 18px 0 10px;
-  font-family: var(--font-heading);
-  font-weight: 700;
-  font-size: 13.5px;
-  color: var(--accent-dark);
-  border-top: 1px dashed var(--border-parchment);
-  padding-top: 14px;
-}
-.buy-section-label:first-child { border-top: none; padding-top: 0; margin-top: 0; }
-
-.field input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 14px;
-  border-radius: 9px;
-  border: 1.5px solid var(--border-parchment);
-  font-size: 15px;
-  background: var(--input-bg);
-  color: var(--ink-dark);
-  transition: border-color .15s, box-shadow .15s;
-}
-.field input:focus {
-  outline: none;
-  border-color: var(--accent-dark);
-  box-shadow: 0 0 0 3px rgba(225, 105, 15, .15);
-}
-.field input:disabled {
-  background: #efe7d8;
-  color: var(--ink-muted);
-  cursor: not-allowed;
-}
-
-.form-row { display: flex; flex-direction: column; }
-
-.btn-primary {
-  position: relative;
-  width: 100%;
-  border: none;
-  cursor: pointer;
-  display: block;
-  text-align: center;
-  background: linear-gradient(180deg, var(--accent), var(--accent-dark));
-  color: #2a1503;
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: .02em;
-  padding: 14px 20px;
-  border-radius: 10px;
-  box-shadow: 0 8px 20px rgba(225, 105, 15, .3), inset 0 1px 0 rgba(255, 255, 255, .35);
-  transition: filter .15s, transform .15s;
-  margin-top: 4px;
-}
-
-/* zumbi pequeno andando bem devagar sobre a borda superior do CARD inteiro
-   (antes era só em cima do botão) -- mesma técnica do sprite sheet de
-   front/zombie-reference (background-position animado em steps()), bem mais
-   devagar que o original (era 0.6s/15s lá) e numa escala minúscula. O sprite
-   olha/estica o braço pra ESQUERDA -- por isso a travessia vai da direita
-   pra esquerda (senão ele fica andando de costas). */
-.login-zombie {
-  position: absolute;
-  top: -20px;
-  left: 104%;
-  width: 24px;
-  height: 37px;
-  background-image: url("../assets/zombie-walk.png");
-  background-repeat: no-repeat;
-  background-size: 240px 37px;
-  background-position: 0 0;
-  pointer-events: none;
-  z-index: 2;
-  animation: loginZombieFrames 3.6s steps(9) infinite, loginZombieCross 20s linear infinite;
-}
-@keyframes loginZombieFrames {
-  100% { background-position: -216px 0; }
-}
-@keyframes loginZombieCross {
-  0% { left: 104%; }
-  100% { left: -8%; }
-}
-.btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); }
-
-.btn-outline {
-  width: 100%;
-  border: 1.5px solid var(--ink-dark);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  background: transparent;
-  color: var(--ink-dark);
-  font-weight: 600;
-  font-size: 14px;
-  padding: 13px 20px;
-  border-radius: 10px;
-  transition: background .15s;
-}
-.btn-outline:hover { background: rgba(36, 26, 20, .07); }
-
-.divider {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin: 18px 0;
-  color: var(--label-muted);
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-}
-.divider::before, .divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: var(--border-parchment);
-}
-
-.card-footer {
-  margin-top: 20px;
-  text-align: center;
-  font-size: 13.5px;
-  color: var(--ink-muted);
-}
-.card-footer a { color: var(--accent-dark); font-weight: 600; }
-.card-footer a:hover { color: var(--accent); }
-.card-footer__link-btn {
-  border: none;
-  background: none;
-  cursor: pointer;
-  padding: 0;
-  font-size: 13.5px;
-  font-weight: 600;
-  font-family: var(--font-body);
-  color: var(--accent-dark);
-}
-.card-footer__link-btn:hover { color: var(--accent); }
-.card-footer__link-btn--purple { color: #6B4A8A; }
-.card-footer__link-btn--purple:hover { color: #4A2358; }
-
-/* -------------------- cartão de auth ESCURO (login/signup/comprar) --------------------
-   Mudança real do mockup "entrega/Telas Halloween v2.dc.html" (telas 1a/1b/1c): o card de
-   autenticação deixava de ser o único elemento pergaminho claro numa página que já era toda
-   escura -- inconsistente com o resto do site. Modificador .card-parchment--dark ao lado de
-   .card-parchment (mesma técnica de override escopado que o .admin-shell já usa mais abaixo),
-   sem tocar a regra base .card-parchment nem em .ticket -- classe totalmente separada, usada só
-   por pagamento.html/meus_pedidos.html, que continua clara (o mockup já mostra ela assim). */
-.card-parchment--dark {
-  background: rgba(15, 10, 20, .92);
-  border: 1px solid rgba(255, 138, 43, .28);
-  color: var(--ink-light);
-}
-.card-parchment--dark .card-subtitle,
-.card-parchment--dark .help-text {
-  color: var(--purple-soft);
-}
-.card-parchment--dark .field label {
-  color: var(--accent);
-}
-.card-parchment--dark .field input {
-  background: #07050d;
-  border-color: #3a2d4a;
-  color: var(--ink-light);
-}
-.card-parchment--dark .field input::placeholder {
-  color: #6f6284;
-}
-.card-parchment--dark .field input:disabled {
-  background: #0d0912;
-  color: var(--purple-mute);
-}
-.card-parchment--dark .buy-price-highlight {
-  display: block;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(255, 138, 43, .1);
-  border: 1px solid rgba(255, 138, 43, .25);
-  color: var(--accent-hover);
-}
-.card-parchment--dark .buy-section-label {
-  color: var(--purple-soft);
-  border-top-color: #3a2d4a;
-}
-.card-parchment--dark .qty-row {
-  background: rgba(255, 138, 43, .08);
-  border: 1px solid rgba(255, 138, 43, .16);
-}
-.card-parchment--dark .qty-row__hint {
-  color: var(--purple-mute);
-}
-.card-parchment--dark .qty-btn {
-  background: transparent;
-  border-color: #5a4a70;
-  color: var(--ink-light);
-}
-.card-parchment--dark .qty-btn:hover {
-  background: rgba(255, 255, 255, .06);
-}
-.card-parchment--dark .divider {
-  color: var(--purple-mute);
-}
-.card-parchment--dark .divider::before,
-.card-parchment--dark .divider::after {
-  background: #3a2d4a;
-}
-.card-parchment--dark .btn-outline {
-  border-color: #5a4a70;
-  color: var(--ink-light);
-}
-.card-parchment--dark .btn-outline:hover {
-  background: rgba(255, 255, 255, .06);
-}
-.card-parchment--dark .card-footer {
-  color: var(--purple-soft);
-}
-.card-parchment--dark .card-footer a {
-  color: var(--accent);
-}
-.card-parchment--dark .card-footer a:hover {
-  color: var(--accent-hover);
-}
-.card-parchment--dark .card-footer__link-btn--purple {
-  color: var(--purple-soft);
-}
-.card-parchment--dark .card-footer__link-btn--purple:hover {
-  color: var(--ink-light);
-}
-
-/* -------------------- tela "aguardando" sem card (cadastro-pendente / verifique-email) --------------------
-   Mockup (tela 1f) mostra essa tela SEM nenhum card -- só o olho brilhando com um glow radial,
-   título e texto direto sobre o gradiente da página. Escolha consciente: aqui a página não pede
-   nenhum dado (é só um aviso), então o card-pergaminho fazia menos sentido do que nas telas de
-   formulário -- por isso não virou .card-parchment--dark como login/signup/comprar, e sim esse
-   bloco próprio sem container. */
-.pending-icon {
-  position: relative;
-  width: 140px;
-  height: 140px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.pending-icon__glow {
-  position: absolute;
-  inset: -30px;
-  border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 160, 60, .35), rgba(0, 0, 0, 0) 70%);
-  pointer-events: none;
-}
-.pending-icon img {
-  position: relative;
-  width: 120px;
-  height: auto;
-  animation: hwFloat 6s ease-in-out infinite;
-}
-.pending-ghost {
-  position: absolute;
-  width: 70px;
-  filter: invert(1);
-  opacity: .16;
-  pointer-events: none;
-  animation: hwFloat 8s ease-in-out infinite;
-}
-.pending-ghost--1 { top: 90px; left: 40px; }
-.pending-ghost--2 { top: 180px; right: 50px; width: 46px; opacity: .12; animation-duration: 11s; animation-delay: -3s; }
-.pending-title {
-  margin: 34px 0 0;
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: 28px;
-  color: var(--ink-light);
-  text-align: center;
-}
-.pending-text {
-  margin: 12px 0 0;
-  max-width: 320px;
-  font-size: 14px;
-  line-height: 1.65;
-  color: var(--purple-soft);
-  text-align: center;
-}
-.pending-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  margin-top: 28px;
-  padding: 14px 26px;
-  border-radius: 999px;
-  border: 1px solid #5a4a70;
-  color: var(--ink-light);
-  font-weight: 600;
-  font-size: 14px;
-  text-decoration: none;
-  transition: background .15s;
-}
-.pending-btn:hover { background: rgba(255, 255, 255, .06); }
-
-.flash-messages {
-  width: 100%;
-  max-width: 640px;
-  box-sizing: border-box;
-  margin: 14px auto 0;
-  padding: 0 20px;
-  position: relative;
-  z-index: 5;
-}
-.flash-messages .flash-message { margin-bottom: 10px; }
-
-.alert-error {
-  background: #fbe3d8;
-  border: 1px solid #e1690f;
-  color: #7a2c0c;
-  border-radius: 9px;
-  padding: 11px 14px;
-  font-size: 13.5px;
-  margin-bottom: 18px;
-  line-height: 1.5;
-}
-
-.alert-success {
-  background: #e9f3df;
-  border: 1px solid #6a9a3f;
-  color: #2c4a16;
-  border-radius: 9px;
-  padding: 11px 14px;
-  font-size: 13.5px;
-  margin-bottom: 18px;
-  line-height: 1.5;
-}
-
-.help-text {
-  font-size: 13.5px;
-  line-height: 1.65;
-  color: var(--ink-muted);
-  margin: 0 0 22px;
-}
-
-/* -------------------- pontinhos de progresso (comprar/pagamento) -------------------- */
-
-.progress-steps {
-  width: 100%;
-  max-width: 420px;
-  box-sizing: border-box;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: 0 12px 24px;
-}
-.progress-step {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 0 1 auto;
-  min-width: 0;
-}
-.progress-step__circle {
-  width: 26px;
-  height: 26px;
-  flex: 0 0 auto;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  background: rgba(255, 255, 255, .12);
-  color: var(--purple-soft);
-}
-.progress-step__circle--done {
-  background: var(--accent);
-  color: #2a1503;
-}
-.progress-step__label {
-  font-size: 11px;
-  color: var(--purple-soft);
-  white-space: nowrap;
-}
-.progress-divider {
-  width: 14px;
-  flex: 0 0 auto;
-  height: 1px;
-  background: #4a3f6b;
-}
-
-/* -------------------- seletor de quantidade (comprar) -------------------- */
-
-.qty-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  background: var(--panel-tan);
-  border-radius: 10px;
-  padding: 14px 16px;
-  margin-bottom: 16px;
-}
-.qty-row__label {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 600;
-}
-.qty-row__hint {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--label-muted);
-}
-.qty-controls {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-.qty-btn {
-  width: 38px;
-  height: 38px;
-  border-radius: 9px;
-  border: 1.5px solid var(--border-parchment);
-  background: var(--input-bg);
-  font-size: 18px;
-  cursor: pointer;
-  color: var(--ink-dark);
-}
-.qty-btn:hover { background: #fff; }
-.qty-value {
-  font-size: 17px;
-  font-weight: 700;
-  min-width: 20px;
-  text-align: center;
-}
-
-/* -------------------- "ticket" de pagamento -------------------- */
-
-.ticket {
-  width: 100%;
-  max-width: 420px;
-  background: linear-gradient(170deg, var(--parchment-1) 0%, var(--parchment-2) 100%);
-  border-radius: 16px;
-  overflow: hidden;
-  box-shadow: 0 24px 54px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .7);
-  color: var(--ink-dark);
-  animation: hwRise .5s ease-out both;
-}
-.ticket__header {
-  background: var(--ink-dark);
-  padding: 16px 26px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-.ticket__header-brand {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-}
-.ticket__header-brand img { width: 20px; }
-.ticket__header-brand p {
-  margin: 0;
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: 15px;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  color: #f2dcaa;
-}
-.ticket__header-tag {
-  margin: 0;
-  font-size: 11px;
-  letter-spacing: .18em;
-  text-transform: uppercase;
-  color: #b9a48a;
-}
-.ticket__summary {
-  padding: 24px 26px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-}
-.ticket__summary-qty {
-  margin: 0 0 4px;
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: 20px;
-}
-.ticket__summary-name {
-  margin: 0;
-  font-size: 13px;
-  color: var(--ink-muted);
-}
-.ticket__summary-total {
-  margin: 0;
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: 28px;
-  color: var(--accent-dark);
-}
-.ticket__holder {
-  padding: 0 26px 14px;
-  margin-top: -6px;
-}
-.ticket__holder + .ticket__holder { margin-top: 0; }
-.ticket__holder-name {
-  margin: 0;
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--ink-dark);
-}
-.ticket__holder-rg {
-  margin: 2px 0 0;
-  font-size: 12px;
-  color: var(--ink-muted);
-}
-.ticket__holder-tag {
-  font-size: 10.5px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: .04em;
-  color: var(--ink-muted);
-}
-.ticket__perforation {
-  position: relative;
-  height: 0;
-  border-top: 2px dashed var(--border-parchment);
-  margin: 0 0 22px;
-}
-.ticket__perforation::before,
-.ticket__perforation::after {
-  content: "";
-  position: absolute;
-  top: -13px;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  background: var(--bg-void);
-}
-.ticket__perforation::before { left: -13px; }
-.ticket__perforation::after { right: -13px; }
-.ticket__section {
-  padding: 0 26px 28px;
-  display: flex;
-  flex-direction: column;
-  gap: 18px;
-}
-.ticket__pix-box {
-  background: var(--panel-tan);
-  border-radius: 10px;
-  padding: 16px;
-}
-.ticket__pix-box--center { text-align: center; }
-.ticket__pix-label {
-  margin: 0 0 6px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .1em;
-  text-transform: uppercase;
-  color: var(--label-muted);
-}
-.ticket__pix-value {
-  margin: 0;
-  font-size: 15px;
-  font-weight: 600;
-  word-break: break-all;
-  font-family: var(--font-body), monospace;
-}
-.ticket__pix-copy-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.ticket__pix-value--clip {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  word-break: normal;
-}
-.ticket__pix-copy-btn {
-  flex: 0 0 auto;
-  border: none;
-  cursor: pointer;
-  background: var(--accent);
-  color: #2a1503;
-  font-weight: 700;
-  font-size: 12.5px;
-  padding: 8px 14px;
-  border-radius: 8px;
-  transition: filter .15s;
-}
-.ticket__pix-copy-btn:hover { filter: brightness(1.08); }
-.ticket__qr {
-  display: block;
-  width: 180px;
-  max-width: 100%;
-  height: auto;
-  margin: 0 auto;
-  border-radius: 8px;
-  border: 1px solid var(--border-parchment);
-}
-.ticket__how-text {
-  margin: 0;
-  font-size: 13.5px;
-  line-height: 1.6;
-  color: #4a3d2f;
-}
-.ticket__actions {
-  display: flex;
-  gap: 12px;
-  margin-top: 2px;
-}
-.ticket__actions .btn-outline { flex: 0 0 auto; width: auto; }
-.ticket__actions form { flex: 1; }
-
-/* -------------------- hero / landing -------------------- */
-
-.hero {
-  position: relative;
-  width: 100%;
-  height: clamp(250px, 34vw, 310px);
-  overflow: hidden;
-}
-
-.hero-stars {
-  position: absolute;
-  inset: 0;
-  background: url("../assets/stars.svg") repeat;
-  background-size: 750px 500px;
-  opacity: .7;
-  -webkit-mask-image: linear-gradient(to bottom, #000 40%, transparent 92%);
-  mask-image: linear-gradient(to bottom, #000 40%, transparent 92%);
-}
-.hero-stars--twinkle {
-  background-size: 480px 320px;
-  opacity: .4;
-  animation: hwTwinkle 5.5s ease-in-out infinite;
-}
-
-.hero-moon {
-  position: absolute;
-  right: 12%;
-  top: 16px;
-  width: clamp(84px, 16vw, 112px);
-  filter: brightness(2.7) sepia(.4) saturate(1.4) drop-shadow(0 0 34px rgba(255, 205, 90, .55)) drop-shadow(0 0 90px rgba(255, 150, 40, .35));
-}
-
-.hero-ghost {
-  position: absolute;
-  width: 74px;
-  filter: invert(1);
-  opacity: .22;
-  animation: hwFloat 9s ease-in-out infinite;
-}
-.hero-ghost--1 { top: 14%; left: 12%; }
-.hero-ghost--2 { top: 40%; right: 22%; width: 46px; opacity: .12; animation-duration: 13s; animation-delay: -5s; }
-
-.hero-bat {
-  position: absolute;
-  filter: grayscale(1) brightness(.2);
-  animation: hwFly 32s linear infinite;
-}
-.hero-bat--1 { top: 10%; left: 0; width: 54px; animation-duration: 26s; filter: grayscale(1) brightness(.18); }
-.hero-bat--2 { top: 26%; left: 0; width: 34px; animation-duration: 38s; animation-delay: -12s; filter: grayscale(1) brightness(.22); }
-.hero-bat--3 { top: 5%; left: 0; width: 24px; animation-duration: 46s; animation-delay: -30s; filter: grayscale(1) brightness(.25); }
-.hero-bat--4 { top: 34%; left: 0; width: 42px; animation-name: hwFly2; animation-duration: 32s; animation-delay: -6s; filter: grayscale(1) brightness(.2); }
-.hero-bat--5 { top: 18%; left: 0; width: 28px; animation-name: hwFly2; animation-duration: 54s; animation-delay: -40s; filter: grayscale(1) brightness(.24); }
-
-.hero-fog {
-  position: absolute;
-  top: 12%;
-  left: 0;
-  width: 300px;
-  height: 12px;
-  background: #cfc6e8;
-  opacity: .12;
-  filter: blur(22px);
-  animation: hwDrift 46s linear infinite;
-}
-.hero-fog--2 {
-  top: 24%;
-  width: 180px;
-  height: 9px;
-  opacity: .1;
-  filter: blur(18px);
-  animation-duration: 64s;
-  animation-delay: -18s;
-}
-
-.hero-tree {
-  position: absolute;
-  bottom: 24px;
-  height: 96%;
-  filter: invert(1) brightness(.34) sepia(1) saturate(4) hue-rotate(215deg);
-}
-.hero-tree--left { left: 0; }
-.hero-tree--right { right: 0; height: 92%; }
-
-.hero-title-wrap {
-  width: 100%;
-  max-width: 520px;
-  box-sizing: border-box;
-  padding: 14px 24px 0;
-  text-align: center;
-  position: relative;
-  z-index: 3;
-  animation: hwRise .7s ease-out both;
-}
-
-/* transição suave entre o céu do hero e o painel escuro de baixo --
-   precisa ocupar a largura da JANELA (100vw), não do card de 520px,
-   senão as bordas laterais ficam visíveis como um "quadrado colado". */
-.hero-title-bg {
-  position: absolute;
-  left: 50%;
-  top: -1px;
-  transform: translateX(-50%);
-  width: 100vw;
-  height: calc(100% + 2px);
-  z-index: -1;
-  background: linear-gradient(180deg, #110c28 0%, #140e20 45%, #17100c 100%);
-}
-
-.hero-eyebrow {
-  margin: 0 0 14px;
-  font-size: 11px;
-  letter-spacing: .34em;
-  text-transform: uppercase;
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.hero-title {
-  margin: 0;
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: clamp(30px, 9vw, 56px);
-  line-height: 1;
-  letter-spacing: .01em;
-  white-space: nowrap;
-  animation: hwLamp 11s linear infinite;
-}
-
-.hero-title span {
-  display: inline-block;
-  color: #ffe9b8;
-  text-shadow: 0 0 5px rgba(255, 190, 82, .95), 0 0 18px rgba(255, 138, 43, .75), 0 0 46px rgba(255, 90, 10, .5), 0 4px 0 #2a1004;
-}
-.hero-title span.buzz-a { animation: hwBuzz 6.5s steps(1, end) infinite; }
-.hero-title span.buzz-b { animation: hwBuzz2 9s steps(1, end) -2.2s infinite; }
-.hero-title span.buzz-c { animation: hwBuzz 7.7s steps(1, end) -4.4s infinite; }
-
-.hero-subtitle {
-  margin: 12px 0 0;
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: clamp(19px, 5vw, 28px);
-  letter-spacing: .06em;
-  color: var(--ink-light);
-  text-transform: uppercase;
-}
-
-/* casinha assombrada -- todos os elementos abaixo são filhos diretos de
-   .hero (não têm um wrapper próprio): o mockup original posiciona a cena
-   inteira com bottom/left relativos ao próprio .hero (que já tem a altura
-   certa e overflow:hidden), então replicamos isso aqui em vez de usar uma
-   caixa isolada -- isolar essas peças num container menor quebra todo o
-   cálculo de bottom/left e foi o que deixou os elementos "soltos" na
-   primeira versão. */
-
-.flying-witch {
-  position: absolute;
-  top: 9%;
-  left: 0;
-  width: clamp(100px, 20vw, 148px);
-  height: auto;
-  animation: hwFly 64s linear -22s infinite;
-}
-
-.house-roof {
-  position: absolute;
-  bottom: -16px;
-  left: -6%;
-  width: 112%;
-  height: 64px;
-  background: #0b0716;
-  border-radius: 48% 42% 0 0 / 30px 26px 0 0;
-}
-.house-roof--back {
-  bottom: -18px;
-  left: -10%;
-  width: 70%;
-  height: 52px;
-  background: #100a20;
-  border-radius: 46% 50% 0 0 / 26px 30px 0 0;
-}
-
-.house-door {
-  position: absolute;
-  bottom: 6px;
-  left: 6%;
-  width: 64px;
-  height: 44px;
-  background: linear-gradient(160deg, #4a3220, #2a1a0e);
-  clip-path: polygon(30% 0%, 70% 0%, 100% 34%, 84% 100%, 16% 100%, 0% 34%);
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, .6);
-}
-.house-door__handle-v {
-  position: absolute;
-  top: 12px;
-  left: calc(50% - 2px);
-  width: 4px;
-  height: 22px;
-  background: #6b4a2c;
-}
-.house-door__handle-h {
-  position: absolute;
-  top: 19px;
-  left: calc(50% - 9px);
-  width: 18px;
-  height: 4px;
-  background: #6b4a2c;
-}
-
-.house-ghost-face {
-  position: absolute;
-  bottom: 8px;
-  left: 26%;
-  width: 40px;
-  height: 34px;
-}
-.house-ghost-face .body {
-  position: absolute;
-  bottom: 8px;
-  left: 0;
-  width: 40px;
-  height: 30px;
-  border-radius: 50% 50% 42% 42%;
-  background: linear-gradient(170deg, #ded3c0, #9e9483);
-}
-.house-ghost-face .chin {
-  position: absolute;
-  bottom: 6px;
-  left: 9px;
-  width: 22px;
-  height: 12px;
-  border-radius: 0 0 6px 6px;
-  background: #c9bfae;
-}
-.house-ghost-face .eye {
-  position: absolute;
-  bottom: 21px;
-  width: 9px;
-  height: 10px;
-  border-radius: 50%;
-  background: #1a120b;
-}
-.house-ghost-face .eye--l { left: 8px; }
-.house-ghost-face .eye--r { left: 23px; }
-.house-ghost-face .mouth {
-  position: absolute;
-  bottom: 15px;
-  left: 17px;
-  width: 5px;
-  height: 6px;
-  border-radius: 50% 50% 40% 40%;
-  background: #1a120b;
-}
-.house-ghost-face .tooth {
-  position: absolute;
-  bottom: 3px;
-  width: 1.5px;
-  height: 8px;
-  background: #8f8677;
-}
-.house-ghost-face .tooth--1 { left: 15px; }
-.house-ghost-face .tooth--2 { left: 20px; }
-.house-ghost-face .tooth--3 { left: 25px; }
-
-
-/* mãos/garras saindo do chão, flanqueando a cena */
-.house-hand {
-  position: absolute;
-  bottom: 6px;
-  width: 34px;
-  height: 40px;
-  transform-origin: 50% 100%;
-}
-.house-hand--left { left: 16%; transform: rotate(-9deg) scale(.95); }
-.house-hand--right { left: 72%; transform: rotate(11deg) scale(1.05); }
-.house-hand__palm {
-  position: absolute;
-  bottom: 6px;
-  left: 11px;
-  width: 12px;
-  height: 22px;
-  border-radius: 5px;
-  background: linear-gradient(180deg, #ded3c0, #8f8677);
-}
-.house-hand__finger {
-  position: absolute;
-  width: 5px;
-  border-radius: 3px;
-}
-.house-hand__finger--1 { bottom: 16px; left: 1px; height: 17px; background: linear-gradient(180deg, #ded3c0, #a29887); transform: rotate(-22deg); }
-.house-hand__finger--2 { bottom: 18px; left: 8px; height: 22px; background: linear-gradient(180deg, #e6dbc9, #a29887); transform: rotate(-8deg); }
-.house-hand__finger--3 { bottom: 18px; left: 15px; height: 24px; background: linear-gradient(180deg, #e6dbc9, #a29887); }
-.house-hand__finger--4 { bottom: 17px; left: 22px; height: 19px; background: linear-gradient(180deg, #ded3c0, #a29887); transform: rotate(12deg); }
-.house-hand__finger--5 { bottom: 6px; left: 26px; height: 13px; background: linear-gradient(180deg, #ded3c0, #a29887); transform: rotate(38deg); }
-
-.house-pumpkin {
-  position: absolute;
-  bottom: 8px;
-  left: 88%;
-  height: 34px;
-  filter: brightness(.8) drop-shadow(0 0 10px rgba(240, 110, 20, .35));
-}
-
-/* lápides/cercas pequenas e baixas, quase texturas no chão */
-.ground-marker {
-  position: absolute;
-}
-.ground-marker--1 { bottom: 2px; left: 36%; width: 52px; height: 12px; opacity: .5; transform: rotate(-6deg); }
-.ground-marker--2 { bottom: 0; left: 56%; width: 40px; height: 10px; opacity: .35; transform: rotate(9deg); }
-.ground-marker--3 { bottom: 1px; left: 8%; width: 34px; height: 9px; opacity: .28; transform: rotate(-14deg); }
-
-.ground-marker--1 .ground-marker__bar { position: absolute; bottom: 4px; left: 6px; width: 40px; height: 5px; border-radius: 3px; background: #cfc4b0; }
-.ground-marker--1 .ground-marker__circle--l { position: absolute; bottom: 1px; left: 0; width: 11px; height: 11px; border-radius: 50%; background: #cfc4b0; }
-.ground-marker--1 .ground-marker__circle--r { position: absolute; bottom: 1px; left: 42px; width: 11px; height: 11px; border-radius: 50%; background: #cfc4b0; }
-
-.ground-marker--2 .ground-marker__bar { position: absolute; bottom: 3px; left: 5px; width: 30px; height: 4px; border-radius: 2px; background: #bdb29e; }
-.ground-marker--2 .ground-marker__circle--l { position: absolute; bottom: 1px; left: 0; width: 9px; height: 9px; border-radius: 50%; background: #bdb29e; }
-.ground-marker--2 .ground-marker__circle--r { position: absolute; bottom: 1px; left: 32px; width: 9px; height: 9px; border-radius: 50%; background: #bdb29e; }
-
-.ground-marker--3 .ground-marker__bar { position: absolute; bottom: 3px; left: 4px; width: 26px; height: 4px; border-radius: 2px; background: #bdb29e; }
-.ground-marker--3 .ground-marker__circle--l { position: absolute; bottom: 1px; left: 0; width: 8px; height: 8px; border-radius: 50%; background: #bdb29e; }
-.ground-marker--3 .ground-marker__circle--r { position: absolute; bottom: 1px; left: 27px; width: 8px; height: 8px; border-radius: 50%; background: #bdb29e; }
-
-/* chapéu de bruxa caído no chão -- pequeno detalhe atmosférico, como se
-   tivesse caído da bruxa voadora no céu */
-.ground-hat {
-  position: absolute;
-  bottom: 2px;
-  left: 80%;
-  width: 22px;
-  height: auto;
-  opacity: .2;
-  filter: brightness(0);
-  transform: rotate(12deg);
-}
-
-/* esqueleto deitado + ossos de dinossauro nas margens escuras vazias que
-   sobram dos dois lados do conteúdo (max-width 520px) em telas largas.
-   Ancorados no .info-panel (que é width:100% da JANELA, não do .hero, que é
-   limitado) -- por isso ficam alinhados com a seção de data/endereço.
-   Somem em telas estreitas via media query, onde não sobra margem lateral. */
-.margin-skeleton {
-  position: absolute;
-  top: 60px;
-  left: 90px;
-}
-.margin-skeleton img {
-  display: block;
-  width: 130px;
-  height: auto;
-  filter: brightness(.5) saturate(.55) contrast(1.1) drop-shadow(0 4px 10px rgba(0, 0, 0, .5));
-}
-
-.margin-dino {
-  position: absolute;
-  width: 100px;
-  height: auto;
-  filter: brightness(.5) saturate(.55) contrast(1.1) drop-shadow(0 4px 10px rgba(0, 0, 0, .5));
-}
-.margin-dino--1 { top: 60px; right: 90px; transform: rotate(-6deg); }
-.margin-dino--2 { top: 170px; right: 120px; width: 70px; opacity: .9; transform: rotate(10deg); }
-
-@media (max-width: 900px) {
-  .margin-skeleton,
-  .margin-dino { display: none; }
-}
-
-/* No celular a cena do chão (mão, caveira, caixão, abóbora) ficava
-   sobreposta/bagunçada -- os ícones têm tamanho fixo em px mas a distância
-   entre eles é em %, então numa tela estreita o espaço encolhe e o tamanho
-   não, virando uma zona de colisão (achado real, print do celular). Encolhe
-   tudo mantendo a base "presa" no chão (transform-origin: bottom). */
-@media (max-width: 480px) {
-  .house-door,
-  .house-ghost-face,
-  .house-pumpkin {
-    transform: scale(.62);
-    transform-origin: bottom center;
-  }
-  .house-hand--left { transform: rotate(-9deg) scale(.6); transform-origin: bottom center; }
-  .house-hand--right { transform: rotate(11deg) scale(.65); transform-origin: bottom center; }
-  .ground-hat { transform: rotate(12deg) scale(.6); transform-origin: bottom center; }
-}
-
-/* seção de informações abaixo do herói */
-
-.info-panel {
-  position: relative;
-  width: 100%;
-  background: linear-gradient(180deg, #17100c 0%, #100a08 30%, #0a0607 62%, #06040a 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-bottom: 8px;
-}
-
-.info-panel-inner {
-  width: 100%;
-  max-width: 520px;
-  box-sizing: border-box;
-  padding: 24px 24px 40px;
-  text-align: center;
-  position: relative;
-  z-index: 3;
-}
-
-/* Grid de 3 cards (Quando/Onde/Traje) -- troca dos parágrafos empilhados antigos
-   (.info-date/.info-place/.info-dress) pelo layout do mockup novo, que lê muito
-   mais rápido: um rótulo pequeno, um valor em destaque e um subtexto por card,
-   lado a lado. Empilha em 1 coluna no mobile (telas < 480px). */
-.info-cards {
-  margin-top: 40px;
-  width: 100%;
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 1px;
-  background: rgba(255, 138, 43, .28);
-  border: 1px solid rgba(255, 138, 43, .28);
-  border-radius: 16px;
-  overflow: hidden;
-}
-@media (min-width: 480px) {
-  .info-cards { grid-template-columns: repeat(3, 1fr); }
-}
-.info-card {
-  background: #0f0a14;
-  padding: 18px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-.info-card__label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: .24em;
-  text-transform: uppercase;
-  color: var(--orange);
-}
-.info-card__value {
-  font-family: var(--font-heading);
-  font-weight: 800;
-  font-size: clamp(18px, 4.6vw, 22px);
-  color: #ffffff;
-}
-.info-card__sub {
-  font-size: 14px;
-  color: var(--ink-2);
-}
-
-.info-cta-note {
-  margin: 14px 0 0;
-  font-size: 13px;
-  color: var(--purple-mute);
-}
-
-.cta-button {
-  margin-top: 28px;
-  border: none;
-  cursor: pointer;
-  width: 100%;
-  display: block;
-  text-align: center;
-  background: linear-gradient(180deg, var(--accent), var(--accent-dark));
-  color: #2a1503;
-  font-weight: 700;
-  font-size: 16px;
-  letter-spacing: .02em;
-  padding: 18px 24px;
-  border-radius: 12px;
-  box-shadow: 0 14px 34px rgba(224, 105, 15, .35), inset 0 1px 0 rgba(255, 255, 255, .35);
-  transition: filter .15s, transform .15s;
-}
-.cta-button:hover { filter: brightness(1.08); transform: translateY(-1px); }
-
-/* ==================== painel admin -- REDESIGN v2 ====================
-   HANDOFF-FRONT-HALLOWEEN.md secao 5 (mockup "Painel Admin v2.dc.html").
-   Passe 3/3 -- reaproveita os tokens globais do :root colados no Passe 1
-   (--orange, --ink*, --line*, --card-a, --btn-line, --ok/--warn/--bad/
-   --purple, .pill--ativo/--encerrado/--agendado etc) em vez da paleta
-   escopada --a-* do reskin anterior, que este bloco substitui.
-
-   Classes abaixo aparecem como STRING LITERAL dentro de <script> nos
-   templates admin/*.html (pedidos.html, cadastros.html, _layout.html) --
-   renomear quebraria esse JS, fora do escopo deste passe (frontend-only,
-   convenção AJAX intocada). Mantidas com o MESMO NOME de antes, só os
-   valores declarados mudam pra bater com o mockup novo: .admin-ajax-form
-   (sem CSS própria), .admin-toast(+variantes), .admin-pill(+variantes),
-   .admin-btn-primary, .admin-btn-outline, .admin-bulk-bar(+variantes),
-   .admin-table__check-col, .admin-group__row (usada em querySelector
-   ('.admin-group__row[data-row-id=...]')). Pedidos e cadastros continuam
-   <table><tbody><tr><td> de verdade (não <div> solto) porque o script de
-   pedidos.html/cadastros.html faz checkbox.closest('tr') e
-   linha.querySelector('td:last-child') -- trocar a tag quebraria os dois
-   em silêncio. O layout em colunas do mockup (grid-template-columns fixo)
-   é alcançado com display:grid direto no <tr> (técnica padrão: com o pai
-   em grid, os <td>/<th> filhos são "blockificados" automaticamente pelo
-   spec de CSS Display, sem precisar trocar tag nem quebrar closest('tr')).
-
-   O bloco .admin-shell/.admin-sidebar*/.admin-nav*/.admin-header*/
-   .admin-panel*/.admin-kpi*/.admin-quick-link*/.admin-event-card__*/
-   .admin-material-card__* de ANTES deste passe fica órfão (nenhum
-   template usa mais essas classes depois desta reescrita) -- não foi
-   apagado do arquivo pra não arriscar um Edit gigante de ~850 linhas por
-   correspondência textual exata; documentado no relatório final como
-   dívida de limpeza pro próximo passe (puramente cosmético, zero risco
-   funcional, CSS morto não é servido a lugar nenhum). */
-
-.a-shell {
-  width: 100%;
-  min-height: 100vh;
-  box-sizing: border-box;
-  display: flex;
-  background: radial-gradient(ellipse 900px 500px at 70% -10%, #2c1a3a 0%, #120b1c 45%, var(--bg) 80%);
-  color: var(--ink);
-  font-family: 'Poppins', sans-serif;
-}
-.a-shell *, .a-shell *::before, .a-shell *::after { box-sizing: border-box; }
-.a-shell .help-text { color: var(--ink-3); }
-.a-shell .field label { color: var(--orange); }
-
-/* -------------------- sidebar -------------------- */
-
-.a-sidebar {
-  position: relative;
-  flex: 0 0 250px;
-  min-width: 210px;
-  display: flex;
-  flex-direction: column;
-  gap: 22px;
-  padding: 26px 18px;
-  background: rgba(10, 6, 14, .85);
-  border-right: 1px solid rgba(255, 138, 43, .18);
-  overflow: hidden;
-}
-.a-sidebar__tree {
-  position: absolute;
-  left: -70px;
-  bottom: -40px;
-  height: 360px;
-  filter: brightness(0);
-  opacity: .9;
-  pointer-events: none;
-}
-
-.a-brand { position: relative; display: flex; align-items: center; gap: 12px; }
-.a-brand__icon {
-  width: 40px;
-  filter: drop-shadow(0 0 12px rgba(255, 120, 20, .6));
-  animation: flicker 3s ease-in-out infinite;
-}
-.a-brand__text { display: flex; flex-direction: column; }
-.a-brand__name {
-  font-family: 'Nosifer', cursive;
-  font-size: 17px;
-  color: var(--glow);
-  text-shadow: 0 0 12px rgba(255, 138, 43, .6);
-}
-.a-brand__tag { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-3); }
-
-.a-nav-label {
-  position: relative;
-  padding: 0 12px 6px;
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: .24em;
-  text-transform: uppercase;
-  color: var(--orange);
-}
-.a-nav { position: relative; display: flex; flex-direction: column; gap: 4px; }
-.a-nav__item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-  padding: 11px 12px;
-  border-radius: 12px;
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--ink-2);
-  font: 500 14px 'Poppins', sans-serif;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background .15s, color .15s, border-color .15s;
-}
-.a-nav__item:hover { background: rgba(255, 138, 43, .1); color: var(--ink); }
-.a-nav__item--active {
-  background: rgba(255, 138, 43, .14);
-  border-color: rgba(255, 138, 43, .45);
-  color: #fff;
-  font-weight: 600;
-}
-.a-nav__icon { width: 22px; height: 22px; object-fit: contain; flex: 0 0 22px; }
-.a-nav__label { flex: 1; }
-.a-nav__count {
-  min-width: 24px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .08);
-  font-size: 11px;
-  text-align: center;
-  color: inherit;
-}
-
-.a-sidebar__footer { position: relative; margin-top: auto; display: flex; flex-direction: column; gap: 12px; }
-.a-event-card {
-  padding: 14px;
-  border-radius: 14px;
-  background: var(--card-a);
-  border: 1px solid rgba(255, 138, 43, .25);
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.a-event-card__label { font-size: 13px; font-weight: 600; }
-.a-event-card__note { font-size: 12px; color: var(--ink-3); }
-.a-event-card__bar { height: 6px; border-radius: 99px; background: var(--line-2); overflow: hidden; }
-.a-event-card__bar-fill { height: 100%; background: linear-gradient(90deg, #ffa24a, var(--orange-3)); }
-
-.a-user { display: flex; align-items: center; gap: 10px; }
-.a-user__info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.a-user__name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.a-user__role { font-size: 11px; color: var(--ink-3); }
-.a-logout { width: 100%; margin-top: 2px; }
-
-/* -------------------- main / header -------------------- */
-
-.a-main {
-  position: relative;
-  flex: 1 1 560px;
-  min-width: 0;
-  padding: 30px 36px 60px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-.a-deco { position: absolute; pointer-events: none; z-index: 0; }
-.a-deco--web { top: 0; right: 0; width: 170px; filter: invert(1); opacity: .14; }
-.a-deco--spider { top: 0; right: 150px; }
-.a-deco--hand { right: 30px; bottom: 0; height: 90px; filter: brightness(0) drop-shadow(0 0 1px rgba(255, 138, 43, .6)); }
-.a-deco--walk { top: -6px; left: 4px; width: 30px; opacity: .14; filter: brightness(0) invert(1); }
-.a-deco--pumpkin { top: -6px; right: 4px; width: 30px; opacity: .14; filter: brightness(0) invert(1); }
-
-.a-header {
-  position: relative;
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 16px;
-}
-.a-header__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
-.a-header__title { margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 34px; line-height: 1.1; color: #fff; }
-.a-header__subtitle { font-size: 14px; color: var(--ink-3); }
-.a-header__actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
-.a-search {
-  width: 260px;
-  max-width: 100%;
-  padding: 12px 16px;
-  border-radius: 999px;
-  border: 1px solid var(--line);
-  background: var(--card);
-  color: var(--ink);
-  font: 400 14px 'Poppins', sans-serif;
-}
-.a-search:focus { outline: none; border-color: var(--orange); }
-
-/* -------------------- cards / kpis (handoff 5.1 "componentes do painel") -------------------- */
-
-.a-card {
-  position: relative;
-  padding: 18px;
-  border-radius: 16px;
-  background: rgba(15, 10, 20, .9);
-  border: 1px solid rgba(255, 138, 43, .22);
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.a-card--row { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 16px; }
-.a-card--empty { align-items: center; text-align: center; padding: 48px; border-style: dashed; border-color: var(--line); }
-.a-card--form { border-color: rgba(255, 138, 43, .4); }
-.a-card__title { margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 22px; color: #fff; }
-
-.a-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
-.a-material-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
-
-.a-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
-.a-kpi__label { font-size: 11px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--orange); }
-.a-kpi__value { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 32px; line-height: 1; color: #fff; }
-.a-kpi__note { font-size: 12px; color: var(--ink-3); }
-
-/* -------------------- tabela (pedidos / cadastros) -------------------- */
-
-.a-table { display: block; border-radius: 18px; background: rgba(15, 10, 20, .9); border: 1px solid rgba(255, 138, 43, .22); overflow-x: auto; }
-.a-table thead, .a-table tbody { display: block; }
-.a-tr {
-  display: grid;
-  grid-template-columns: 36px 80px minmax(160px, 2fr) 50px 80px 120px 130px;
-  gap: 12px;
-  align-items: center;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--line-3);
-  min-width: 780px;
-}
-.a-tr > th, .a-tr > td { margin: 0; padding: 0; border: 0; text-align: left; font-weight: 400; font: inherit; color: inherit; vertical-align: middle; }
-.a-tr:hover { background: rgba(255, 138, 43, .05); }
-.a-tr:last-child { border-bottom: none; }
-.a-th { font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-4); border-bottom-color: var(--line-2); }
-.a-tr--cadastros { grid-template-columns: 36px minmax(160px, 1.6fr) minmax(140px, 1.2fr) 130px auto; min-width: 620px; }
-
-.a-order__namecell { display: flex; align-items: center; gap: 10px; min-width: 0; }
-.a-order__namecell > .a-order__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.a-empty-icon { width: 70px; }
-.a-order__client { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
-.a-order__name { font-size: 14px; font-weight: 600; }
-.a-order__email { font-size: 12px; color: var(--ink-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.a-order__extra { font-size: 11px; color: var(--ink-4); }
-.a-order__value { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 17px; }
-.a-order__id { font-weight: 600; color: var(--orange-2); }
-
-.avatar {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
-  border-radius: 50%;
-  background: var(--line-2);
-  color: var(--orange-2);
-  font-weight: 700;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* -------------------- barra de ação em lote (admin-bulk-bar--visivel é string literal) -------------------- */
-
-.admin-bulk-bar {
-  display: none;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  background: var(--card-a);
-  border: 1.5px solid var(--orange);
-  border-radius: 14px;
-  padding: 10px 14px;
-  margin-bottom: 14px;
-}
-.admin-bulk-bar--visivel { display: flex; }
-.admin-bulk-bar__count { font-weight: 700; font-size: 13.5px; color: var(--ink); margin-right: auto; }
-
-.admin-table__check-col { padding-right: 0; }
-
-/* -------------------- toast flutuante (classe usada como string literal em _layout.html) -------------------- */
-
-.admin-toast {
-  display: none;
-  position: fixed;
-  left: 50%;
-  bottom: 24px;
-  transform: translateX(-50%);
-  z-index: 60;
-  max-width: min(420px, calc(100vw - 32px));
-  background: #1d1330;
-  color: #fff3e2;
-  font-family: 'Poppins', sans-serif;
-  font-weight: 600;
-  font-size: 13.5px;
-  line-height: 1.4;
-  padding: 12px 18px;
-  border-radius: 12px;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, .28);
-}
-.admin-toast--visivel { display: block; }
-.admin-toast--erro { background: #7a2222; }
-.admin-toast--aviso { background: #8a5a16; }
-
-/* -------------------- selos de status (classe usada como string literal em pedidos.html) -------------------- */
-
-.admin-pill {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-.admin-pill--ok { background: var(--ok-bg); color: var(--ok); }
-.admin-pill--warn { background: var(--warn-bg); color: var(--warn); }
-.admin-pill--bad { background: var(--bad-bg); color: var(--bad); }
-.admin-pill--accent { background: rgba(255, 138, 43, .22); color: var(--orange-2); }
-.admin-pill--neutral { background: var(--purple-bg); color: var(--purple); }
-
-/* -------------------- modal de confirmação -------------------- */
-
-.confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(11, 7, 19, .72); z-index: 50; align-items: center; justify-content: center; padding: 20px; }
-.confirm-modal { background: var(--card-a); color: var(--ink); border-radius: 14px; padding: 22px 24px; max-width: 360px; width: 100%; box-shadow: 0 24px 54px rgba(0, 0, 0, .5); }
-.confirm-modal__text { margin: 0 0 18px; font-size: 14px; line-height: 1.5; }
-.confirm-modal__actions { display: flex; gap: 10px; justify-content: flex-end; }
-
-/* -------------------- botões admin (admin-btn-primary/outline são string literal em pedidos.html) -------------------- */
-
-.admin-btn-primary {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: none;
-  cursor: pointer;
-  font: 700 13px 'Poppins', sans-serif;
-  color: #2a1503;
-  background: linear-gradient(180deg, #ffa24a, var(--orange-3));
-  padding: 10px 16px;
-  border-radius: 999px;
-  box-shadow: 0 6px 16px rgba(216, 84, 26, .3);
-  transition: filter .15s;
-  white-space: nowrap;
-  text-decoration: none;
-}
-.admin-btn-primary:hover { filter: brightness(1.08); color: #2a1503; }
-.admin-btn-outline {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  border: 1px solid var(--btn-line);
-  cursor: pointer;
-  font: 600 13px 'Poppins', sans-serif;
-  color: var(--ink);
-  background: transparent;
-  padding: 10px 16px;
-  border-radius: 999px;
-  transition: background .15s;
-  white-space: nowrap;
-  text-decoration: none;
-}
-.admin-btn-outline:hover { background: rgba(255, 255, 255, .06); color: var(--ink); }
-.admin-btn-dashed {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  align-self: flex-start;
-  border: 1px dashed var(--orange);
-  cursor: pointer;
-  font: 600 14px 'Poppins', sans-serif;
-  color: var(--orange-2);
-  background: transparent;
-  padding: 13px 22px;
-  border-radius: 999px;
-  transition: background .15s;
-}
-.admin-btn-dashed:hover { background: rgba(255, 138, 43, .08); }
-
-/* -------------------- hierarquia -------------------- */
-
-.admin-group + .admin-group { margin-top: 14px; }
-.admin-group__header {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
-  border-radius: 18px 18px 0 0;
-  background: rgba(15, 10, 20, .9);
-  border: 1px solid rgba(255, 138, 43, .22);
-  border-bottom: none;
-}
-.admin-group__title { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14.5px; color: var(--ink); }
-.admin-group__count { font-size: 12.5px; color: var(--ink-4); margin-left: 6px; font-weight: 400; font-family: 'Poppins', sans-serif; }
-.admin-group__select-all { display: flex; align-items: center; gap: 6px; margin-left: auto; font-weight: 600; font-size: 12.5px; color: var(--ink-4); cursor: pointer; white-space: nowrap; }
-
-/* Lista em COLUNA ÚNICA (não card-grid) -- é a causa raiz do bug de
-   sobreposição em ~1080px relatado antes: um grid auto-fit cria colunas
-   estreitas o bastante pra apertar avatar/nome/botões em larguras
-   intermediárias; uma lista de largura total nunca precisa espremer, o
-   bug deixa de poder acontecer (o mockup também usa lista de 1 coluna
-   nesta seção, não card-grid). */
-.admin-group__list {
-  display: flex;
-  flex-direction: column;
-  background: rgba(15, 10, 20, .9);
-  border: 1px solid rgba(255, 138, 43, .22);
-  border-radius: 0 0 18px 18px;
-  overflow: hidden;
-}
-.admin-group__row {
-  background: transparent;
-  padding: 14px 20px;
-  border-bottom: 1px solid var(--line-3);
-  /* container-type mantido como rede de segurança: mesmo numa lista de 1
-     coluna, a própria linha ainda pode ficar estreita se a página for
-     usada dentro de um painel/iframe/split-view mais apertado. */
-  container-type: inline-size;
-}
-.admin-group__row:last-child { border-bottom: none; }
-.admin-group__row:hover { background: rgba(255, 138, 43, .05); }
-.admin-group__row-inner { display: flex; align-items: center; gap: 14px; }
-.admin-group__info { min-width: 0; flex: 1; display: flex; flex-direction: column; }
-.admin-group__name { font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.admin-group__email { font-size: 12px; color: var(--ink-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.admin-group__action { flex: 0 0 auto; }
-.admin-group__action form { margin: 0; }
-.admin-group__action--duplo { display: flex; gap: 8px; }
-
-@container (max-width: 480px) {
-  .admin-group__row-inner { flex-wrap: wrap; }
-  .admin-group__action { flex: 1 1 100%; margin-top: 8px; }
-  .admin-group__action .admin-btn-primary,
-  .admin-group__action .admin-btn-outline { width: 100%; }
-}
-
-/* -------------------- material -------------------- */
-
-.a-material__name { font-weight: 600; font-size: 15px; }
-.a-material__desc { font-size: 12px; color: var(--ink-4); }
-.a-material__value { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 28px; color: var(--orange-2); line-height: 1.1; }
-.a-material__meta { font-size: 12px; color: var(--ink-3); }
-
-/* -------------------- eventos: lotes -------------------- */
-
-.a-lote { border-color: rgba(255, 138, 43, .22); }
-.a-lote--ativo { border-color: rgba(255, 138, 43, .55); }
-.a-lote__badge {
-  width: 64px;
-  height: 64px;
-  flex: 0 0 64px;
-  border-radius: 14px;
-  background: var(--line-3);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 1px;
-}
-.a-lote__badge-tag { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--orange); }
-.a-lote__badge-n { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 26px; line-height: 1; color: #fff; }
-.a-lote__info { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 2px; }
-.a-lote__price { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 22px; color: #fff; }
-.a-lote__period { font-size: 12px; color: var(--ink-4); }
-.a-lote__meta { font-size: 11px; color: var(--ink-3); }
-
-/* -------------------- index: links rápidos -------------------- */
-
-.a-quick-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
-.a-quick-link {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: rgba(15, 10, 20, .9);
-  border: 1px solid rgba(255, 138, 43, .22);
-  border-radius: 20px;
-  padding: 18px;
-  color: var(--ink);
-  text-decoration: none;
-  transition: background .15s;
-}
-.a-quick-link:hover { color: var(--ink); background: rgba(255, 138, 43, .08); }
-.a-quick-link__icon {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
-  border-radius: 12px;
-  background: linear-gradient(160deg, var(--orange), var(--orange-3));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.a-quick-link__icon img { width: 22px; filter: brightness(0) invert(1); }
-.a-quick-link__label { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 15px; }
-
-@media (max-width: 860px) {
-  .a-shell { flex-direction: column; }
-  .a-sidebar { flex: 1 1 auto; width: 100%; }
-  .a-main { flex: 1 1 auto; width: 100%; padding: 20px; }
-  .a-sidebar__tree { display: none; }
-  .a-nav-label { display: none; }
-  .a-nav { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; gap: 6px; -webkit-overflow-scrolling: touch; }
-  .a-nav__item { flex: 0 0 auto; width: auto; white-space: nowrap; padding: 9px 13px; }
-  .a-nav__count { display: none; }
-  .a-brand__tag { display: none; }
-  .a-header__title { font-size: 24px; }
-  .a-kpis { grid-template-columns: 1fr 1fr; }
-}
-
-@media (max-width: 480px) {
-  .a-kpis { grid-template-columns: 1fr; }
-  .admin-bulk-bar { flex-direction: column; align-items: stretch; }
-  .admin-bulk-bar__count { margin-right: 0; }
-  .admin-bulk-bar .admin-btn-primary,
-  .admin-bulk-bar .admin-btn-outline { width: 100%; }
-}
-
-/* ============================================================
-   REDESIGN v2 "Horror Night Party" -- fundação compartilhada
-   (HANDOFF-FRONT-HALLOWEEN.md, seção 3 -- Passe 1/3).
-   Bloco colado ao final do arquivo, verbatim conforme o handoff:
-   nomes de classe/variável exatamente como especificado, pra Passe 2
-   (comprar/pagamento/meus_pedidos) e Passe 3 (admin) reaproveitarem.
-
-   Onde uma classe abaixo tem o MESMO NOME de uma classe antiga que as
-   telas ainda não migradas (comprar.html, pagamento.html, admin/*)
-   continuam usando -- .field, .btn-primary, .divider, .ticket, body --
-   a regra ANTIGA continua em vigor pra essas telas (seletores idênticos
-   fazem o CSS mesclar propriedade por propriedade, e a versão nova abaixo
-   só ganha nas propriedades que ela de fato redefine); nada quebra
-   funcionalmente, só o visual dessas telas ainda não migradas fica um
-   pouco inconsistente até o próximo passe trocar as classes delas também.
-   Ver relatório final do Passe 1 pra a lista completa. */
-
+/* ============ TOKENS ============ */
 :root{
   --bg:#07050d; --bg-2:#0a060e; --card:#0f0a14; --card-a:rgba(15,10,20,.92);
-  --ink:#f4ece0; --ink-2:#d8cbe8; --ink-3:#b9a9d4; --ink-4:#8e80a6;
+  --ink:#f4ece0; --ink-2:#d8cbe8; --ink-3:#b9a9d4; --ink-4:#8e80a6; --ph:#6f6284;
   --line:#3a2d4a; --line-2:#2a2036; --line-3:#1d1628; --btn-line:#5a4a70;
   --orange:#ff8a2b; --orange-2:#ffb15e; --orange-3:#e1690f; --glow:#ffe9b8;
-  --paper:#f6ead2; --paper-ink:#241a14; --paper-mute:#7a6a56; --paper-price:#c9560b;
+  --border-o:rgba(255,138,43,.28); --border-o2:rgba(255,138,43,.22);
+  --paper:#f6ead2; --paper-2:#efe2c8; --paper-ink:#241a14; --paper-mute:#7a6a56; --paper-price:#c9560b;
   --ok-bg:rgba(122,209,79,.16); --ok:#9be070;
   --warn-bg:rgba(255,138,43,.18); --warn:#ffb15e;
   --bad-bg:rgba(220,70,70,.16); --bad:#ff8f8f;
   --purple-bg:rgba(160,120,230,.16); --purple:#c9b3ff;
-  --border-o:rgba(255,138,43,.28);
+  --f-display:'Nosifer',cursive; --f-title:'Baloo 2',sans-serif; --f-body:'Poppins',sans-serif;
 }
-body{margin:0;background:var(--bg);color:var(--ink);font-family:'Poppins',sans-serif}
+
+/* ============ FONTES LOCAIS ============
+   Servidas de /static/fonts em vez do CDN do Google Fonts, pra não
+   depender de rede externa no carregamento da página (achado real: CDN
+   instável derrubou a fonte em produção uma vez). */
+@font-face{font-family:'Nosifer';font-style:normal;font-weight:400;font-display:swap;src:url("../fonts/nosifer.ttf") format('truetype');}
+@font-face{font-family:'Baloo 2';font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/baloo2-600.ttf") format('truetype');}
+@font-face{font-family:'Baloo 2';font-style:normal;font-weight:800;font-display:swap;src:url("../fonts/baloo2-800.ttf") format('truetype');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:400;font-display:swap;src:url("../fonts/poppins-400.ttf") format('truetype');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:500;font-display:swap;src:url("../fonts/poppins-500.ttf") format('truetype');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/poppins-600.ttf") format('truetype');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:700;font-display:swap;src:url("../fonts/poppins-700.ttf") format('truetype');}
+
+/* ============ RESET ============ */
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+img{max-width:none}
 a{color:var(--orange)} a:hover{color:var(--orange-2)}
-input::placeholder{color:#6f6284}
-.deco{position:absolute;pointer-events:none}
+input::placeholder{color:var(--ph)}
+button{font-family:inherit}
+p{margin:0}
+
+/* ============ DECORAÇÃO ============ */
+.deco{position:absolute;pointer-events:none;user-select:none}
 .sil{filter:brightness(0)}
+.inv{filter:invert(1)}
+.glow-pumpkin{filter:drop-shadow(0 0 16px rgba(255,120,20,.7));animation:flicker 3s ease-in-out infinite}
+.spider{position:absolute;top:0;display:flex;flex-direction:column;align-items:center;animation:spiderBob 5s ease-in-out infinite;pointer-events:none;z-index:1}
+.spider i{display:block;width:1px;height:120px;background:rgba(230,220,255,.45)}
+.spider img{width:40px;margin-top:-6px;filter:brightness(0) drop-shadow(0 0 6px rgba(255,160,60,.4))}
 
-/* Tipografia */
-.eyebrow{margin:0;font-size:12px;font-weight:600;letter-spacing:.34em;text-transform:uppercase;color:var(--orange)}
-.display{margin:0;font-family:'Nosifer',cursive;font-weight:400;color:var(--glow);
+/* ============ TIPOGRAFIA ============ */
+.eyebrow{font-size:12px;font-weight:600;letter-spacing:.34em;text-transform:uppercase;color:var(--orange)}
+.display{margin:0;font-family:var(--f-display);font-weight:400;line-height:1;color:var(--glow);
   text-shadow:0 0 6px rgba(255,190,82,.8),0 0 22px rgba(255,138,43,.6)}
-.h2{margin:0;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:28px;color:#fff}
-.muted{color:var(--ink-3);font-size:14px}
+.h2{margin:0;font-family:var(--f-title);font-weight:800;font-size:28px;line-height:1.15;color:#fff}
+.lead{font-size:14px;color:var(--ink-2)}
+.muted{font-size:13px;color:var(--ink-3)}
+.center{text-align:center}
+.help-text{font-size:13px;color:var(--ink-3)}
 
-/* Fundo padrão das telas de cliente */
-.screen{position:relative;min-height:100vh;overflow:hidden;display:flex;flex-direction:column;
-  align-items:center;justify-content:center;padding:32px 20px;
-  background:radial-gradient(circle at 50% 8%,#3d2440 0%,#1c1230 30%,#0a060e 70%)}
-.screen--top{justify-content:flex-start;padding-top:40px}
+/* ============ FLASH / ERRO ============ */
+.flash-wrap{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;width:min(92vw,440px)}
+.flash{padding:12px 16px;border-radius:12px;background:var(--card-a);border:1px solid var(--border-o);color:var(--ink);font-size:14px;box-shadow:0 12px 30px rgba(0,0,0,.5)}
+.flash-messages{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;width:min(92vw,440px)}
+.alert,.alert-error{padding:12px 14px;border-radius:10px;background:var(--bad-bg);border:1px solid rgba(255,143,143,.35);color:var(--bad);font-size:14px}
+.alert-success{padding:12px 14px;border-radius:10px;background:var(--ok-bg);border:1px solid rgba(155,224,112,.35);color:var(--ok);font-size:14px}
 
-/* Card */
-.card{position:relative;width:100%;max-width:420px;background:var(--card-a);border:1px solid var(--border-o);
-  border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:14px;box-shadow:0 30px 60px rgba(0,0,0,.6)}
+/* ============ TELA CLIENTE ============ */
+.screen{position:relative;min-height:100vh;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:40px 20px;background:radial-gradient(circle at 50% 8%,#3d2440 0%,#1c1230 30%,#0a060e 70%)}
+.screen--top{justify-content:flex-start}
+.screen--page{justify-content:flex-start;background:radial-gradient(circle at 50% 0%,#2c1a3a 0%,#120b1c 40%,#0a060e 75%)}
+.screen > .content{position:relative;z-index:2;width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center}
+.screen--page > .content{max-width:560px;align-items:stretch;gap:20px}
+.brand-head{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:26px}
+.brand-head .display{font-size:34px}
 
-/* Form */
+/* Compat: screens já usam .eyebrow/.display/.card soltos (sem .content) --
+   os decorados desses templates ficam absolutos dentro de .screen mesmo,
+   e o miolo (eyebrow/título/card) segue como filho direto empilhado. */
+.screen > .eyebrow{position:relative;z-index:2}
+.screen > .display{position:relative;z-index:2;margin-top:14px}
+.screen > .card,.screen > .mp-wrap{position:relative;z-index:2}
+.auth-title{font-size:34px;margin-top:14px;margin-bottom:26px}
+.auth-title--sm{font-size:30px}
+.auth-footer{margin:4px 0 0;font-size:13px;color:var(--ink-3);text-align:center}
+.card-lead{margin:0;font-size:14px;color:var(--ink-2)}
+
+/* ============ CARD ============ */
+.card{position:relative;width:100%;max-width:420px;background:var(--card-a);border:1px solid var(--border-o);border-radius:18px;padding:24px;
+  display:flex;flex-direction:column;gap:14px;box-shadow:0 30px 60px rgba(0,0,0,.6)}
+
+/* ============ FORM ============ */
 .field{display:flex;flex-direction:column;gap:7px;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--orange)}
 .input{width:100%;min-width:0;padding:13px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);
-  color:var(--ink);font:400 15px 'Poppins',sans-serif;letter-spacing:0;text-transform:none}
+  color:var(--ink);font:400 15px var(--f-body);letter-spacing:0;text-transform:none}
 .input:focus{outline:none;border-color:var(--orange)}
-/* Sobrescreve `.field label`/`.field input` (regra antiga do card CLARO,
-   pergaminho -- ver .dev-squad/gotchas.md "reskin claro->escuro"). Essa
-   regra antiga (linhas ~566/585/596/601) tem a MESMA especificidade
-   (classe + tipo) que estas daqui, então quem ganha é a ORDEM no arquivo --
-   ficando depois delas aqui garante que todo `.field` das telas novas
-   (login/signup/comprar e admin material/eventos, que reusam a mesma
-   estrutura `.field > label + input.input`) usa a paleta escura nova, não o
-   branco/creme órfão da versão anterior (bug real: caixa de input branca
-   dentro do card escuro). Não apaga nem edita a regra antiga -- só some do
-   cascade pra quem usa `.field` hoje, que são só telas já migradas. */
-.field label{color:var(--orange)}
-.field input{width:100%;min-width:0;padding:13px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);
-  color:var(--ink);font:400 15px 'Poppins',sans-serif;letter-spacing:0;text-transform:none}
-.field input:focus{outline:none;border-color:var(--orange)}
-.field input:disabled{background:var(--bg);color:var(--ink-4);cursor:not-allowed}
+.input:disabled{opacity:.6;cursor:not-allowed}
+.input--pill{border-radius:999px;padding:12px 16px;background:var(--card);width:260px;max-width:100%;font-size:14px}
 .row-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
-
-/* Botões */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;border-radius:999px;
-  font:700 15px 'Poppins',sans-serif;padding:15px 22px;text-decoration:none;transition:filter .15s,transform .15s}
-.btn-primary{border:none;background:linear-gradient(180deg,#ffa24a,var(--orange-3));color:#2a1503;box-shadow:0 12px 30px rgba(225,105,15,.4)}
-.btn-primary:hover{filter:brightness(1.1);color:#2a1503}
-.btn-ghost{background:transparent;border:1px solid var(--btn-line);color:var(--ink);font-weight:600}
-.btn-ghost:hover{background:rgba(255,255,255,.06);color:var(--ink)}
-.btn-dashed{background:transparent;border:1px dashed var(--orange);color:var(--orange-2);font-weight:600}
-.btn-sm{padding:8px 14px;font-size:12px}
 .divider{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--ink-4)}
 .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
+.dashed-top{padding-top:14px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:12px}
+.sub-label{font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3)}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:pointer}
 
-/* Pills de status */
-.pill{display:inline-block;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase}
-.pill--confirmado,.pill--ok{background:var(--ok-bg);color:var(--ok)}
-.pill--pendente,.pill--ativo{background:var(--warn-bg);color:var(--warn)}
-.pill--cancelado{background:var(--bad-bg);color:var(--bad)}
-.pill--encerrado{background:rgba(255,255,255,.06);color:var(--ink-4)}
-.pill--agendado{background:var(--purple-bg);color:var(--purple)}
+/* ============ BOTÕES ============ */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;border-radius:999px;border:1px solid transparent;
+  font:700 15px var(--f-body);padding:15px 22px;text-decoration:none;line-height:1.2;transition:filter .15s,transform .15s,background .15s,border-color .15s,color .15s}
+.btn-primary,.admin-btn-primary{border:none;background:linear-gradient(180deg,#ffa24a,var(--orange-3));color:#2a1503;box-shadow:0 12px 30px rgba(225,105,15,.4)}
+.btn-primary:hover,.admin-btn-primary:hover{filter:brightness(1.1);color:#2a1503;transform:translateY(-1px)}
+.btn-ghost,.admin-btn-outline{background:transparent;border:1px solid var(--btn-line);color:var(--ink);font-weight:600}
+.btn-ghost:hover,.admin-btn-outline:hover{background:rgba(255,255,255,.06);color:var(--ink)}
+.btn-dashed,.admin-btn-dashed{background:transparent;border:1px dashed var(--orange);color:var(--orange-2);font-weight:600;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border-radius:999px;font:700 14px var(--f-body);padding:13px 22px}
+.btn-dashed:hover,.admin-btn-dashed:hover{background:rgba(255,138,43,.08);color:var(--orange-2)}
+.btn-danger:hover{background:var(--bad-bg);border-color:var(--bad);color:var(--bad)}
+.admin-btn-primary,.admin-btn-outline{padding:8px 14px;font-size:13px;border-radius:999px;cursor:pointer;font-family:var(--f-body);font-weight:700;display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none}
+.btn-sm{padding:8px 14px;font-size:12px}
+.btn-lg{padding:18px 36px;font-size:17px;min-width:280px}
+.btn-block{width:100%}
+.btn-link{background:none;border:none;color:var(--ink-3);font:500 12px var(--f-body);cursor:pointer;padding:0}
+.btn-link:hover{color:#fff}
+.qty{display:flex;align-items:center;gap:12px}
+.qty button,.buy-qty-btn{width:44px;height:44px;border-radius:10px;border:1px solid var(--btn-line);background:transparent;color:var(--ink);font-size:18px;cursor:pointer}
+.qty button:hover,.buy-qty-btn:hover{background:rgba(255,255,255,.06)}
+.qty span{font-weight:700;font-size:17px;min-width:16px;text-align:center}
 
-/* Stepper de compra */
-.steps{display:flex;align-items:center;gap:8px;margin-bottom:30px}
+/* ============ PILLS ============ */
+.pill,.admin-pill{display:inline-block;padding:4px 12px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;white-space:nowrap}
+.pill--ok,.admin-pill--ok,.pill--confirmado{background:var(--ok-bg);color:var(--ok)}
+.pill--warn,.admin-pill--warn,.pill--pendente,.pill--ativo{background:var(--warn-bg);color:var(--warn)}
+.pill--bad,.admin-pill--bad,.pill--cancelado{background:var(--bad-bg);color:var(--bad)}
+.pill--off,.admin-pill--neutral,.pill--encerrado{background:rgba(255,255,255,.06);color:var(--ink-4)}
+.pill--purple,.pill--agendado{background:var(--purple-bg);color:var(--purple)}
+.admin-pill--accent{background:var(--warn-bg);color:var(--warn);border:1px solid rgba(255,138,43,.5)}
+
+/* ============ STEPPER ============ */
+.steps{display:flex;align-items:center;gap:8px;margin-bottom:30px;flex-wrap:wrap;justify-content:center;position:relative;z-index:2}
 .step{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-3)}
 .step b{width:26px;height:26px;border-radius:50%;border:1px solid var(--btn-line);display:flex;align-items:center;justify-content:center;font-size:12px}
+.step.done,.step.on{color:var(--ink-2)}
 .step.done b,.step.on b{background:var(--orange);border-color:var(--orange);color:#2a1503}
 .step.on{color:#fff;font-weight:600}
-.step-line{width:22px;height:1px;background:#4a3f6b}.step-line.done{background:var(--orange)}
+.step-line{width:22px;height:1px;background:#4a3f6b}
+.step-line.done{background:var(--orange)}
+.price-strip,.buy-price{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 14px;border-radius:12px;background:rgba(255,138,43,.1);border:1px solid rgba(255,138,43,.25)}
+.price-strip strong,.buy-price__value{font-family:var(--f-title);font-weight:800;font-size:20px;color:var(--orange-2)}
+.buy-section-label{margin:4px 0 0;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3)}
+.buy-qty-row{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.buy-qty-row__label{display:block;font-size:14px;font-weight:600}
+.buy-qty-row__hint{display:block;font-size:12px;color:var(--ink-3)}
+.buy-qty-controls{display:flex;align-items:center;gap:12px}
+.buy-qty-value{font-weight:700;font-size:17px;min-width:16px;text-align:center}
+.buy-companion{padding-top:14px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:12px}
+.buy-companion__label{font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3)}
+.buy-companion__hint{margin-top:-4px}
+.buy-actions{display:flex;gap:10px;margin-top:4px}
+.buy-actions__submit{flex:1}
+.buy-logout{display:flex;justify-content:center;margin:0}
 
-/* Ingresso (papel) */
-.ticket{width:100%;max-width:420px;border-radius:18px;overflow:hidden;background:var(--paper);color:var(--paper-ink);
-  box-shadow:0 30px 60px rgba(0,0,0,.6),0 0 60px rgba(255,138,43,.18)}
-.ticket__top{display:flex;justify-content:space-between;align-items:center;padding:14px 20px;background:#140d18}
-.ticket__brand{display:flex;align-items:center;gap:10px;font-family:'Baloo 2';font-weight:800;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--glow)}
-.ticket__brand img{width:22px}
-.ticket__price{font-family:'Baloo 2';font-weight:800;font-size:26px;color:var(--paper-price)}
+/* ============ INGRESSO ============ */
+.ticket{width:100%;border-radius:18px;overflow:hidden;background:var(--paper);color:var(--paper-ink);box-shadow:0 30px 60px rgba(0,0,0,.6),0 0 60px rgba(255,138,43,.18);position:relative;z-index:2}
+.ticket__top,.ticket__top-tag{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 20px;background:#140d18}
+.ticket__brand{display:flex;align-items:center;gap:10px;font-family:var(--f-title);font-weight:800;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--glow)}
+.ticket__brand img{width:22px;height:22px}
+.ticket__tag,.ticket__top-tag{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--orange)}
+.ticket__main,.ticket__row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:18px 20px 10px}
+.ticket__row--compact{padding:14px 20px 18px;align-items:center}
+.ticket__title,.ticket__qty{font-family:var(--f-title);font-weight:800;font-size:20px;line-height:1.2;margin:0}
+.ticket__qty--sm{font-size:18px}
+.ticket__meta{font-size:12px;color:var(--paper-mute);margin:2px 0 0}
+.ticket__price{font-family:var(--f-title);font-weight:800;font-size:26px;line-height:1.1;color:var(--paper-price);white-space:nowrap;margin:0}
+.ticket__people,.ticket__holders{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 20px 16px}
+.ticket__people p,.ticket__holder-name{font-size:13px;font-weight:600;margin:0}
+.ticket__people small,.ticket__holder-rg{display:block;font-size:11px;color:var(--paper-mute);font-weight:400;margin:2px 0 0}
 .ticket__cut{position:relative;border-top:2px dashed #cdbb99}
 .ticket__cut::before,.ticket__cut::after{content:"";position:absolute;top:-12px;width:24px;height:24px;border-radius:50%;background:#1c1230}
 .ticket__cut::before{left:-12px}.ticket__cut::after{right:-12px}
+.ticket__body{padding:22px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.ticket__label,.pay-pix-label{font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#8a7760}
+.ticket__note,.pay-how{font-size:12px;color:#6a5a48}
+.ticket__banner{width:100%;margin:0;padding:14px 20px;text-align:center;font-size:14px;font-weight:600}
+.ticket__banner--left{text-align:left}
+.ticket__banner--ok{background:var(--ok-bg);color:#2e6136}
+.ticket__banner--bad{background:var(--bad-bg);color:#8e2b2b}
+.status-box{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 20px 6px}
+.status-box strong{font-family:var(--f-title);font-weight:800;font-size:22px}
+.pay-pix{padding:22px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
+.pay-key{margin:0;font-size:13px;color:var(--paper-ink);word-break:break-all}
+.pay-actions{display:flex;gap:10px;padding:0 20px 22px}
+.pay-actions__confirm{flex:1;margin:0}
+.qr,.pay-qr{width:190px;height:190px;border-radius:12px;background:#fffdf8;border:8px solid #fffdf8;box-shadow:0 0 0 1px #dccdae;image-rendering:pixelated}
+.copy-box,.pay-copy-row{width:100%;display:flex;gap:8px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--paper-2)}
+.copy-box p,.pay-copy-value{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;margin:0}
+.copy-box button,.pay-copy-btn{border:none;cursor:pointer;padding:8px 12px;border-radius:8px;background:var(--paper-ink);color:var(--glow);font:600 12px var(--f-body)}
+.ticket .btn-paper{border:none;cursor:pointer;padding:13px 20px;border-radius:999px;background:var(--paper-ink);color:var(--glow);font:700 14px var(--f-body);width:100%}
+.ticket .btn-paper:hover{filter:brightness(1.25)}
+.mp-bg{background:radial-gradient(circle at 50% 0%,#2c1a3a 0%,#120b1c 40%,#0a060e 75%)!important}
+.mp-wrap{width:100%;max-width:720px;display:flex;flex-direction:column;gap:20px}
+.mp-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.mp-skeleton{right:10px;bottom:10px;height:130px;opacity:.8;transform:rotate(6deg)}
 
-/* Animações */
+/* ============ CONVITE ============ */
+.invite{position:relative;min-height:100vh;overflow:hidden;
+  background:linear-gradient(180deg,#1b1236 0%,#2a1840 28%,#3a1d33 50%,#1a0f1c 66%,#0a060e 72%,#07050d 100%)}
+.invite__nav{position:absolute;top:16px;right:16px;z-index:10;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.invite__nav form{margin:0}
+.scene{position:relative;height:clamp(440px,66vh,680px);overflow:hidden}
+.stars{position:absolute;inset:0;background-repeat:repeat;background-size:620px 413px;opacity:.6;animation:twinkle 6s ease-in-out infinite}
+.moon{position:absolute;left:50%;top:clamp(40px,7vh,80px);width:clamp(220px,30vw,400px);aspect-ratio:1/1;transform:translateX(-50%);border-radius:50%;
+  background:radial-gradient(circle at 38% 34%,#fff6d8 0%,#ffe6a3 38%,#f7c76a 70%,#e9a441 100%);animation:moonPulse 6s ease-in-out infinite}
+.moon i{position:absolute;border-radius:50%;background:rgba(214,150,60,.32)}
+.moon i:nth-child(1){left:22%;top:30%;width:18%;height:14%}
+.moon i:nth-child(2){left:58%;top:52%;width:22%;height:16%;background:rgba(214,150,60,.26)}
+.moon i:nth-child(3){left:40%;top:70%;width:12%;height:9%}
+.ghost-a{top:14%;left:14%;width:80px;animation:ghostFloat 9s ease-in-out infinite}
+.ghost-b{top:30%;right:16%;width:54px;animation:ghostFloat 12s ease-in-out -4s infinite}
+.witch{top:16%;left:0;width:clamp(150px,16vw,230px);animation:witchFly 22s linear infinite}
+.bat{left:0;animation:batFly linear infinite}
+.bat-1{top:9%;width:46px;animation-duration:18s}
+.bat-2{top:22%;width:30px;animation-duration:26s;animation-delay:-9s}
+.bat-3{top:5%;width:22px;animation-duration:34s;animation-delay:-20s}
+.bat-4{top:34%;width:36px;animation-duration:30s;animation-delay:-14s}
+.web-r{top:0;right:0;width:clamp(110px,14vw,190px);opacity:.22}
+.web-l{top:0;left:0;width:clamp(90px,11vw,150px);opacity:.16;transform:scaleX(-1)}
+.tree-l{left:-2%;bottom:50px;height:94%}
+.tree-r{right:-2%;bottom:50px;height:88%}
+.fog{position:absolute;left:-10%;right:-10%;bottom:60px;height:80px;background:radial-gradient(ellipse at center,rgba(200,180,230,.14),rgba(0,0,0,0) 70%);
+  filter:blur(10px);animation:fogMove 18s ease-in-out infinite alternate;pointer-events:none}
+.ground{position:absolute;left:0;right:0;bottom:30px;height:60px}
+.ground__hill{position:absolute;left:-5%;right:-5%;bottom:-31px;height:100px;background:var(--bg-2);border-radius:50% 50% 0 0/60px 60px 0 0}
+.g-cat{bottom:30px;left:58%;height:70px}
+.g-coffin{bottom:10px;left:14%;height:58px;transform:rotate(-12deg);filter:brightness(.55) saturate(.8)}
+.g-hand{transform-origin:50% 100%;animation:handRise 4s ease-in-out infinite}
+.g-hand-1{bottom:12px;left:30%;height:64px}
+.g-hand-2{bottom:8px;left:76%;height:48px;animation-duration:5s;animation-delay:-2s}
+.g-pump-1{bottom:4px;left:40%;height:46px}
+.g-pump-2{bottom:6px;left:86%;height:36px;animation-duration:3.6s;animation-delay:-1s}
+.zombie{position:absolute;bottom:-8px;left:0;width:100px;height:156px;animation:zWalk 40s linear infinite;pointer-events:none}
+.zombie div{width:100px;height:156px;background-repeat:no-repeat;background-size:1000px 156px;filter:brightness(.55) saturate(.7);animation:zFrames 1.1s steps(10) infinite}
+.invite__content{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;text-align:center;padding:8px 20px 72px;background:var(--bg-2);animation:rise .8s ease-out both}
+.invite__title{font-size:clamp(38px,9vw,96px);margin-top:14px;text-shadow:0 0 6px rgba(255,190,82,.9),0 0 24px rgba(255,138,43,.7),0 0 60px rgba(255,90,10,.45),0 5px 0 #2a1004;animation:titleBuzz 8s steps(1,end) infinite}
+.invite__sub{margin-top:14px;font-family:var(--f-title);font-weight:800;font-size:clamp(20px,3vw,30px);letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
+.info-grid{margin-top:40px;width:100%;max-width:640px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;
+  background:var(--border-o);border:1px solid var(--border-o);border-radius:16px;overflow:hidden}
+.info-grid > div{background:var(--card);padding:20px 16px;display:flex;flex-direction:column;gap:6px}
+.info-grid span{font-size:11px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--orange)}
+.info-grid strong{font-family:var(--f-title);font-weight:800;font-size:22px;color:#fff;line-height:1.2}
+.info-grid small{font-size:14px;color:var(--ink-2)}
+.invite__cta{margin-top:32px;box-shadow:0 0 0 4px rgba(255,138,43,.18),0 18px 40px rgba(225,105,15,.45)}
+.invite__skeleton{left:3%;bottom:40px;height:clamp(90px,13vw,160px);opacity:.85;transform:rotate(-6deg);z-index:1}
+
+/* ============ ADMIN ============ */
+.a-shell{position:relative;display:flex;min-height:100vh;overflow:hidden;background:radial-gradient(ellipse 900px 500px at 70% -10%,#2c1a3a 0%,#120b1c 45%,#07050d 80%)}
+.a-sidebar{position:relative;flex:0 0 250px;display:flex;flex-direction:column;gap:22px;padding:26px 18px;background:rgba(10,6,14,.85);border-right:1px solid rgba(255,138,43,.18);overflow:hidden}
+.a-sidebar__tree{left:-70px;bottom:-40px;height:360px;opacity:.9}
+.a-brand{position:relative;display:flex;align-items:center;gap:12px;text-decoration:none;color:inherit}
+.a-brand__icon{width:40px;height:40px}
+.a-brand__text{display:flex;flex-direction:column}
+.a-brand__name{display:block;font-family:var(--f-display);font-weight:400;font-size:17px;color:var(--glow);text-shadow:0 0 12px rgba(255,138,43,.6)}
+.a-brand__tag{display:block;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-3)}
+.a-nav-label{padding:0 12px 6px;font-size:10px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--orange)}
+.a-nav{position:relative;display:flex;flex-direction:column;gap:4px}
+.a-nav__item{display:flex;align-items:center;gap:10px;padding:11px 12px;border-radius:12px;border:1px solid transparent;color:var(--ink-2);font-size:14px;font-weight:500;text-decoration:none}
+.a-nav__item:hover{background:rgba(255,138,43,.1);color:#fff}
+.a-nav__item--active{background:rgba(255,138,43,.14);border-color:rgba(255,138,43,.45);color:#fff}
+.a-nav__icon{width:22px;height:22px;object-fit:contain}
+.a-nav__label{flex:1}
+.a-nav__count{min-width:24px;padding:2px 8px;border-radius:999px;background:rgba(255,255,255,.08);font-size:11px;text-align:center}
+.a-sidebar__footer{position:relative;margin-top:auto;display:flex;flex-direction:column;gap:12px}
+.a-user{display:flex;align-items:center;gap:10px}
+.a-user__info{flex:1;min-width:0;display:flex;flex-direction:column}
+.a-user__name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.a-user__role{font-size:11px;color:var(--ink-3)}
+.a-logout{width:100%}
+.avatar{flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--line-2);color:var(--orange-2);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
+.avatar--me{width:38px;height:38px;background:var(--orange);color:#2a1503}
+.a-main{position:relative;flex:1;min-width:0;padding:30px 36px 80px;display:flex;flex-direction:column;gap:24px}
+.a-deco--web{top:0;right:0;width:170px;opacity:.14}
+.a-deco--spider{right:150px}
+.a-deco--spider.spider i{height:70px}
+.a-deco--spider.spider img{width:30px}
+.a-deco--hand{right:30px;bottom:0;height:110px;filter:brightness(0) drop-shadow(0 0 1px rgba(255,138,43,.6))}
+.a-header{position:relative;z-index:1;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;padding-right:clamp(0px,12vw,200px)}
+.a-header__title{margin:0;font-family:var(--f-title);font-weight:800;font-size:34px;line-height:1.1;color:#fff}
+.a-header__subtitle{display:block;font-size:14px;color:var(--ink-3)}
+.a-header__actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.a-search{width:260px;max-width:100%;padding:12px 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:400 14px var(--f-body)}
+.a-search:focus{outline:none;border-color:var(--orange)}
+.a-card{position:relative;padding:18px;border-radius:16px;background:rgba(15,10,20,.9);border:1px solid var(--border-o2)}
+.a-card--empty{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:48px 20px;border:1px dashed var(--line);background:rgba(15,10,20,.9)}
+.a-card--form{border-color:rgba(255,138,43,.4);display:flex;flex-direction:column;gap:14px}
+.a-card--row{display:flex;flex-wrap:wrap;align-items:center;gap:20px;padding:18px 22px}
+.a-card__title{margin:0;font-family:var(--f-title);font-weight:800;font-size:20px;color:#fff}
+.a-empty-icon{width:70px}
+.a-kpis{position:relative;z-index:1;display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px}
+.a-kpi__label{display:block;font-size:11px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--orange)}
+.a-kpi__value{display:block;margin-top:6px;font-family:var(--f-title);font-weight:800;font-size:32px;line-height:1;color:#fff}
+.a-kpi__note{display:block;margin-top:6px;font-size:12px;color:var(--ink-3)}
+.v-ok{color:var(--ok)!important}.v-bad{color:var(--bad)!important}
+.a-bar{margin-top:10px;height:6px;border-radius:99px;background:var(--line-2);overflow:hidden}
+.a-bar > div{height:100%;background:linear-gradient(90deg,#ffa24a,var(--orange-3))}
+.a-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.a-table-wrap{position:relative;z-index:1;border-radius:18px;background:rgba(15,10,20,.9);border:1px solid var(--border-o2);overflow-x:auto}
+.a-table{width:100%;min-width:820px;border-collapse:collapse;font-size:14px;border-radius:18px;background:rgba(15,10,20,.9);border:1px solid var(--border-o2);overflow:hidden}
+.a-table th,.a-table td{padding:14px 16px;text-align:left;vertical-align:middle}
+.a-table th{font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-4);border-bottom:1px solid var(--line-2);white-space:nowrap}
+.a-table td{border-bottom:1px solid var(--line-3)}
+.a-tr:hover td{background:rgba(255,138,43,.05)}
+.a-tr:last-child td{border-bottom:none}
+.admin-table__check-col{width:40px}
+.a-order__id{font-weight:600;color:var(--orange-2);white-space:nowrap}
+.a-order__client{display:flex;flex-direction:column;gap:2px}
+.a-order__name{font-weight:600}
+.a-order__extra{font-size:12px;color:var(--ink-4)}
+.a-order__email{font-size:12px;color:var(--ink-4)}
+.a-order__value{font-family:var(--f-title);font-weight:800;font-size:17px;white-space:nowrap}
+.a-order__namecell{display:flex;align-items:center;gap:10px}
+.a-list{display:flex;flex-direction:column;gap:12px}
+.admin-group__row,.a-row{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:14px 20px;border-radius:16px;background:rgba(15,10,20,.9);border:1px solid var(--border-o2);container-type:inline-size}
+.admin-group__row-inner{display:flex;flex-wrap:wrap;align-items:center;gap:14px;width:100%}
+.admin-group__header{display:flex;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.admin-group__title{font-family:var(--f-title);font-weight:800;font-size:18px;color:#fff}
+.admin-group__count{margin-left:8px;font-family:var(--f-body);font-weight:500;font-size:12px;color:var(--ink-3)}
+.admin-group__list{display:flex;flex-direction:column;gap:12px;margin-bottom:20px}
+.admin-group__info{flex:1;min-width:0;display:flex;flex-direction:column}
+.admin-group__name{font-weight:600}
+.admin-group__email{font-size:12px;color:var(--ink-4)}
+.admin-group__action{flex:0 0 auto}
+.admin-group__action--duplo{display:flex;gap:8px}
+.admin-group__select-all{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink-3);cursor:pointer;margin-left:auto}
+.a-row__who{flex:1;min-width:180px;display:flex;flex-direction:column}
+.a-row__who b{font-weight:600}
+.a-row__who small{font-size:12px;color:var(--ink-4)}
+.a-row__actions{display:flex;gap:8px;flex-wrap:wrap}
+.a-row__actions form{margin:0}
+.a-section-title{display:flex;align-items:center;gap:10px;font-family:var(--f-title);font-weight:800;font-size:20px;color:#fff;margin-bottom:12px}
+.a-section-title small{font-family:var(--f-body);font-weight:500;font-size:12px;color:var(--ink-3)}
+.a-empty{padding:48px 20px;border-radius:18px;background:rgba(15,10,20,.9);border:1px dashed var(--line);display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;color:var(--ink-3)}
+.a-empty img{width:70px}
+.a-material-grid,.mat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;position:relative;z-index:1}
+.a-material-grid .a-card{display:flex;flex-direction:column;gap:8px}
+.a-material__name{font-weight:600;font-size:15px}
+.a-material__desc{font-size:12px;color:var(--ink-4)}
+.a-material__value{font-family:var(--f-title);font-weight:800;font-size:28px;line-height:1.1;color:var(--orange-2)}
+.a-material__meta{font-size:12px;color:var(--ink-3)}
+.a-material-grid form{margin:4px 0 0}
+.a-lote{gap:20px}
+.a-lote--ativo{border-color:rgba(255,138,43,.55)}
+.a-lote__badge{width:64px;height:64px;border-radius:14px;background:var(--line-3);display:flex;flex-direction:column;align-items:center;justify-content:center}
+.a-lote__badge-tag{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--orange)}
+.a-lote__badge-n{font-family:var(--f-title);font-weight:800;font-size:26px;line-height:1}
+.a-lote__info{flex:1;min-width:180px;display:flex;flex-direction:column;gap:2px}
+.a-lote__price{font-family:var(--f-title);font-weight:800;font-size:20px}
+.a-lote__period{font-size:12px;color:var(--ink-4)}
+.a-lote__meta{font-size:12px;color:var(--ink-3)}
+.a-quick-links,.home-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;position:relative;z-index:1}
+.a-quick-link{display:flex;flex-direction:column;gap:10px;padding:18px;border-radius:16px;background:rgba(15,10,20,.9);border:1px solid var(--border-o2);text-decoration:none;color:var(--ink)}
+.a-quick-link:hover{border-color:rgba(255,138,43,.55);color:var(--ink)}
+.a-quick-link__icon img{width:44px;height:44px;object-fit:contain}
+.a-quick-link__label{font-family:var(--f-title);font-weight:800;font-size:20px}
+
+/* Barra de ação em lote + toast + modal de confirmação (JS real, ver
+   admin/_layout.html e .dev-squad/memory.md) */
+.admin-bulk-bar{display:none;align-items:center;gap:12px;flex-wrap:wrap;background:rgba(15,10,20,.9);border:1.5px solid var(--orange);border-radius:14px;padding:10px 14px;margin-bottom:14px}
+.admin-bulk-bar--visivel{display:flex}
+.admin-bulk-bar__count{font-weight:700;font-size:13.5px;color:var(--ink);margin-right:auto}
+.admin-toast{display:none;position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;max-width:min(420px,calc(100vw - 32px));background:var(--line-3);color:var(--ink);font-weight:600;font-size:13.5px;line-height:1.4;padding:12px 18px;border-radius:12px;box-shadow:0 10px 28px rgba(0,0,0,.4)}
+.admin-toast--visivel{display:block}
+.admin-toast--erro{background:#7a2222}
+.admin-toast--aviso{background:#8a5a16}
+.confirm-overlay{display:none;position:fixed;inset:0;z-index:200;align-items:center;justify-content:center;padding:20px;background:rgba(5,3,9,.72);backdrop-filter:blur(3px)}
+.confirm-modal{width:100%;max-width:420px;background:var(--card);border:1px solid rgba(255,138,43,.4);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:18px;box-shadow:0 30px 60px rgba(0,0,0,.6)}
+.confirm-modal__text{margin:0;font-size:15px;color:var(--ink)}
+.confirm-modal__actions{display:flex;justify-content:flex-end;gap:10px}
+
+/* ============ ANIMAÇÕES ============ */
 @keyframes twinkle{0%,100%{opacity:.2}50%{opacity:.9}}
 @keyframes moonPulse{0%,100%{box-shadow:0 0 60px 10px rgba(255,196,90,.45),0 0 180px 60px rgba(255,120,30,.22)}50%{box-shadow:0 0 80px 18px rgba(255,196,90,.55),0 0 220px 80px rgba(255,120,30,.28)}}
 @keyframes witchFly{0%{transform:translate(-30vw,40px) rotate(-4deg)}100%{transform:translate(130vw,-60px) rotate(-8deg)}}
-@keyframes batFly{0%{transform:translate(-10vw,0)}25%{transform:translate(25vw,-30px) scale(.9)}50%{transform:translate(55vw,10px)}75%{transform:translate(85vw,-20px) scale(.9)}100%{transform:translate(115vw,0)}}
+@keyframes batFly{0%{transform:translate(-10vw,0) scale(1)}25%{transform:translate(25vw,-30px) scale(.9)}50%{transform:translate(55vw,10px) scale(1)}75%{transform:translate(85vw,-20px) scale(.9)}100%{transform:translate(115vw,0) scale(1)}}
 @keyframes spiderBob{0%,100%{transform:translateY(0)}50%{transform:translateY(40px)}}
 @keyframes ghostFloat{0%,100%{transform:translate(0,0);opacity:.18}50%{transform:translate(22px,-18px);opacity:.32}}
+@keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(12px,-10px)}}
 @keyframes zFrames{from{background-position:0 0}to{background-position:-1000px 0}}
 @keyframes zWalk{from{transform:translateX(105vw)}to{transform:translateX(-160px)}}
 @keyframes handRise{0%,60%,100%{transform:translateY(0) rotate(-4deg)}75%{transform:translateY(-10px) rotate(4deg)}}
-@keyframes flicker{0%,100%{opacity:1}20%{opacity:.75}40%{opacity:.95}62%{opacity:.7}}
+@keyframes flicker{0%,100%{opacity:1}20%{opacity:.75}40%{opacity:.95}62%{opacity:.7}80%{opacity:1}}
 @keyframes titleBuzz{0%,91%,100%{opacity:1}92%{opacity:.3}93%{opacity:1}95%{opacity:.4}96%{opacity:1}}
-/* (prefers-reduced-motion já coberto pela media query global lá em cima,
-   que já silencia * { animation: none !important }.) */
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+@keyframes fogMove{from{transform:translateX(-20%)}to{transform:translateX(20%)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}
 
-/* Aranha pendurada (reutilizável) */
-.spider{position:absolute;top:0;display:flex;flex-direction:column;align-items:center;animation:spiderBob 5s ease-in-out infinite;pointer-events:none}
-.spider i{width:1px;height:120px;background:rgba(230,220,255,.45)}
-.spider img{width:40px;margin-top:-6px;filter:brightness(0) drop-shadow(0 0 6px rgba(255,160,60,.4))}
-
-/* ---------- 4.1 convite.html -- cena + conteúdo ---------- */
-.cv-topbar{width:100%;max-width:640px;box-sizing:border-box;padding:14px 20px 0;display:flex;justify-content:flex-end;align-items:center;gap:14px}
-.cv-topbar a,.cv-topbar button{color:var(--ink-3);font-size:12px;font-family:'Poppins',sans-serif;background:none;border:none;cursor:pointer;padding:0}
-.cv-topbar a:hover,.cv-topbar button:hover{color:var(--orange-2)}
-
-.cv-scene{position:relative;height:clamp(440px,66vh,680px);overflow:hidden;
-  background:linear-gradient(180deg,#1b1236 0%,#2a1840 28%,#3a1d33 50%,#1a0f1c 66%,#0a060e 72%)}
-.cv-stars{position:absolute;inset:0;background:url("../assets/stars.svg") repeat;background-size:620px 413px;opacity:.6;animation:twinkle 6s ease-in-out infinite}
-
-.cv-moon{position:absolute;left:50%;top:clamp(40px,7vh,80px);width:clamp(220px,30vw,400px);aspect-ratio:1;transform:translateX(-50%);
-  border-radius:50%;background:radial-gradient(circle at 38% 34%,#fff6d8 0%,#ffe6a3 38%,#f7c76a 70%,#e9a441 100%);animation:moonPulse 6s ease-in-out infinite}
-.cv-moon i{position:absolute;display:block;border-radius:50%;background:rgba(214,150,60,.3);font-style:normal}
-.cv-moon i:nth-child(1){left:22%;top:30%;width:18%;height:14%}
-.cv-moon i:nth-child(2){left:58%;top:52%;width:22%;height:16%;background:rgba(214,150,60,.28)}
-.cv-moon i:nth-child(3){left:40%;top:70%;width:12%;height:9%}
-
-.cv-ghost{width:80px;filter:invert(1);animation:ghostFloat 9s ease-in-out infinite}
-.cv-ghost--1{top:14%;left:14%}
-.cv-ghost--2{top:30%;right:16%;width:54px;animation-duration:12s;animation-delay:-4s}
-
-.cv-witch{top:16%;left:0;width:clamp(150px,16vw,230px);filter:brightness(0) drop-shadow(0 0 1px rgba(0,0,0,.6));animation:witchFly 22s linear infinite}
-
-.cv-bat{left:0;animation-name:batFly;animation-timing-function:linear;animation-iteration-count:infinite}
-.cv-bat--1{top:9%;width:46px;animation-duration:18s}
-.cv-bat--2{top:22%;width:30px;animation-duration:26s;animation-delay:-9s}
-.cv-bat--3{top:5%;width:22px;animation-duration:34s;animation-delay:-20s}
-.cv-bat--4{top:34%;width:36px;animation-duration:30s;animation-delay:-14s}
-
-.cv-web{top:0;filter:invert(1)}
-.cv-web--r{right:0;width:clamp(110px,14vw,190px);opacity:.22}
-.cv-web--l{left:0;width:clamp(90px,11vw,150px);opacity:.16;transform:scaleX(-1)}
-
-.cv-spider{right:clamp(60px,8vw,120px)}
-
-.cv-tree{bottom:50px}
-.cv-tree--l{left:-2%;height:94%}
-.cv-tree--r{right:-2%;height:88%}
-
-.cv-fog{left:-10%;right:-10%;bottom:60px;height:80px;background:radial-gradient(ellipse at center,rgba(200,180,230,.14),rgba(0,0,0,0) 70%);filter:blur(10px);animation:hwFog 18s ease-in-out infinite alternate}
-
-.cv-ground{position:absolute;left:0;right:0;bottom:30px;height:60px;pointer-events:none}
-.cv-ground__hill{position:absolute;left:-5%;right:-5%;bottom:-31px;height:100px;background:#0a060e;border-radius:50% 50% 0 0/60px 60px 0 0}
-.cv-cat{bottom:30px;left:58%;height:70px}
-.cv-coffin{bottom:10px;left:14%;height:58px;transform:rotate(-12deg);filter:brightness(.55) saturate(.8)}
-.cv-hand{transform-origin:50% 100%;animation:handRise 4s ease-in-out infinite}
-.cv-hand--1{bottom:12px;left:30%;height:64px}
-.cv-hand--2{bottom:8px;left:76%;height:48px;animation-duration:5s;animation-delay:-2s}
-.cv-pumpkin{filter:drop-shadow(0 0 16px rgba(255,120,20,.7));animation:flicker 3s ease-in-out infinite}
-.cv-pumpkin--1{bottom:4px;left:40%;height:46px}
-.cv-pumpkin--2{bottom:6px;left:86%;height:36px;animation-duration:3.6s;animation-delay:-1s;filter:drop-shadow(0 0 14px rgba(255,120,20,.6))}
-.cv-zombie-wrap{position:absolute;bottom:-8px;left:0;width:100px;height:156px;pointer-events:none;animation:zWalk 40s linear infinite}
-.cv-zombie{width:100px;height:156px;background:url("../assets/zombie-walk.png") no-repeat;background-size:1000px 156px;filter:brightness(.55) saturate(.7);animation:zFrames 1.1s steps(10) infinite}
-
-.cv-content{position:relative;display:flex;flex-direction:column;align-items:center;padding:8px 20px 72px;background:#0a060e;text-align:center}
-.cv-title{font-size:clamp(38px,9vw,96px);animation:titleBuzz 8s steps(1,end) infinite}
-.cv-subtitle{margin:14px 0 0;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:clamp(20px,3vw,30px);letter-spacing:.14em;text-transform:uppercase;color:var(--ink)}
-.cv-cta{min-width:280px;padding:18px 36px;margin-top:32px}
-.cv-note{margin:14px 0 0;font-size:13px;color:var(--ink-3)}
-.cv-skeleton{left:3%;bottom:40px;height:clamp(90px,13vw,160px);opacity:.85;transform:rotate(-6deg)}
-
-@media (max-width: 480px){ .cv-skeleton{ opacity:.5; height:90px; } }
-
-/* Reaproveita .info-cards/.info-card do bloco antigo (só usado por
-   convite.html, sem conflito) -- recor apenas os tokens de cor pros novos. */
-.info-cards{background:var(--border-o)}
-
-/* ---------- 4.2 / 4.3 login.html + signup.html ---------- */
-.auth-title{font-size:34px}
-.auth-title--sm{font-size:30px}
-.card-lead{margin:0;color:var(--ink-2);font-size:14px}
-.btn-block{width:100%}
-.auth-footer{margin:0;text-align:center;font-size:13.5px;color:var(--ink-3)}
-.auth-footer a{font-weight:600}
-
-.lg-tree{top:0;left:0;width:380px;opacity:.9}
-.lg-spider{top:0;right:clamp(40px,10vw,120px)}
-.lg-hand{bottom:0;left:10px;width:70px;opacity:.5;transform:rotate(-8deg)}
-
-.sg-tree{top:0;right:0;width:340px;opacity:.9}
-.sg-web{top:0;left:0;width:160px;opacity:.5;filter:invert(1)}
-.sg-cat{bottom:0;right:10px;width:70px;opacity:.5}
-
-/* Mensagens de erro/sucesso -- agora usadas em cartões escuros (.card) em
-   vez do pergaminho claro original; recolore pro par pílula bad/ok do
-   tema escuro novo (mesma lógica de .pill--cancelado/.pill--ok). Afeta
-   também comprar.html/pagamento.html (que ainda usam .alert-error dentro
-   do .card-parchment--dark escuro) -- resultado ali é uma MELHORA de
-   contraste, não uma regressão (a versão antiga já era clara-sobre-escuro). */
-.alert-error{background:var(--bad-bg);border:1px solid rgba(255,143,143,.35);color:var(--bad);border-radius:10px;padding:11px 14px;font-size:13.5px;line-height:1.5;margin:0}
-.alert-success{background:var(--ok-bg);border:1px solid rgba(155,224,112,.35);color:var(--ok);border-radius:10px;padding:11px 14px;font-size:13.5px;line-height:1.5;margin:0}
-
-/* ---------- 4.7 cadastro_pendente.html + verifique_email.html ---------- */
-.pending-h2{margin-top:34px;text-align:center}
-.pending-text{color:var(--ink-2)}
-
-/* ---------- 4.4 comprar.html -- "Seus dados" ---------- */
-.buy-web{top:0;right:0;width:140px;filter:invert(1);opacity:.18}
-.buy-treat{left:20px;bottom:18px;height:80px;filter:drop-shadow(0 0 16px rgba(255,120,20,.5));animation:flicker 3s ease-in-out infinite}
-
-.buy-price{display:flex;justify-content:space-between;align-items:center;gap:12px;
-  padding:12px 14px;border-radius:12px;background:rgba(255,138,43,.1);border:1px solid rgba(255,138,43,.25);
-  font-size:13px;color:var(--ink-2)}
-.buy-price__value{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:20px;color:var(--orange-2);white-space:nowrap}
-
-.buy-section-label{margin:0;font-size:11px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
-
-.buy-qty-row{display:flex;justify-content:space-between;align-items:center;gap:12px}
-.buy-qty-row__label{display:block;font-size:14px;font-weight:600;color:var(--ink)}
-.buy-qty-row__hint{display:block;font-size:12px;color:var(--ink-4)}
-.buy-qty-controls{display:flex;align-items:center;gap:12px}
-.buy-qty-btn{width:40px;height:40px;padding:0;font-size:18px;line-height:1}
-.buy-qty-value{min-width:16px;text-align:center;font-weight:700;font-size:17px;color:var(--ink)}
-
-.buy-companion{display:flex;flex-direction:column;gap:12px;padding-top:14px;border-top:1px dashed var(--line)}
-.buy-companion__label{font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--ink-3)}
-.buy-companion__hint{margin:-4px 0 0}
-
-.buy-actions{display:flex;gap:10px;margin-top:4px}
-.buy-actions__submit{flex:1}
-.buy-logout{margin:4px 0 0;text-align:center}
-
-/* ---------- 4.5 pagamento.html + _ticket_topo.html ---------- */
-.pay-witch{right:-30px;top:70px;width:170px}
-
-/* Selo de conteúdo do topo do ingresso quando não há status pra mostrar
-   (contexto de pagamento -- o estado real já aparece em .ticket__banner
-   logo abaixo, então aqui é só um rótulo fixo, igual ao mockup). */
-.ticket__top-tag{font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--orange)}
-
-.ticket__row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:20px 22px 12px}
-.ticket__row--compact{padding:16px 18px;align-items:center}
-.ticket__qty{margin:0;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:20px}
-.ticket__qty--sm{font-size:18px}
-.ticket__meta{margin:2px 0 0;font-size:12px;color:var(--paper-mute)}
-
-.ticket__holders{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:0 22px 18px}
-.ticket__holder-name{margin:0;font-size:13px;font-weight:600}
-.ticket__holder-rg{margin:0;font-size:11px;color:var(--paper-mute)}
-
-/* Bandeiras de status (confirmado/cancelado/aguardando/erro) dentro do
-   ingresso de papel -- claro demais pro par translúcido de .alert-error/
-   .alert-success (pensado pra cartão ESCURO); aqui usa texto escuro
-   saturado sobre o mesmo wash de cor, que mantém contraste no papel claro. */
-.ticket__banner{margin:0;padding:16px 22px;text-align:center;font-size:14px;font-weight:600;line-height:1.5}
-.ticket__banner--ok{background:rgba(122,209,79,.22);color:#2f6a1c}
-.ticket__banner--bad{background:rgba(220,70,70,.2);color:#7a2323}
-.ticket__banner--left{text-align:left}
-
-.pay-pix{padding:22px;display:flex;flex-direction:column;align-items:center;gap:14px}
-.pay-pix-label{margin:0;font-size:11px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:#8a7760}
-.pay-qr{width:170px;height:170px;border-radius:12px;border:8px solid #fffdf8;box-shadow:0 0 0 1px #dccdae;display:block;object-fit:cover}
-.pay-copy-row{width:100%;box-sizing:border-box;display:flex;gap:8px;align-items:center;padding:10px 12px;border-radius:10px;background:#efe2c8}
-.pay-copy-value{flex:1;min-width:0;margin:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pay-copy-btn{border:none;cursor:pointer;padding:8px 12px;border-radius:8px;background:#241a14;color:var(--glow);font:600 12px 'Poppins',sans-serif}
-.pay-key{width:100%;box-sizing:border-box;margin:0;padding:10px 12px;border-radius:10px;background:#efe2c8;font-size:13px;text-align:center}
-.pay-how{margin:0;font-size:12px;color:#6a5a48;text-align:center}
-.pay-actions{display:flex;gap:10px;padding:0 22px 22px}
-.pay-actions__confirm{flex:1;margin:0}
-
-/* ---------- 4.6 meus_pedidos.html ---------- */
-.mp-bg{background:radial-gradient(circle at 50% 0%,#2c1a3a 0%,#120b1c 40%,#0a060e 75%)}
-.mp-wrap{position:relative;width:100%;max-width:720px;display:flex;flex-direction:column;gap:20px}
-.mp-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap}
-.mp-skeleton{right:10px;bottom:10px;height:130px;opacity:.8;transform:rotate(6deg)}
-
+/* ============ RESPONSIVO ============ */
+@media (max-width:860px){
+  .a-shell{flex-direction:column}
+  .a-sidebar{flex:none;padding:18px}
+  .a-sidebar__tree{display:none}
+  .a-nav{flex-direction:row;flex-wrap:wrap}
+  .a-nav-label{width:100%}
+  .a-main{padding:22px 16px 80px}
+  .a-header{padding-right:0}
+  .a-deco--spider{display:none}
+}
 @media (max-width:480px){
-  .buy-actions{flex-direction:column}
-  .ticket__holders{grid-template-columns:1fr}
+  .g-coffin,.g-hand-2{display:none}
+  .btn-lg{min-width:0;width:100%}
+}
+@container (max-width:480px){
+  .admin-group__row-inner{flex-wrap:wrap}
+  .admin-group__action{flex:1 1 100%;margin-top:8px}
+  .admin-group__action .admin-btn-primary,.admin-group__action .admin-btn-outline{width:100%}
 }

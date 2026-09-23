@@ -1,96 +1,69 @@
 {% extends "base.html" %}
 {% block title %}Horror Night Party — Você está convidado{% endblock %}
 {% block content %}
-<div style="width: 100%; display: flex; flex-direction: column; align-items: center;">
+<div class="invite">
 
-  {% if usuario %}
-  <div class="cv-topbar">
-    {% if tem_pedido %}
-    <a href="/meus-pedidos">Meus pedidos</a>
+  <nav class="invite__nav">
+    {% if usuario %}
+      {% if usuario.hierarquia == 'adm' %}<a href="/admin" class="btn btn-ghost btn-sm">Painel admin</a>{% endif %}
+      {% if tem_pedido %}<a href="/meus-pedidos" class="btn btn-ghost btn-sm">Meus pedidos</a>{% endif %}
+      <form method="post" action="/logout"><button type="submit" class="btn btn-ghost btn-sm">Sair ({{ usuario.nome }})</button></form>
+    {% else %}
+      <a href="/login" class="btn btn-ghost btn-sm">Entrar</a>
     {% endif %}
-    {% if usuario.hierarquia == 'adm' %}
-    <a href="/admin">Admin</a>
-    {% endif %}
-    <form method="post" action="/logout" style="margin: 0;">
-      <button type="submit">Sair ({{ usuario.nome }})</button>
-    </form>
+  </nav>
+
+  <div class="scene" aria-hidden="true">
+    <div class="stars" style="background-image:url('{{ url_for('static', filename='assets/stars.svg') }}')"></div>
+    <div class="moon"><i></i><i></i><i></i></div>
+
+    <img class="deco inv ghost-a" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="">
+    <img class="deco inv ghost-b" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="">
+
+    <img class="deco sil witch" src="{{ url_for('static', filename='assets/witch-flying.png') }}" alt="">
+    <img class="deco sil bat bat-1" src="{{ url_for('static', filename='assets/bat.svg') }}" alt="">
+    <img class="deco sil bat bat-2" src="{{ url_for('static', filename='assets/bat.svg') }}" alt="">
+    <img class="deco sil bat bat-3" src="{{ url_for('static', filename='assets/bat.svg') }}" alt="">
+    <img class="deco sil bat bat-4" src="{{ url_for('static', filename='assets/bat.svg') }}" alt="">
+
+    <img class="deco inv web-r" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="">
+    <img class="deco inv web-l" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="">
+    <div class="spider" style="right:clamp(60px,8vw,120px)"><i></i><img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt=""></div>
+
+    <img class="deco sil tree-l" src="{{ url_for('static', filename='assets/lTree.svg') }}" alt="">
+    <img class="deco sil tree-r" src="{{ url_for('static', filename='assets/rTree.svg') }}" alt="">
+    <div class="fog"></div>
+
+    <div class="ground">
+      <div class="ground__hill"></div>
+      <img class="deco sil g-cat" src="{{ url_for('static', filename='assets/deco-evil-cat.png') }}" alt="">
+      <img class="deco g-coffin" src="{{ url_for('static', filename='assets/deco-coffin.png') }}" alt="">
+      <img class="deco sil g-hand g-hand-1" src="{{ url_for('static', filename='assets/deco-zombie-hand.png') }}" alt="">
+      <img class="deco sil g-hand g-hand-2" src="{{ url_for('static', filename='assets/deco-zombie-hand.png') }}" alt="">
+      <img class="deco glow-pumpkin g-pump-1" src="{{ url_for('static', filename='assets/deco-pumpkin-new.png') }}" alt="">
+      <img class="deco glow-pumpkin g-pump-2" src="{{ url_for('static', filename='assets/deco-pumpkin-new.png') }}" alt="">
+      <div class="zombie"><div style="background-image:url('{{ url_for('static', filename='assets/zombie-walk.png') }}')"></div></div>
+    </div>
   </div>
-  {% endif %}
 
-  <section class="cv-scene">
-    <div class="deco cv-stars" aria-hidden="true"></div>
+  <section class="invite__content">
+    <p class="eyebrow">Você está convidado</p>
+    <h1 class="display invite__title">HALLOWEEN</h1>
+    <p class="invite__sub">Horror Night Party</p>
 
-    <div class="cv-moon" aria-hidden="true">
-      <i></i><i></i><i></i>
+    <div class="info-grid">
+      <div><span>Quando</span><strong>{{ data_formatada or "Data a definir" }}</strong><small>a partir das 21:00</small></div>
+      <div><span>Onde</span><strong>Rua Mário Bhering, 171</strong><small>Tamarineira</small></div>
+      <div><span>Traje</span><strong>A rigor</strong><small>quanto mais assustador, melhor</small></div>
     </div>
 
-    <img class="deco cv-ghost cv-ghost--1" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="" aria-hidden="true">
-    <img class="deco cv-ghost cv-ghost--2" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="" aria-hidden="true">
-
-    <img class="deco cv-witch" src="{{ url_for('static', filename='assets/witch-flying.png') }}" alt="" aria-hidden="true">
-    <img class="deco sil cv-bat cv-bat--1" src="{{ url_for('static', filename='assets/bat.svg') }}" alt="" aria-hidden="true">
-    <img class="deco sil cv-bat cv-bat--2" src="{{ url_for('static', filename='assets/bat.svg') }}" alt="" aria-hidden="true">
-    <img class="deco sil cv-bat cv-bat--3" src="{{ url_for('static', filename='assets/bat.svg') }}" alt="" aria-hidden="true">
-    <img class="deco sil cv-bat cv-bat--4" src="{{ url_for('static', filename='assets/bat.svg') }}" alt="" aria-hidden="true">
-
-    <img class="deco cv-web cv-web--r" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true">
-    <img class="deco cv-web cv-web--l" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true">
-
-    <div class="spider deco cv-spider" aria-hidden="true">
-      <i></i>
-      <img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt="">
-    </div>
-
-    <img class="deco sil cv-tree cv-tree--l" src="{{ url_for('static', filename='assets/lTree.svg') }}" alt="" aria-hidden="true">
-    <img class="deco sil cv-tree cv-tree--r" src="{{ url_for('static', filename='assets/rTree.svg') }}" alt="" aria-hidden="true">
-
-    <div class="deco cv-fog" aria-hidden="true"></div>
-
-    <div class="cv-ground" aria-hidden="true">
-      <div class="cv-ground__hill"></div>
-      <img class="deco sil cv-cat" src="{{ url_for('static', filename='assets/deco-evil-cat.png') }}" alt="">
-      <img class="deco cv-coffin" src="{{ url_for('static', filename='assets/deco-coffin.png') }}" alt="">
-      <img class="deco sil cv-hand cv-hand--1" src="{{ url_for('static', filename='assets/deco-zombie-hand.png') }}" alt="">
-      <img class="deco sil cv-hand cv-hand--2" src="{{ url_for('static', filename='assets/deco-zombie-hand.png') }}" alt="">
-      <img class="deco cv-pumpkin cv-pumpkin--1" src="{{ url_for('static', filename='assets/deco-pumpkin-new.png') }}" alt="">
-      <img class="deco cv-pumpkin cv-pumpkin--2" src="{{ url_for('static', filename='assets/deco-pumpkin-new.png') }}" alt="">
-      <div class="cv-zombie-wrap">
-        <div class="cv-zombie"></div>
-      </div>
-    </div>
+    <a class="btn btn-primary btn-lg invite__cta"
+       href="{% if not usuario %}/login?next=/comprar{% elif usuario.hierarquia == 'adm' %}/admin{% elif tem_pedido %}/meus-pedidos{% else %}/comprar{% endif %}">
+      {% if not usuario %}Comprar ingresso{% elif usuario.hierarquia == 'adm' %}Ir pro painel{% elif tem_pedido %}Ver meus ingressos{% else %}Comprar ingresso{% endif %}
+    </a>
+    <p class="muted" style="margin-top:14px">Vagas limitadas · Pagamento via Pix</p>
   </section>
 
-  <div class="cv-content">
-    <p class="eyebrow">Você está convidado</p>
-    <h1 class="display cv-title">HALLOWEEN</h1>
-    <p class="cv-subtitle">Horror Night Party</p>
-
-    {% set partes_data = (data_formatada or "Data a definir").split(' | ') %}
-    <div class="info-cards">
-      <div class="info-card">
-        <span class="info-card__label">Quando</span>
-        <span class="info-card__value">{{ partes_data[0] }}{% if partes_data|length > 1 %} · {{ partes_data[1] }}{% endif %}</span>
-        {% if partes_data|length > 2 %}<span class="info-card__sub">a partir das {{ partes_data[2] }}</span>{% endif %}
-      </div>
-      <div class="info-card">
-        <span class="info-card__label">Onde</span>
-        <span class="info-card__value">Rua Mário Bhering, 171</span>
-        <span class="info-card__sub">Tamarineira</span>
-      </div>
-      <div class="info-card">
-        <span class="info-card__label">Traje</span>
-        <span class="info-card__value">A rigor</span>
-        <span class="info-card__sub">quanto mais assustador, melhor</span>
-      </div>
-    </div>
-
-    <a class="btn btn-primary cv-cta" href="{% if not usuario %}/login?next=/comprar{% elif usuario.hierarquia == 'adm' %}/admin{% elif tem_pedido %}/meus-pedidos{% else %}/comprar{% endif %}">
-      <span>Comprar ingresso</span>
-    </a>
-    <p class="cv-note">Vagas limitadas · Pagamento via Pix</p>
-
-    <img class="deco cv-skeleton" src="{{ url_for('static', filename='assets/deco-skeleton.webp') }}" alt="">
-  </div>
-
+  <img class="deco invite__skeleton" src="{{ url_for('static', filename='assets/deco-skeleton.webp') }}" alt="" aria-hidden="true">
 </div>
 {% endblock %}

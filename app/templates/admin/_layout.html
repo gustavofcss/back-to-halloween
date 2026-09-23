@@ -4,26 +4,24 @@
 <div class="a-shell">
   <aside class="a-sidebar">
     <img class="a-sidebar__tree deco" src="{{ url_for('static', filename='assets/lTree.svg') }}" alt="" aria-hidden="true">
-    <div class="a-brand">
-      <img class="a-brand__icon" src="{{ url_for('static', filename='assets/deco-pumpkin-new.png') }}" alt="">
+    <a href="/admin" class="a-brand">
+      <img class="a-brand__icon glow-pumpkin" src="{{ url_for('static', filename='assets/deco-pumpkin-new.png') }}" alt="">
       <div class="a-brand__text">
-        <span class="a-brand__name">Cripta</span>
+        <span class="a-brand__name">CRIPTA</span>
         <span class="a-brand__tag">Painel admin</span>
       </div>
-    </div>
+    </a>
 
     <span class="a-nav-label">Operação</span>
     {#
-      Contagem por item (pílula do mockup) -- só fica disponível quando a
-      PRÓPRIA página já carrega essa lista (pedidos.html passa `pedidos`,
+      Contagem por item (pílula) -- só fica disponível quando a PRÓPRIA
+      página já carrega essa lista (pedidos.html passa `pedidos`,
       cadastros.html passa `pendentes`, etc; ver app/admin.py). Sem tocar em
       app/admin.py pra buscar as 5 contagens em toda página (custaria uma
       conexão/query nova a mais em TODA página do admin só pra preencher
       pílulas que nem sempre estão olhando pra seção ativa), a pílula some
       (`is defined` / `none`) nos itens que não são a página atual --
-      simplificação deliberada: só a seção ativa mostra número ao vivo, os
-      outros 4 itens ficam sem pílula nesta página. Documentado no relatório
-      final do passe.
+      simplificação deliberada: só a seção ativa mostra número ao vivo.
     #}
     {% set admin_nav_items = [
       ('pedidos', url_for('admin.pedidos'), 'Pedidos', 'deco-pumpkin-new.png', (pedidos|length if pedidos is defined else none)),
@@ -43,41 +41,26 @@
     </nav>
 
     <div class="a-sidebar__footer">
-      {#
-        O card "N de N ingressos vendidos" do mockup (barra de progresso no
-        rodapé da sidebar) foi PULADO de novo neste passe -- só ficaria
-        disponível de verdade em Pedidos e Lotes do evento (únicas rotas que
-        hoje passam ingressos_vendidos_total/capacidade_maxima ao template,
-        ver app/admin.py); aparecer só em 2 das 5 páginas do admin e sumir
-        ao navegar pras outras 3 seria pior que não mostrar. Resolver isso
-        de vez exige um único ponto central (ex.: um
-        @admin_bp.context_processor) que calcule os dois valores pra TODA
-        página do admin -- mudança em app/admin.py, fora do escopo de um
-        passe frontend-only. Mesma decisão e mesmo motivo do passe anterior
-        (ver .dev-squad/memory.md).
-      #}
       {% if usuario %}
       {% set partes = usuario.nome.split(' ') %}
       <div class="a-user">
-        <span class="avatar">{{ (partes[0][0] ~ (partes[1][0] if partes|length > 1 else ''))|upper }}</span>
+        <span class="avatar avatar--me">{{ (partes[0][0] ~ (partes[1][0] if partes|length > 1 else ''))|upper }}</span>
         <div class="a-user__info">
           <span class="a-user__name">{{ usuario.nome }}</span>
           <span class="a-user__role">Guardião(ã) da Cripta</span>
         </div>
       </div>
-      <form method="post" action="/logout">
-        <button type="submit" class="admin-btn-primary a-logout">Sair</button>
-      </form>
+      <form method="post" action="/logout"><button type="submit" class="btn btn-ghost a-logout">Sair</button></form>
       {% endif %}
     </div>
   </aside>
 
   <main class="a-main">
-    <img class="a-deco a-deco--web" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true">
-    <div class="a-deco a-deco--spider spider"><i></i><img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt=""></div>
+    <img class="deco a-deco--web inv" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true">
+    <div class="spider a-deco--spider" aria-hidden="true"><i></i><img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt=""></div>
 
     <header class="a-header">
-      <div class="a-header__text">
+      <div>
         <h1 class="a-header__title">{% block admin_title %}{% endblock %}</h1>
         <span class="a-header__subtitle">{% block admin_subtitle %}{% endblock %}</span>
       </div>
@@ -88,15 +71,15 @@
 
     {% block admin_body %}{% endblock %}
 
-    <img class="a-deco a-deco--hand" src="{{ url_for('static', filename='assets/deco-zombie-hand.png') }}" alt="" aria-hidden="true">
+    <img class="deco a-deco--hand" src="{{ url_for('static', filename='assets/deco-zombie-hand.png') }}" alt="" aria-hidden="true">
   </main>
 
   <div class="confirm-overlay" id="confirm-overlay">
     <div class="confirm-modal">
       <p class="confirm-modal__text" id="confirm-modal-text"></p>
       <div class="confirm-modal__actions">
-        <button type="button" class="admin-btn-outline" id="confirm-modal-cancel">Cancelar</button>
-        <button type="button" class="admin-btn-primary" id="confirm-modal-ok">Confirmar</button>
+        <button type="button" class="btn btn-ghost btn-sm" id="confirm-modal-cancel">Cancelar</button>
+        <button type="button" class="btn btn-primary btn-sm" id="confirm-modal-ok">Confirmar</button>
       </div>
     </div>
   </div>
@@ -269,11 +252,6 @@
   // em lote marcada (um reload do zero perderia a seleção sem necessidade,
   // já que a ação em si não recarrega mais nada).
   (function () {
-    // achado real (nesta revisão): "overlay" aqui referenciava a variável
-    // declarada dentro do outro IIFE acima, fora de escopo -- o
-    // auto-refresh de 60s vinha lançando ReferenceError toda vez e nunca
-    // recarregava nada de verdade. Busca o elemento de novo, no escopo
-    // certo.
     var overlayEl = document.getElementById('confirm-overlay');
     setInterval(function () {
       var ativo = document.activeElement;

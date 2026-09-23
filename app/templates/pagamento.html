@@ -2,120 +2,134 @@
 {% block title %}Pagamento — Horror Night Party{% endblock %}
 {% block content %}
 <div class="screen screen--top">
-  <img class="deco sil pay-witch" src="{{ url_for('static', filename='assets/witch-flying.png') }}" alt="" aria-hidden="true">
+  <img class="deco sil" src="{{ url_for('static', filename='assets/witch-flying.png') }}" alt="" aria-hidden="true" style="right:-30px;top:70px;width:170px;opacity:.9">
 
-  <div class="steps">
-    <div class="step done"><b>1</b><span>Convite</span></div>
-    <div class="step-line done"></div>
-    <div class="step done"><b>2</b><span>Seus dados</span></div>
-    <div class="step-line done"></div>
-    <div class="step on"><b>3</b><span>Pagamento</span></div>
-  </div>
+  <nav class="invite__nav" style="position:absolute;top:16px;right:16px">
+    <a href="/meus-pedidos" class="btn btn-ghost btn-sm">Meus pedidos</a>
+    <form method="post" action="/logout"><button type="submit" class="btn btn-ghost btn-sm">Sair</button></form>
+  </nav>
 
-  <div class="ticket">
-    {% include "_ticket_topo.html" %}
-
-    <div class="ticket__row">
-      <div>
-        <p class="ticket__qty">{{ pedido.quantidade }} &times; Entrada</p>
-        <p class="ticket__meta">Pedido #{{ pedido.id_pedido }}</p>
-      </div>
-      <p class="ticket__price">R$ {{ pedido.valor }}</p>
+  <div class="content">
+    <div class="steps">
+      <div class="step done"><b>1</b>Convite</div><div class="step-line done"></div>
+      <div class="step done"><b>2</b>Seus dados</div><div class="step-line done"></div>
+      <div class="step on"><b>3</b>Pagamento</div>
     </div>
 
-    {% if usuario %}
-    <div class="ticket__holders">
-      <div>
-        <p class="ticket__holder-name">{{ usuario.nome }}</p>
-        {% if pedido.rg %}<p class="ticket__holder-rg">RG {{ pedido.rg }}</p>{% endif %}
+    <div class="ticket">
+      {% include "_ticket_topo.html" %}
+
+      <div class="ticket__row">
+        <div>
+          <p class="ticket__qty">{{ pedido.quantidade }} &times; Entrada</p>
+          <p class="ticket__meta">Pedido #{{ pedido.id_pedido }}</p>
+        </div>
+        <p class="ticket__price">R$ {{ pedido.valor }}</p>
       </div>
-      {% if pedido.acompanhante_nome %}
-      <div>
-        <p class="ticket__holder-name">{{ pedido.acompanhante_nome }}</p>
-        {% if pedido.acompanhante_rg %}<p class="ticket__holder-rg">RG {{ pedido.acompanhante_rg }}</p>{% endif %}
+
+      {% if usuario %}
+      <div class="ticket__holders">
+        <div>
+          <p class="ticket__holder-name">{{ usuario.nome }}</p>
+          {% if pedido.rg %}<p class="ticket__holder-rg">RG {{ pedido.rg }}</p>{% endif %}
+        </div>
+        {% if pedido.acompanhante_nome %}
+        <div>
+          <p class="ticket__holder-name">{{ pedido.acompanhante_nome }}</p>
+          {% if pedido.acompanhante_rg %}<p class="ticket__holder-rg">RG {{ pedido.acompanhante_rg }}</p>{% endif %}
+        </div>
+        {% endif %}
       </div>
       {% endif %}
-    </div>
-    {% endif %}
 
-    <div class="ticket__cut"></div>
+      <div class="ticket__cut"></div>
 
-    {% if pedido.status_pedido == 'confirmado' %}
-      <p class="ticket__banner ticket__banner--ok">Pagamento confirmado! Seu ingresso já está garantido.</p>
-    {% elif pedido.status_pedido == 'cancelado' %}
-      <p class="ticket__banner ticket__banner--bad">Esse pedido foi cancelado.</p>
-    {% elif aguardando %}
-      <p class="ticket__banner ticket__banner--ok">Ingresso reservado, aguardando confirmação do pagamento.</p>
-    {% else %}
-      {% if mp_erro %}
-      <p class="ticket__banner ticket__banner--bad ticket__banner--left">{{ mp_erro }}</p>
-      {% endif %}
+      {% if pedido.status_pedido == 'confirmado' %}
+        <div class="status-box"><span class="pill pill--ok">Confirmado</span><strong>Pagamento recebido!</strong>
+          <p class="ticket__note">Seu ingresso está garantido. Te esperamos na festa.</p></div>
+        <div style="padding:0 20px 22px"><a href="/meus-pedidos" class="btn-paper" style="text-decoration:none;text-align:center;display:block">Ver meus pedidos</a></div>
 
-      <div class="pay-pix">
-        <p class="pay-pix-label">Pague com Pix</p>
+      {% elif pedido.status_pedido == 'cancelado' %}
+        <div class="status-box"><span class="pill pill--bad">Cancelado</span><strong>Pedido cancelado</strong>
+          <p class="ticket__note">Se foi engano, fale com a organização.</p></div>
+        <div style="padding:0 20px 22px"><a href="/meus-pedidos" class="btn-paper" style="text-decoration:none;text-align:center;display:block">Ver meus pedidos</a></div>
 
-        {% if qr_code_base64 %}
-        <img class="pay-qr" src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code para pagamento Pix">
+      {% elif aguardando %}
+        <div class="status-box"><span class="pill pill--warn">Em análise</span><strong>Recebemos seu aviso</strong>
+          <p class="ticket__note">A confirmação chega por e-mail assim que o pagamento for conferido.</p></div>
+        <div style="padding:0 20px 22px"><a href="/meus-pedidos" class="btn-paper" style="text-decoration:none;text-align:center;display:block">Ver meus pedidos</a></div>
+
+      {% else %}
+        {% if mp_erro %}
+        <p class="ticket__banner ticket__banner--bad ticket__banner--left">{{ mp_erro }}</p>
         {% endif %}
 
-        {% if qr_code %}
-        <div class="pay-copy-row">
-          <p class="pay-copy-value" id="pix-copia-cola">{{ qr_code }}</p>
-          <button type="button" class="pay-copy-btn" id="btn-copiar-pix">Copiar</button>
+        <div class="pay-pix">
+          <p class="pay-pix-label">Pague com Pix</p>
+
+          {% if qr_code_base64 %}
+          <img class="pay-qr" src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code para pagamento Pix">
+          {% endif %}
+
+          {% if qr_code %}
+          <div class="pay-copy-row">
+            <p class="pay-copy-value" id="pix-copia-cola">{{ qr_code }}</p>
+            <button type="button" class="pay-copy-btn" id="btn-copiar-pix">Copiar</button>
+          </div>
+          <script>
+            (function () {
+              var btn = document.getElementById('btn-copiar-pix');
+              var valor = document.getElementById('pix-copia-cola');
+              if (!btn || !valor) { return; }
+              btn.addEventListener('click', function () {
+                navigator.clipboard.writeText(valor.textContent.trim()).then(function () {
+                  var textoOriginal = btn.textContent;
+                  btn.textContent = 'Copiado!';
+                  setTimeout(function () { btn.textContent = textoOriginal; }, 2000);
+                });
+              });
+            })();
+          </script>
+          {% else %}
+          <p class="pay-key">Chave Pix: {{ pix_key }}</p>
+          {% endif %}
+
+          <p class="pay-how">A confirmação chega por e-mail assim que o pagamento cair.</p>
         </div>
+
+        <div class="pay-actions">
+          <a href="/comprar" class="btn btn-ghost">Voltar</a>
+          <form method="post" action="/pagamento/{{ pedido.id_pedido }}/confirmar" class="pay-actions__confirm">
+            <button type="submit" class="btn btn-primary btn-block">Já paguei, confirmar</button>
+          </form>
+        </div>
+
+        {% if qr_code_base64 or qr_code or pedido.mp_payment_id %}
         <script>
           (function () {
-            var btn = document.getElementById('btn-copiar-pix');
-            var valor = document.getElementById('pix-copia-cola');
-            if (!btn || !valor) { return; }
-            btn.addEventListener('click', function () {
-              navigator.clipboard.writeText(valor.textContent.trim()).then(function () {
-                var textoOriginal = btn.textContent;
-                btn.textContent = 'Copiado!';
-                setTimeout(function () { btn.textContent = textoOriginal; }, 2000);
-              });
-            });
+            var tentativas = 0;
+            var maxTentativas = 60; // 60 x 5s ~= 5 minutos
+            var intervalo = setInterval(function () {
+              tentativas += 1;
+              if (tentativas > maxTentativas) {
+                clearInterval(intervalo);
+                return;
+              }
+              fetch('/pagamento/{{ pedido.id_pedido }}/verificar', { method: 'POST' })
+                .then(function (resp) { return resp.json(); })
+                .then(function (data) {
+                  if (data.status === 'confirmado') {
+                    clearInterval(intervalo);
+                    window.location.reload();
+                  }
+                })
+                .catch(function () {});
+            }, 5000);
           })();
         </script>
-        {% else %}
-        <p class="pay-key">Chave Pix: {{ pix_key }}</p>
         {% endif %}
-
-        <p class="pay-how">A confirmação chega por e-mail assim que o pagamento cair.</p>
-      </div>
-
-      <div class="pay-actions">
-        <a href="/comprar" class="btn btn-ghost">Voltar</a>
-        <form method="post" action="/pagamento/{{ pedido.id_pedido }}/confirmar" class="pay-actions__confirm">
-          <button type="submit" class="btn btn-primary btn-block">Já paguei, confirmar</button>
-        </form>
-      </div>
-
-      {% if qr_code_base64 or qr_code or pedido.mp_payment_id %}
-      <script>
-        (function () {
-          var tentativas = 0;
-          var maxTentativas = 60; // 60 x 5s ~= 5 minutos
-          var intervalo = setInterval(function () {
-            tentativas += 1;
-            if (tentativas > maxTentativas) {
-              clearInterval(intervalo);
-              return;
-            }
-            fetch('/pagamento/{{ pedido.id_pedido }}/verificar', { method: 'POST' })
-              .then(function (resp) { return resp.json(); })
-              .then(function (data) {
-                if (data.status === 'confirmado') {
-                  clearInterval(intervalo);
-                  window.location.reload();
-                }
-              })
-              .catch(function () {});
-          }, 5000);
-        })();
-      </script>
       {% endif %}
-    {% endif %}
+    </div>
   </div>
 </div>
 {% endblock %}
