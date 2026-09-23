@@ -333,3 +333,97 @@ convenção AJAX/JS/data-attributes documentada acima continua igual.
   `data-material-id`, `admin:sucesso` e as 3 funções JS
   (`confirmarAcao`/`confirmarAcaoLote`/`enviarAcaoAdmin`) continuam
   presentes nos mesmos arquivos de antes do passe.
+
+## Reskin v2 do painel admin pro handoff literal, seção 5 (2026-09-23, Passe 3/3)
+
+Substitui o reskin `.admin-*`/`--a-*` do passe anterior (que só trocava
+tokens de cor) por markup novo seguindo `HANDOFF-FRONT-HALLOWEEN.md` seção 5
+e o mockup `entrega/Painel Admin v2.dc.html` byte a byte onde dava. Só
+`app/static/css/style.css` + os 7 `app/templates/admin/*.html` mudaram --
+`app/admin.py` **não foi tocado** (confirmado com `git diff --stat`, zero
+linhas).
+
+- **Duas categorias de classe, critério pra decidir o que podia ser
+  renomeado**: (1) classes que aparecem como STRING LITERAL dentro de um
+  `<script>` (`className = '...'`, `innerHTML = '...<button class="...">'`,
+  `classList.toggle('...')`, `querySelector('.classe[data-attr=...]')`) --
+  essas NÃO podiam mudar de nome sem editar o script (fora do escopo);
+  ficaram com o nome de sempre (`admin-ajax-form`, `admin-toast*`,
+  `admin-pill*`, `admin-btn-primary`, `admin-btn-outline`,
+  `admin-bulk-bar*`, `admin-group__row`), só os VALORES CSS declarados
+  mudaram pra bater com a paleta/spacing do mockup novo, reaproveitando os
+  tokens globais do `:root` (`--orange`, `--ink*`, `--card-a` etc) em vez
+  dos antigos `--a-*` escopados. (2) classes puramente estruturais/visuais
+  sem menção em nenhum script (`admin-shell`, `admin-sidebar*`,
+  `admin-header*`, `admin-kpi*`, `admin-panel*` etc) -- livres, renomeadas
+  pro prefixo `.a-*` do handoff (`.a-shell`, `.a-card`, `.a-kpis`,
+  `.a-table`/`.a-tr`/`.a-th`, `.avatar`, `.a-lote__*` etc).
+- **Pedidos e Cadastros continuam `<table><tbody><tr><td>` de verdade**,
+  não viraram `<div>` solto -- os scripts fazem
+  `checkbox.closest('tr')` e `linha.querySelector('td:last-child')`
+  (tag-based, não class-based). O layout em colunas fixas do mockup
+  (`.a-tr` com `grid-template-columns` explícito) foi alcançado com
+  `display:grid` DIRETO no `<tr>` (a tabela e o `<thead>/<tbody>` viram
+  `display:block`) -- técnica padrão suportada em todo browser evergreen:
+  com o pai em grid, os `<td>`/`<th>` filhos são "blockificados" pelo
+  próprio spec de CSS Display, sem precisar trocar a tag nem quebrar
+  `closest('tr')`/`querySelector('td:last-child')`.
+- **Hierarquia: `.admin-group__list` saiu de card-grid
+  (`grid-template-columns:repeat(auto-fit,minmax(240px,1fr))`) pra lista
+  de UMA COLUNA (`flex-direction:column`)** -- essa é a causa raiz do bug
+  de sobreposição em ~1080px relatado antes (grid auto-fit cria colunas
+  estreitas o bastante pra apertar avatar/nome/botões em larguras
+  intermediárias). Uma lista de largura total nunca precisa espremer, o
+  bug deixa de poder acontecer estruturalmente -- não é mais só o
+  `@container` cobrindo o sintoma. O `container-type:inline-size` +
+  `@container (max-width:480px)` em `.admin-group__row` foi MANTIDO como
+  rede de segurança (a própria linha ainda pode ficar estreita se a
+  página for usada dentro de um painel/iframe mais apertado), mas deixou
+  de ser a única defesa.
+- **Nav-count da sidebar: mesma simplificação do passe anterior, ainda
+  ativa** -- pílula de contagem só aparece na página ativa (cada rota só
+  passa a LISTA da própria seção, não as 5). Resolver de vez pede um
+  `@admin_bp.context_processor` (ou 5 queries a mais por página) em
+  `app/admin.py`, fora do escopo de um passe frontend-only.
+- **Barra "N de N ingressos vendidos" no rodapé da sidebar (do mockup)
+  segue PULADA** -- só Pedidos e Lotes passam `ingressos_vendidos_total`/
+  `capacidade_maxima` ao template hoje; aparecer só em 2 das 5 páginas e
+  sumir ao navegar pras outras 3 seria pior que não mostrar.
+- **Eventos (Lotes do evento) -- pill Ativo/Encerrado real, sem
+  "Agendado"**: `eventos` vem `ORDER BY data_cadastro DESC` de
+  `app/admin.py`, então `eventos[0]` é sempre o lote vigente agora
+  (mesma premissa que o comentário "o primeiro da lista é o ativo agora"
+  já documentava) -- usado em Jinja puro (`loop.index0 == 0`) pra decidir
+  `pill--ativo`/`pill--encerrado`, reaproveitando as classes globais
+  `.pill--ativo`/`.pill--encerrado`/`.pill--agendado` já coladas no Passe
+  1. "Agendado" (3º estado do mockup) não tem equivalente real no modelo
+  de dados -- todo lote cadastrado passa a valer IMEDIATAMENTE, não existe
+  "cadastrar lote pra valer no futuro" sem mudar `app/admin.py`. O
+  "período" de cada lote (ex. "11/10 a 24/10") também não vem pronto do
+  banco -- calculado em Jinja puro a partir de `data_cadastro` de cada
+  lote contra o `data_cadastro` do lote mais novo seguinte na mesma lista
+  (`eventos[loop.index0 - 1]`), sem precisar de coluna nova nem tocar
+  `admin.py`.
+- **CSS: bloco antigo `.admin-shell`/`.admin-sidebar*`/`.admin-header*`/
+  `.admin-panel*`/`.admin-kpi*`/`.admin-quick-link*`/
+  `.admin-event-card__*`/`.admin-material-card__*` (reskin do passe
+  anterior) ficou ÓRFÃO** -- nenhum template usa mais essas classes depois
+  desta reescrita, mas não foi apagado do arquivo (risco de um Edit
+  gigante de ~850 linhas por correspondência textual exata vs. o ganho
+  cosmético de apagar CSS morto que não é servido a lugar nenhum).
+  Dívida de limpeza documentada pro próximo passe que mexer em
+  `style.css`.
+- **Validado sem Postgres** (mesma limitação de sempre): `jinja2.Environment().parse()`
+  nos 7 templates, `render_template()` de verdade (Flask test_request_context +
+  `auth.current_user` mockado) com dado fake cobrindo os ramos vazio/não-vazio
+  de cada página (pedidos com pendente/confirmado/cancelado, cadastros
+  vazio/com pendente, material vazio/com item, eventos vazio/com 3 lotes
+  incluindo o cálculo de período), grep de occorrência (não só de linha)
+  comparando ANTES/DEPOIS pra `admin-ajax-form` (7 ocorrências, igual),
+  `data-admin-total` (14 no total entre os 5 arquivos que usam, igual por
+  arquivo), `data-row-id` (3, igual), `data-material-id` (2, igual),
+  `admin-bulk-bar`+variantes (3 por página em pedidos/cadastros/hierarquia,
+  igual), `admin-table__check-col` (2 em cada uma de pedidos/cadastros,
+  igual), e todo id referenciado por `getElementById`/`querySelector` nos
+  6 arquivos com `<script>` (todos resolvem pra um elemento real depois da
+  reescrita). Balanço de chaves do CSS conferido (708 abre / 708 fecha).

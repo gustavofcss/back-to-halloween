@@ -1,19 +1,18 @@
 {% extends "base.html" %}
 {% block content %}
 {% set active_nav = active_nav|default('') %}
-<div class="admin-shell">
-  <aside class="admin-sidebar">
-    <div class="admin-sidebar__brand">
-      <div class="admin-sidebar__brand-icon">
-        <img src="{{ url_for('static', filename='assets/pumpkin.svg') }}" alt="">
-      </div>
-      <div>
-        <div class="admin-sidebar__brand-name">Cripta</div>
-        <div class="admin-sidebar__brand-tag">Painel admin</div>
+<div class="a-shell">
+  <aside class="a-sidebar">
+    <img class="a-sidebar__tree deco" src="{{ url_for('static', filename='assets/lTree.svg') }}" alt="" aria-hidden="true">
+    <div class="a-brand">
+      <img class="a-brand__icon" src="{{ url_for('static', filename='assets/deco-pumpkin-new.png') }}" alt="">
+      <div class="a-brand__text">
+        <span class="a-brand__name">Cripta</span>
+        <span class="a-brand__tag">Painel admin</span>
       </div>
     </div>
 
-    <div class="admin-sidebar__section-label">Operação</div>
+    <span class="a-nav-label">Operação</span>
     {#
       Contagem por item (pílula do mockup) -- só fica disponível quando a
       PRÓPRIA página já carrega essa lista (pedidos.html passa `pedidos`,
@@ -27,49 +26,69 @@
       final do passe.
     #}
     {% set admin_nav_items = [
-      ('pedidos', url_for('admin.pedidos'), 'Pedidos', 'pumpkin.png', (pedidos|length if pedidos is defined else none)),
-      ('cadastros', url_for('admin.cadastros'), 'Cadastros', 'eye.png', (pendentes|length if pendentes is defined else none)),
-      ('hierarquia', url_for('admin.hierarquia'), 'Hierarquia', 'witch-hat.png', (usuarios|length if usuarios is defined else none)),
-      ('material', url_for('admin.material'), 'Material', 'coffin.png', (materiais|length if materiais is defined else none)),
-      ('eventos', url_for('admin.eventos'), 'Lotes do evento', 'treat.png', (eventos|length if eventos is defined else none)),
+      ('pedidos', url_for('admin.pedidos'), 'Pedidos', 'deco-pumpkin-new.png', (pedidos|length if pedidos is defined else none)),
+      ('cadastros', url_for('admin.cadastros'), 'Cadastros', 'deco-eye.png', (pendentes|length if pendentes is defined else none)),
+      ('hierarquia', url_for('admin.hierarquia'), 'Hierarquia', 'deco-witch-hat.png', (usuarios|length if usuarios is defined else none)),
+      ('material', url_for('admin.material'), 'Material', 'deco-coffin.png', (materiais|length if materiais is defined else none)),
+      ('eventos', url_for('admin.eventos'), 'Lotes do evento', 'deco-trick-or-treat.png', (eventos|length if eventos is defined else none)),
     ] %}
-    <nav class="admin-nav">
+    <nav class="a-nav">
       {% for nav_id, nav_href, nav_label, nav_icon, nav_count in admin_nav_items %}
-      <a class="admin-nav__item {% if active_nav == nav_id %}admin-nav__item--active{% endif %}" href="{{ nav_href }}">
-        <img class="admin-nav__icon" src="{{ url_for('static', filename='assets/' ~ nav_icon) }}" alt="">
-        <span class="admin-nav__label">{{ nav_label }}</span>
-        {% if nav_count is not none %}<span class="admin-nav__count">{{ nav_count }}</span>{% endif %}
+      <a class="a-nav__item {% if active_nav == nav_id %}a-nav__item--active{% endif %}" href="{{ nav_href }}">
+        <img class="a-nav__icon" src="{{ url_for('static', filename='assets/' ~ nav_icon) }}" alt="">
+        <span class="a-nav__label">{{ nav_label }}</span>
+        {% if nav_count is not none %}<span class="a-nav__count">{{ nav_count }}</span>{% endif %}
       </a>
       {% endfor %}
     </nav>
 
-    {% if usuario %}
-    {% set partes = usuario.nome.split(' ') %}
-    <div class="admin-sidebar__user">
-      <div class="admin-sidebar__avatar">{{ (partes[0][0] ~ (partes[1][0] if partes|length > 1 else ''))|upper }}</div>
-      <div class="admin-sidebar__user-info">
-        <div class="admin-sidebar__user-name">{{ usuario.nome }}</div>
-        <div class="admin-sidebar__user-role">Guardião(ã) da Cripta</div>
+    <div class="a-sidebar__footer">
+      {#
+        O card "N de N ingressos vendidos" do mockup (barra de progresso no
+        rodapé da sidebar) foi PULADO de novo neste passe -- só ficaria
+        disponível de verdade em Pedidos e Lotes do evento (únicas rotas que
+        hoje passam ingressos_vendidos_total/capacidade_maxima ao template,
+        ver app/admin.py); aparecer só em 2 das 5 páginas do admin e sumir
+        ao navegar pras outras 3 seria pior que não mostrar. Resolver isso
+        de vez exige um único ponto central (ex.: um
+        @admin_bp.context_processor) que calcule os dois valores pra TODA
+        página do admin -- mudança em app/admin.py, fora do escopo de um
+        passe frontend-only. Mesma decisão e mesmo motivo do passe anterior
+        (ver .dev-squad/memory.md).
+      #}
+      {% if usuario %}
+      {% set partes = usuario.nome.split(' ') %}
+      <div class="a-user">
+        <span class="avatar">{{ (partes[0][0] ~ (partes[1][0] if partes|length > 1 else ''))|upper }}</span>
+        <div class="a-user__info">
+          <span class="a-user__name">{{ usuario.nome }}</span>
+          <span class="a-user__role">Guardião(ã) da Cripta</span>
+        </div>
       </div>
+      <form method="post" action="/logout">
+        <button type="submit" class="admin-btn-primary a-logout">Sair</button>
+      </form>
+      {% endif %}
     </div>
-    <form method="post" action="/logout" style="margin-top: 10px;">
-      <button type="submit" class="admin-sidebar__logout">Sair</button>
-    </form>
-    {% endif %}
   </aside>
 
-  <main class="admin-main">
-    <header class="admin-header">
-      <div class="admin-header__text">
-        <div class="admin-header__title">{% block admin_title %}{% endblock %}</div>
-        <div class="admin-header__subtitle">{% block admin_subtitle %}{% endblock %}</div>
+  <main class="a-main">
+    <img class="a-deco a-deco--web" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true">
+    <div class="a-deco a-deco--spider spider"><i></i><img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt=""></div>
+
+    <header class="a-header">
+      <div class="a-header__text">
+        <h1 class="a-header__title">{% block admin_title %}{% endblock %}</h1>
+        <span class="a-header__subtitle">{% block admin_subtitle %}{% endblock %}</span>
       </div>
-      <div class="admin-header__actions">
+      <div class="a-header__actions">
         {% block admin_header_actions %}{% endblock %}
       </div>
     </header>
 
     {% block admin_body %}{% endblock %}
+
+    <img class="a-deco a-deco--hand" src="{{ url_for('static', filename='assets/deco-zombie-hand.png') }}" alt="" aria-hidden="true">
   </main>
 
   <div class="confirm-overlay" id="confirm-overlay">

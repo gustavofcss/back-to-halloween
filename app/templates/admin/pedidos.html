@@ -4,10 +4,9 @@
 {% block admin_title %}Pedidos{% endblock %}
 {% block admin_subtitle %}Ingressos comprados na Horror Night Party{% endblock %}
 {% block admin_header_actions %}
-<input type="search" class="admin-search" id="admin-pedidos-search" placeholder="Buscar pedido, nome, e-mail…">
+<input type="search" class="a-search" id="admin-pedidos-search" placeholder="Buscar pedido, nome, e-mail…">
 {% endblock %}
 {% block admin_body %}
-<img class="admin-deco admin-deco--top-right" src="{{ url_for('static', filename='assets/deco-zombie.png') }}" alt="" aria-hidden="true">
 {% set status_pill = {'confirmado': 'admin-pill--ok', 'pendente': 'admin-pill--warn', 'cancelado': 'admin-pill--bad'} %}
 {% set ns = namespace(total_valor=0, confirmados=0, pendentes=0) %}
 {% for p in pedidos %}
@@ -16,79 +15,81 @@
   {% if p.status_pedido == 'pendente' %}{% set ns.pendentes = ns.pendentes + 1 %}{% endif %}
 {% endfor %}
 
-<div class="admin-kpis">
-  <div class="admin-kpi">
-    <div class="admin-kpi__label">Total de pedidos</div>
-    <div class="admin-kpi__value"><span data-admin-total="total_pedidos">{{ pedidos|length }}</span></div>
+<div class="a-kpis">
+  <div class="a-card">
+    <span class="a-kpi__label">Pedidos</span>
+    <span class="a-kpi__value"><span data-admin-total="total_pedidos">{{ pedidos|length }}</span></span>
+    <span class="a-kpi__note"><span data-admin-total="pendentes">{{ ns.pendentes }}</span> aguardando Pix</span>
   </div>
-  <div class="admin-kpi">
-    <div class="admin-kpi__label">Valor total</div>
-    <div class="admin-kpi__value">R$ <span data-admin-total="valor_total">{{ ns.total_valor }}</span></div>
+  <div class="a-card">
+    <span class="a-kpi__label">Valor total</span>
+    <span class="a-kpi__value">R$ <span data-admin-total="valor_total">{{ ns.total_valor }}</span></span>
+    <span class="a-kpi__note">sem cancelados</span>
   </div>
-  <div class="admin-kpi">
-    <div class="admin-kpi__label">Confirmados</div>
-    <div class="admin-kpi__value"><span data-admin-total="confirmados">{{ ns.confirmados }}</span></div>
-    <div class="admin-kpi__delta"><span data-admin-total="pendentes">{{ ns.pendentes }}</span> pendente(s)</div>
+  <div class="a-card">
+    <span class="a-kpi__label">Confirmados</span>
+    <span class="a-kpi__value"><span data-admin-total="confirmados">{{ ns.confirmados }}</span></span>
+    <span class="a-kpi__note">{{ ns.confirmados }} ingresso(s)</span>
   </div>
-  <div class="admin-kpi">
-    <div class="admin-kpi__label">Vagas do evento</div>
-    <div class="admin-kpi__value"><span data-admin-total="ingressos_vendidos_total">{{ ingressos_vendidos_total }}</span> / <span data-admin-total="capacidade_maxima">{{ capacidade_maxima }}</span></div>
+  <div class="a-card">
+    <span class="a-kpi__label">Vagas</span>
+    <span class="a-kpi__value"><span data-admin-total="ingressos_vendidos_total">{{ ingressos_vendidos_total }}</span> / <span data-admin-total="capacidade_maxima">{{ capacidade_maxima }}</span></span>
+    <span class="a-kpi__note">vendidos / capacidade</span>
   </div>
 </div>
 
-<section class="admin-panel">
-  <div class="admin-panel__head">
-    <h2 class="admin-panel__title">Pedidos</h2>
-    <span class="admin-panel__count"><span data-admin-total="total_pedidos">{{ pedidos|length }}</span> resultado(s)</span>
-  </div>
+<div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+  <h2 class="a-card__title" style="font-size: 18px;">Pedidos</h2>
+  <span class="a-kpi__note"><span data-admin-total="total_pedidos">{{ pedidos|length }}</span> resultado(s)</span>
+</div>
 
-  {% if pedidos %}
-  <form method="post" id="pedidos-lote-form" class="admin-ajax-form">
-    <div class="admin-bulk-bar" id="pedidos-bulk-bar">
-      <span class="admin-bulk-bar__count" id="pedidos-bulk-count">0 selecionado(s)</span>
-      <button type="submit" formaction="/admin/pedidos/confirmar-lote" class="admin-btn-primary">Confirmar selecionados</button>
-      <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/cancelar-lote', 'Cancelar os pedidos selecionados?')">Cancelar selecionados</button>
-      <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/apagar-lote', 'Apagar os pedidos cancelados selecionados? Pedidos pendentes/confirmados na seleção são ignorados. Não tem como desfazer.')">Apagar selecionados</button>
-    </div>
-    <div class="admin-table-scroll">
-      <table class="admin-table" id="admin-pedidos-table">
-        <thead>
-          <tr>
-            <th class="admin-table__check-col"><input type="checkbox" id="pedidos-check-all" aria-label="Selecionar todos"></th>
-            <th>Pedido</th><th>Nome</th><th>E-mail</th><th>Qtd.</th><th>Valor</th><th>Status</th><th>Data</th><th></th>
-          </tr>
-        </thead>
-        <tbody>
-        {% for p in pedidos %}
-          <tr>
-            <td class="admin-table__check-col"><input type="checkbox" name="ids" value="{{ p.id_pedido }}" class="pedidos-check-item" aria-label="Selecionar pedido #{{ p.id_pedido }}"></td>
-            <td>#{{ p.id_pedido }}</td>
-            <td>{{ p.nome }}{% if p.acompanhante_nome %}<br><span class="help-text" style="margin:0;">+ {{ p.acompanhante_nome }}</span>{% endif %}</td>
-            <td>{{ p.email }}</td>
-            <td>{{ p.quantidade }}</td>
-            <td>R$ {{ p.valor }}</td>
-            <td><span class="admin-pill {{ status_pill.get(p.status_pedido, 'admin-pill--neutral') }}">{{ p.status_pedido }}</span></td>
-            <td>{{ p.data_pedido|data_hora_br }}</td>
-            <td>
-              {% if p.status_pedido == 'pendente' %}
-              <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/confirmar" class="admin-btn-primary">Confirmar</button>
-              <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/cancelar" class="admin-btn-outline">Cancelar</button>
-              {% elif p.status_pedido == 'confirmado' %}
-              <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/cancelar" class="admin-btn-outline">Cancelar</button>
-              {% elif p.status_pedido == 'cancelado' %}
-              <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/{{ p.id_pedido }}/apagar', 'Apagar esse pedido cancelado? Não tem como desfazer.')">Apagar</button>
-              {% endif %}
-            </td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </form>
-  {% else %}
-    <p class="help-text">Nenhum pedido ainda.</p>
-  {% endif %}
-</section>
+{% if pedidos %}
+<form method="post" id="pedidos-lote-form" class="admin-ajax-form">
+  <div class="admin-bulk-bar" id="pedidos-bulk-bar">
+    <span class="admin-bulk-bar__count" id="pedidos-bulk-count">0 selecionado(s)</span>
+    <button type="submit" formaction="/admin/pedidos/confirmar-lote" class="admin-btn-primary">Confirmar selecionados</button>
+    <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/cancelar-lote', 'Cancelar os pedidos selecionados?')">Cancelar selecionados</button>
+    <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/apagar-lote', 'Apagar os pedidos cancelados selecionados? Pedidos pendentes/confirmados na seleção são ignorados. Não tem como desfazer.')">Apagar selecionados</button>
+  </div>
+  <table class="a-table" id="admin-pedidos-table">
+    <thead>
+      <tr class="a-tr a-th">
+        <th class="admin-table__check-col"><input type="checkbox" id="pedidos-check-all" aria-label="Selecionar todos"></th>
+        <th>Pedido</th><th>Cliente</th><th>Qtd.</th><th>Valor</th><th>Status</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in pedidos %}
+      <tr class="a-tr">
+        <td class="admin-table__check-col"><input type="checkbox" name="ids" value="{{ p.id_pedido }}" class="pedidos-check-item" aria-label="Selecionar pedido #{{ p.id_pedido }}"></td>
+        <td class="a-order__id">#{{ p.id_pedido }}</td>
+        <td class="a-order__client">
+          <span class="a-order__name">{{ p.nome }}</span>
+          {% if p.acompanhante_nome %}<span class="a-order__extra">+ {{ p.acompanhante_nome }}</span>{% endif %}
+          <span class="a-order__email">{{ p.email }}</span>
+          <span class="a-order__extra">{{ p.data_pedido|data_hora_br }}</span>
+        </td>
+        <td>{{ p.quantidade }}×</td>
+        <td class="a-order__value">R$ {{ p.valor }}</td>
+        <td><span class="admin-pill {{ status_pill.get(p.status_pedido, 'admin-pill--neutral') }}">{{ p.status_pedido }}</span></td>
+        <td>
+          {% if p.status_pedido == 'pendente' %}
+          <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/confirmar" class="admin-btn-primary">Confirmar Pix</button>
+          <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/cancelar" class="admin-btn-outline">Cancelar</button>
+          {% elif p.status_pedido == 'confirmado' %}
+          <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/cancelar" class="admin-btn-outline">Cancelar</button>
+          {% elif p.status_pedido == 'cancelado' %}
+          <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/{{ p.id_pedido }}/apagar', 'Apagar esse pedido cancelado? Não tem como desfazer.')">Apagar</button>
+          {% endif %}
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</form>
+{% else %}
+  <p class="help-text">Nenhum pedido ainda.</p>
+{% endif %}
 
 <script>
   (function () {

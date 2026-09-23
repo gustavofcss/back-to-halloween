@@ -4,48 +4,53 @@
 {% block admin_title %}Cadastros pendentes{% endblock %}
 {% block admin_subtitle %}Aprove quem pode criar conta na Horror Night Party{% endblock %}
 {% block admin_body %}
-<section class="admin-panel">
-  <div class="admin-panel__head">
-    <h2 class="admin-panel__title">Cadastros pendentes</h2>
-    <span class="admin-panel__count"><span data-admin-total="pendentes">{{ pendentes|length }}</span> resultado(s)</span>
-  </div>
+{% macro initials(nome) -%}
+{% set partes = nome.split(' ') %}{{- (partes[0][0] ~ (partes[1][0] if partes|length > 1 else ''))|upper -}}
+{%- endmacro %}
+<div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
+  <h2 class="a-card__title" style="font-size: 18px;">Cadastros pendentes</h2>
+  <span class="a-kpi__note"><span data-admin-total="pendentes">{{ pendentes|length }}</span> resultado(s)</span>
+</div>
 
-  {% if pendentes %}
-  <form method="post" id="cadastros-lote-form" class="admin-ajax-form">
-    <div class="admin-bulk-bar" id="cadastros-bulk-bar">
-      <span class="admin-bulk-bar__count" id="cadastros-bulk-count">0 selecionado(s)</span>
-      <button type="submit" formaction="/admin/cadastros/confirmar-lote" class="admin-btn-primary">Confirmar selecionados</button>
-      <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('cadastros-lote-form'), '/admin/cadastros/recusar-lote', 'Recusar e apagar os cadastros selecionados?')">Recusar selecionados</button>
-    </div>
-    <div class="admin-table-scroll">
-      <table class="admin-table">
-        <thead>
-          <tr>
-            <th class="admin-table__check-col"><input type="checkbox" id="cadastros-check-all" aria-label="Selecionar todos"></th>
-            <th>Nome</th><th>E-mail</th><th>Cadastrado em</th><th></th>
-          </tr>
-        </thead>
-        <tbody>
-        {% for p in pendentes %}
-          <tr>
-            <td class="admin-table__check-col"><input type="checkbox" name="ids" value="{{ p.id_usuario }}" class="cadastros-check-item" aria-label="Selecionar {{ p.nome }}"></td>
-            <td>{{ p.nome }}</td>
-            <td>{{ p.email }}</td>
-            <td>{{ p.data_cadastro|data_hora_br }}</td>
-            <td>
-              <button type="submit" formaction="/admin/cadastros/{{ p.id_usuario }}/confirmar" class="admin-btn-primary">Confirmar cadastro</button>
-              <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('cadastros-lote-form'), '/admin/cadastros/{{ p.id_usuario }}/recusar', 'Recusar e apagar esse cadastro?')">Recusar</button>
-            </td>
-          </tr>
-        {% endfor %}
-        </tbody>
-      </table>
-    </div>
-  </form>
-  {% else %}
-    <p class="help-text">Nenhum cadastro pendente.</p>
-  {% endif %}
-</section>
+{% if pendentes %}
+<form method="post" id="cadastros-lote-form" class="admin-ajax-form">
+  <div class="admin-bulk-bar" id="cadastros-bulk-bar">
+    <span class="admin-bulk-bar__count" id="cadastros-bulk-count">0 selecionado(s)</span>
+    <button type="submit" formaction="/admin/cadastros/confirmar-lote" class="admin-btn-primary">Confirmar selecionados</button>
+    <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('cadastros-lote-form'), '/admin/cadastros/recusar-lote', 'Recusar e apagar os cadastros selecionados?')">Recusar selecionados</button>
+  </div>
+  <table class="a-table">
+    <thead>
+      <tr class="a-tr a-th a-tr--cadastros">
+        <th class="admin-table__check-col"><input type="checkbox" id="cadastros-check-all" aria-label="Selecionar todos"></th>
+        <th>Nome</th><th>E-mail</th><th>Cadastrado em</th><th></th>
+      </tr>
+    </thead>
+    <tbody>
+    {% for p in pendentes %}
+      <tr class="a-tr a-tr--cadastros">
+        <td class="admin-table__check-col"><input type="checkbox" name="ids" value="{{ p.id_usuario }}" class="cadastros-check-item" aria-label="Selecionar {{ p.nome }}"></td>
+        <td class="a-order__namecell">
+          <span class="avatar">{{ initials(p.nome) }}</span>
+          <span class="a-order__name">{{ p.nome }}</span>
+        </td>
+        <td class="a-order__email">{{ p.email }}</td>
+        <td class="a-order__extra">{{ p.data_cadastro|data_hora_br }}</td>
+        <td>
+          <button type="submit" formaction="/admin/cadastros/{{ p.id_usuario }}/confirmar" class="admin-btn-primary">Confirmar cadastro</button>
+          <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('cadastros-lote-form'), '/admin/cadastros/{{ p.id_usuario }}/recusar', 'Recusar e apagar esse cadastro?')">Recusar</button>
+        </td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</form>
+{% else %}
+  <div class="a-card a-card--empty">
+    <img class="a-empty-icon" src="{{ url_for('static', filename='assets/deco-eye.png') }}" alt="">
+    <span class="help-text" style="margin: 0;">Nenhum cadastro esperando aprovação.</span>
+  </div>
+{% endif %}
 
 <script>
   (function () {

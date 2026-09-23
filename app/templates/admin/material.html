@@ -3,68 +3,63 @@
 {% block title %}Admin — Material{% endblock %}
 {% block admin_title %}Material{% endblock %}
 {% block admin_subtitle %}Compras de cenografia, fantasias e efeitos{% endblock %}
-{% block admin_header_actions %}
-<button type="button" id="btn-novo-material" class="admin-cta">+ Novo material</button>
-{% endblock %}
 {% block admin_body %}
-<img class="admin-deco admin-deco--top-right" src="{{ url_for('static', filename='assets/deco-pumpkin.png') }}" alt="" aria-hidden="true">
-
-<div class="admin-kpis">
-  <div class="admin-kpi">
-    <div class="admin-kpi__label">Total arrecadado</div>
-    <div class="admin-kpi__value">R$ <span data-admin-total="total_arrecadado">{{ total_arrecadado }}</span></div>
+<div class="a-kpis">
+  <div class="a-card">
+    <span class="a-kpi__label">Total arrecadado</span>
+    <span class="a-kpi__value">R$ <span data-admin-total="total_arrecadado">{{ total_arrecadado }}</span></span>
   </div>
-  <div class="admin-kpi">
-    <div class="admin-kpi__label">Total gasto em material</div>
-    <div class="admin-kpi__value">R$ <span data-admin-total="total_gasto">{{ total_gasto }}</span></div>
+  <div class="a-card">
+    <span class="a-kpi__label">Gasto em material</span>
+    <span class="a-kpi__value">R$ <span data-admin-total="total_gasto">{{ total_gasto }}</span></span>
   </div>
-  <div class="admin-kpi">
-    <div class="admin-kpi__label">Saldo disponível</div>
-    <div class="admin-kpi__value">R$ <span data-admin-total="saldo">{{ saldo }}</span></div>
+  <div class="a-card">
+    <span class="a-kpi__label">Saldo disponível</span>
+    <span class="a-kpi__value" style="color: {{ 'var(--ok)' if saldo >= 0 else 'var(--bad)' }};">R$ <span data-admin-total="saldo">{{ saldo }}</span></span>
   </div>
 </div>
 
-<section class="admin-panel" id="form-material" style="display: none;">
-  <div class="admin-panel__head">
-    <h2 class="admin-panel__title">Cadastrar material</h2>
-  </div>
-  <form method="post" action="/admin/material">
-    <div class="field">
-      <label for="nome_material">Nome do material</label>
-      <input id="nome_material" name="nome_material" required>
-    </div>
-    <div class="field">
-      <label for="valor">Valor (R$)</label>
-      <input id="valor" name="valor" type="number" step="0.01" min="0" required>
-    </div>
-    <div class="field">
-      <label for="descricao">Descrição</label>
-      <input id="descricao" name="descricao">
-    </div>
-    <button type="submit" class="admin-btn-primary">Cadastrar material</button>
-  </form>
-</section>
-
-{% if materiais %}
-<div class="admin-grid">
-  {% for m in materiais %}
-  <div class="admin-card" data-material-id="{{ m.id }}">
-    <div class="admin-material-card__head">
-      <div style="flex: 1; min-width: 0;">
-        <div class="admin-material-card__name">{{ m.nome_material }}</div>
-        {% if m.descricao %}<div class="admin-material-card__meta">{{ m.descricao }}</div>{% endif %}
+<section class="a-card a-card--form" id="form-material" style="display: none;">
+  <h2 class="a-card__title">Cadastrar material</h2>
+  <form method="post" action="/admin/material" style="display: flex; flex-direction: column; gap: 14px;">
+    <div class="a-grid">
+      <div class="field">
+        <label for="nome_material">Nome do material</label>
+        <input id="nome_material" name="nome_material" class="input" placeholder="Ex.: Teias sintéticas" required>
+      </div>
+      <div class="field">
+        <label for="valor">Valor (R$)</label>
+        <input id="valor" name="valor" class="input" type="number" step="0.01" min="0" placeholder="0,00" required>
+      </div>
+      <div class="field">
+        <label for="descricao">Descrição (opcional)</label>
+        <input id="descricao" name="descricao" class="input">
       </div>
     </div>
-    <div class="admin-material-card__value">R$ {{ m.valor }}</div>
-    <div class="admin-material-card__meta">{{ m.data_compra.strftime('%d/%m/%Y') }} &middot; {{ m.cadastrado_por or '--' }}</div>
-    <form method="post" action="/admin/material/{{ m.id }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse material?')" style="margin-top: 10px;">
+    <div style="display: flex; gap: 10px;">
+      <button type="submit" class="admin-btn-primary">Cadastrar material</button>
+      <button type="button" class="admin-btn-outline" onclick="document.getElementById('form-material').style.display='none';">Cancelar</button>
+    </div>
+  </form>
+</section>
+<button type="button" id="btn-novo-material" class="admin-btn-dashed">+ Novo material</button>
+
+{% if materiais %}
+<div class="a-material-grid">
+  {% for m in materiais %}
+  <div class="a-card" data-material-id="{{ m.id }}">
+    <span class="a-material__name">{{ m.nome_material }}</span>
+    <span class="a-material__desc">{{ m.descricao or '—' }}</span>
+    <span class="a-material__value">R$ {{ m.valor }}</span>
+    <span class="a-material__meta">{{ m.data_compra.strftime('%d/%m/%Y') }} &middot; {{ m.cadastrado_por or '--' }}</span>
+    <form method="post" action="/admin/material/{{ m.id }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse material?')">
       <button type="submit" class="admin-btn-outline">Apagar</button>
     </form>
   </div>
   {% endfor %}
 </div>
 {% else %}
-<p class="help-text admin-empty-text">Nenhum material cadastrado ainda.</p>
+<p class="help-text">Nenhum material cadastrado ainda.</p>
 {% endif %}
 <script>
   (function () {

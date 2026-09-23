@@ -4,90 +4,87 @@
 {% block admin_title %}Hierarquia{% endblock %}
 {% block admin_subtitle %}Quem tem acesso admin na Horror Night Party{% endblock %}
 {% block admin_header_actions %}
-<input type="search" class="admin-search" id="admin-hierarquia-search" placeholder="Buscar por nome ou e-mail…">
+<input type="search" class="a-search" id="admin-hierarquia-search" placeholder="Buscar por nome ou e-mail…">
 {% endblock %}
 {% block admin_body %}
-<img class="admin-deco admin-deco--top-left" src="{{ url_for('static', filename='assets/deco-walk.png') }}" alt="" aria-hidden="true">
 {% macro initials(nome) -%}
 {% set partes = nome.split(' ') %}{{- (partes[0][0] ~ (partes[1][0] if partes|length > 1 else ''))|upper -}}
 {%- endmacro %}
 {% set admins = usuarios|selectattr('hierarquia', 'equalto', 'adm')|list %}
 {% set clientes = usuarios|selectattr('hierarquia', 'equalto', 'cliente')|list %}
 
-<section class="admin-panel">
-  <div class="admin-group">
-    <div class="admin-group__header">
-      <span class="admin-pill admin-pill--accent">Adm</span>
-      <span class="admin-group__title">Administradores<span class="admin-group__count"><span data-admin-total="admins">{{ admins|length }}</span> pessoa(s)</span></span>
+<div class="admin-group">
+  <div class="admin-group__header">
+    <span class="admin-pill admin-pill--accent">Adm</span>
+    <span class="admin-group__title">Administradores<span class="admin-group__count"><span data-admin-total="admins">{{ admins|length }}</span> pessoa(s)</span></span>
+  </div>
+  <div class="admin-group__list">
+    {% for u in admins %}
+    <div class="admin-group__row" data-row-id="{{ u.id_usuario }}">
+      <div class="admin-group__row-inner">
+        <span class="avatar">{{ initials(u.nome) }}</span>
+        <span class="admin-group__info">
+          <span class="admin-group__name">{{ u.nome }}</span>
+          <span class="admin-group__email">{{ u.email }}</span>
+        </span>
+        <span class="admin-group__action">
+          {% if eu and u.id_usuario != eu.id_usuario %}
+          <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/rebaixar" class="admin-ajax-form">
+            <button type="submit" class="admin-btn-outline">Rebaixar pra cliente</button>
+          </form>
+          {% else %}
+          <span class="help-text" style="margin: 0;">você</span>
+          {% endif %}
+        </span>
+      </div>
+    </div>
+    {% else %}
+    <p class="help-text" style="margin: 14px 4px 4px;">Nenhum administrador cadastrado.</p>
+    {% endfor %}
+  </div>
+</div>
+
+<div class="admin-group">
+  <div class="admin-group__header">
+    <span class="admin-pill admin-pill--neutral">Cliente</span>
+    <span class="admin-group__title">Clientes<span class="admin-group__count"><span data-admin-total="clientes">{{ clientes|length }}</span> pessoa(s)</span></span>
+    {% if clientes %}
+    <label class="admin-group__select-all">
+      <input type="checkbox" id="clientes-check-all">
+      <span>Selecionar todos</span>
+    </label>
+    {% endif %}
+  </div>
+  {% if clientes %}
+  <form method="post" id="clientes-lote-form" class="admin-ajax-form">
+    <div class="admin-bulk-bar" id="clientes-bulk-bar">
+      <span class="admin-bulk-bar__count" id="clientes-bulk-count">0 selecionado(s)</span>
+      <button type="submit" formaction="/admin/hierarquia/promover-lote" class="admin-btn-primary">Promover selecionados</button>
+      <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/remover-lote', 'Apagar os clientes selecionados? Isso também apaga os pedidos deles. Não tem como desfazer.')">Apagar selecionados</button>
     </div>
     <div class="admin-group__list">
-      {% for u in admins %}
+      {% for u in clientes %}
       <div class="admin-group__row" data-row-id="{{ u.id_usuario }}">
         <div class="admin-group__row-inner">
-          <span class="admin-group__avatar">{{ initials(u.nome) }}</span>
+          <input type="checkbox" name="ids" value="{{ u.id_usuario }}" class="clientes-check-item" aria-label="Selecionar {{ u.nome }}">
+          <span class="avatar">{{ initials(u.nome) }}</span>
           <span class="admin-group__info">
             <span class="admin-group__name">{{ u.nome }}</span>
             <span class="admin-group__email">{{ u.email }}</span>
           </span>
-          <span class="admin-group__action">
-            {% if eu and u.id_usuario != eu.id_usuario %}
-            <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/rebaixar" class="admin-ajax-form">
-              <button type="submit" class="admin-btn-outline">Rebaixar pra cliente</button>
-            </form>
-            {% else %}
-            <span class="help-text" style="margin: 0;">você</span>
-            {% endif %}
+          <span class="admin-group__action admin-group__action--duplo">
+            <button type="submit" formaction="/admin/hierarquia/{{ u.id_usuario }}/promover" class="admin-btn-primary">Promover a admin</button>
+            <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/{{ u.id_usuario }}/remover', 'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.')">Apagar</button>
           </span>
         </div>
       </div>
-      {% else %}
-      <p class="help-text" style="margin: 14px 4px 4px;">Nenhum administrador cadastrado.</p>
       {% endfor %}
     </div>
-  </div>
-
-  <div class="admin-group">
-    <div class="admin-group__header">
-      <span class="admin-pill admin-pill--neutral">Cliente</span>
-      <span class="admin-group__title">Clientes<span class="admin-group__count"><span data-admin-total="clientes">{{ clientes|length }}</span> pessoa(s)</span></span>
-      {% if clientes %}
-      <label class="admin-group__select-all">
-        <input type="checkbox" id="clientes-check-all">
-        <span>Selecionar todos</span>
-      </label>
-      {% endif %}
-    </div>
-    {% if clientes %}
-    <form method="post" id="clientes-lote-form" class="admin-ajax-form">
-      <div class="admin-bulk-bar" id="clientes-bulk-bar">
-        <span class="admin-bulk-bar__count" id="clientes-bulk-count">0 selecionado(s)</span>
-        <button type="submit" formaction="/admin/hierarquia/promover-lote" class="admin-btn-primary">Promover selecionados</button>
-        <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/remover-lote', 'Apagar os clientes selecionados? Isso também apaga os pedidos deles. Não tem como desfazer.')">Apagar selecionados</button>
-      </div>
-      <div class="admin-group__list">
-        {% for u in clientes %}
-        <div class="admin-group__row" data-row-id="{{ u.id_usuario }}">
-          <div class="admin-group__row-inner">
-            <input type="checkbox" name="ids" value="{{ u.id_usuario }}" class="clientes-check-item" aria-label="Selecionar {{ u.nome }}">
-            <span class="admin-group__avatar">{{ initials(u.nome) }}</span>
-            <span class="admin-group__info">
-              <span class="admin-group__name">{{ u.nome }}</span>
-              <span class="admin-group__email">{{ u.email }}</span>
-            </span>
-            <span class="admin-group__action admin-group__action--duplo">
-              <button type="submit" formaction="/admin/hierarquia/{{ u.id_usuario }}/promover" class="admin-btn-primary">Promover a admin</button>
-              <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/{{ u.id_usuario }}/remover', 'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.')">Apagar</button>
-            </span>
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-    </form>
-    {% else %}
-    <p class="help-text" style="margin: 14px 4px 4px;">Nenhum cliente cadastrado.</p>
-    {% endif %}
-  </div>
-</section>
+  </form>
+  {% else %}
+  <p class="help-text" style="margin: 14px 4px 4px;">Nenhum cliente cadastrado.</p>
+  {% endif %}
+</div>
 
 <script>
   (function () {

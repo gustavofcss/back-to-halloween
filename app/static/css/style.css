@@ -1659,170 +1659,126 @@ h1, h2, h3 {
 }
 .cta-button:hover { filter: brightness(1.08); transform: translateY(-1px); }
 
-/* ==================== painel admin ====================
-   Paleta própria (mockup "front/painel adm/Painel Admin Halloween.dc.html"),
-   separada da paleta pública do site -- área de gestão tem identidade visual
-   diferente de propósito. Tokens escopados em .admin-shell pra não vazar
-   pro resto do site. Fontes (Bricolage Grotesque + DM Sans) self-hosted,
-   ver @font-face lá em cima -- eram carregadas via Google Fonts CDN e
-   caíam pra serif/sans-serif genérico quando o CDN falhava (achado real:
-   só a tela "Painel admin" mostrou isso, mas era risco em qualquer página
-   de admin). */
+/* ==================== painel admin -- REDESIGN v2 ====================
+   HANDOFF-FRONT-HALLOWEEN.md secao 5 (mockup "Painel Admin v2.dc.html").
+   Passe 3/3 -- reaproveita os tokens globais do :root colados no Passe 1
+   (--orange, --ink*, --line*, --card-a, --btn-line, --ok/--warn/--bad/
+   --purple, .pill--ativo/--encerrado/--agendado etc) em vez da paleta
+   escopada --a-* do reskin anterior, que este bloco substitui.
 
-.admin-shell {
-  /* Reskin (2026-09-23, "Painel Admin v2" mockup): cards eram claros
-     (--a-cream* cor de pergaminho) com texto escuro (--a-ink*) -- o mockup
-     novo quer o oposto, cards ESCUROS com texto claro, pra combinar com a
-     sidebar (que já era escura) e com o resto do site. --a-cream* viraram
-     valores rgba translúcidos escuros (não hex sólido) porque é exatamente
-     o valor que o mockup usa pros cards (`rgba(15,10,20,.9)`), sobre o
-     gradiente escuro do .admin-shell -- troca de token, sem tocar em
-     nenhuma regra que consome var(--a-cream)/var(--a-ink). Acento e fontes
-     também alinhados ao token global do site (--accent/--accent-dark,
-     Baloo 2 + Poppins) em vez de uma paleta/fonte própria do admin. */
-  --a-bg-void: #07050d;
-  --a-bg-deep: #120b1c;
-  --a-sidebar-1: #1d1330;
-  --a-sidebar-2: #170f26;
-  --a-accent: #FF8A2B;
-  --a-accent-dark: #E1690F;
-  --a-cream: rgba(15, 10, 20, .9);
-  --a-cream-soft: rgba(21, 14, 28, .95);
-  --a-cream-alt: rgba(29, 22, 40, .92);
-  --a-border-cream: rgba(255, 138, 43, .22);
-  --a-ink: #F4ECE0;
-  --a-ink-muted: #B9A9D4;
-  --a-ink-muted-2: #8E80A6;
-  --a-purple-1: #C3B2D6;
-  --a-purple-2: #9A7FB8;
-  --a-purple-3: #8B72AB;
-  --a-purple-4: #7C649A;
-  --a-font-heading: 'Baloo 2', sans-serif;
-  --a-font-body: 'Poppins', sans-serif;
+   Classes abaixo aparecem como STRING LITERAL dentro de <script> nos
+   templates admin/*.html (pedidos.html, cadastros.html, _layout.html) --
+   renomear quebraria esse JS, fora do escopo deste passe (frontend-only,
+   convenção AJAX intocada). Mantidas com o MESMO NOME de antes, só os
+   valores declarados mudam pra bater com o mockup novo: .admin-ajax-form
+   (sem CSS própria), .admin-toast(+variantes), .admin-pill(+variantes),
+   .admin-btn-primary, .admin-btn-outline, .admin-bulk-bar(+variantes),
+   .admin-table__check-col, .admin-group__row (usada em querySelector
+   ('.admin-group__row[data-row-id=...]')). Pedidos e cadastros continuam
+   <table><tbody><tr><td> de verdade (não <div> solto) porque o script de
+   pedidos.html/cadastros.html faz checkbox.closest('tr') e
+   linha.querySelector('td:last-child') -- trocar a tag quebraria os dois
+   em silêncio. O layout em colunas do mockup (grid-template-columns fixo)
+   é alcançado com display:grid direto no <tr> (técnica padrão: com o pai
+   em grid, os <td>/<th> filhos são "blockificados" automaticamente pelo
+   spec de CSS Display, sem precisar trocar tag nem quebrar closest('tr')).
 
+   O bloco .admin-shell/.admin-sidebar*/.admin-nav*/.admin-header*/
+   .admin-panel*/.admin-kpi*/.admin-quick-link*/.admin-event-card__*/
+   .admin-material-card__* de ANTES deste passe fica órfão (nenhum
+   template usa mais essas classes depois desta reescrita) -- não foi
+   apagado do arquivo pra não arriscar um Edit gigante de ~850 linhas por
+   correspondência textual exata; documentado no relatório final como
+   dívida de limpeza pro próximo passe (puramente cosmético, zero risco
+   funcional, CSS morto não é servido a lugar nenhum). */
+
+.a-shell {
   width: 100%;
   min-height: 100vh;
   box-sizing: border-box;
-  background:
-    radial-gradient(1100px 600px at 12% -10%, #2a1846 0%, rgba(42, 24, 70, 0) 60%),
-    radial-gradient(900px 500px at 100% 0%, #3d1b2e 0%, rgba(61, 27, 46, 0) 55%),
-    linear-gradient(180deg, var(--a-bg-void) 0%, var(--a-bg-deep) 100%);
-  font-family: var(--a-font-body);
-  color: #EFE6D6;
-  padding: 20px;
   display: flex;
-  gap: 20px;
-  align-items: flex-start;
-  flex-wrap: wrap;
+  background: radial-gradient(ellipse 900px 500px at 70% -10%, #2c1a3a 0%, #120b1c 45%, var(--bg) 80%);
+  color: var(--ink);
+  font-family: 'Poppins', sans-serif;
 }
-.admin-shell *, .admin-shell *::before, .admin-shell *::after { box-sizing: border-box; }
-
-/* `.help-text` e `.field label` são classes GLOBAIS do site (definidas lá
-   em cima, pensadas pro card-pergaminho claro das telas de auth/compra --
-   texto marrom escuro). Usadas cruas dentro do admin (ex.: "Nenhum pedido
-   ainda.", rótulos do form de material/lote) elas herdariam essa cor escura
-   sobre o card do admin, que agora é escuro -- texto escuro em cima de
-   fundo escuro, ilegível (achado deste passe, auditando cor por cor após a
-   troca --a-cream/--a-ink). Sobrescreve só dentro de .admin-shell, sem
-   tocar a regra global (que continua certa pras telas de auth/compra). */
-.admin-shell .help-text { color: var(--a-ink-muted); }
-.admin-shell .field label { color: var(--a-accent); }
+.a-shell *, .a-shell *::before, .a-shell *::after { box-sizing: border-box; }
+.a-shell .help-text { color: var(--ink-3); }
+.a-shell .field label { color: var(--orange); }
 
 /* -------------------- sidebar -------------------- */
 
-.admin-sidebar {
+.a-sidebar {
+  position: relative;
   flex: 0 0 250px;
   min-width: 210px;
-  background: linear-gradient(180deg, var(--a-sidebar-1) 0%, var(--a-sidebar-2) 100%);
-  border: 1px solid rgba(242, 144, 59, .18);
-  border-radius: 24px;
-  padding: 22px 16px;
-  position: sticky;
-  top: 20px;
-  box-shadow: 0 24px 60px rgba(0, 0, 0, .45);
-}
-
-.admin-sidebar__brand {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 6px 20px;
-}
-.admin-sidebar__brand-icon {
-  width: 42px;
-  height: 42px;
-  flex: 0 0 42px;
-  border-radius: 14px;
-  background: linear-gradient(160deg, var(--a-accent), var(--a-accent-dark));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 0 22px rgba(242, 144, 59, .45);
-}
-.admin-sidebar__brand-icon img { width: 22px; filter: brightness(0) invert(1); }
-.admin-sidebar__brand-name {
-  /* Nosifer especificamente pro wordmark "CRIPTA" (mockup) -- é o mesmo
-     token --font-display usado no hero do site público, não o
-     --a-font-heading (Baloo 2) usado no resto do painel admin. */
-  font-family: var(--font-display);
-  font-weight: 400;
-  font-size: 17px;
-  letter-spacing: -.2px;
-  text-transform: uppercase;
-  color: #ffe9b8;
-  text-shadow: 0 0 12px rgba(255, 138, 43, .6);
-}
-.admin-sidebar__brand-tag {
-  font-size: 11px;
-  letter-spacing: 1.4px;
-  text-transform: uppercase;
-  color: var(--a-purple-2);
-}
-
-.admin-sidebar__section-label {
-  font-size: 10px;
-  letter-spacing: 1.6px;
-  text-transform: uppercase;
-  color: var(--a-purple-4);
-  padding: 0 8px 8px;
-}
-
-.admin-nav {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 22px;
+  padding: 26px 18px;
+  background: rgba(10, 6, 14, .85);
+  border-right: 1px solid rgba(255, 138, 43, .18);
+  overflow: hidden;
 }
-.admin-nav__item {
+.a-sidebar__tree {
+  position: absolute;
+  left: -70px;
+  bottom: -40px;
+  height: 360px;
+  filter: brightness(0);
+  opacity: .9;
+  pointer-events: none;
+}
+
+.a-brand { position: relative; display: flex; align-items: center; gap: 12px; }
+.a-brand__icon {
+  width: 40px;
+  filter: drop-shadow(0 0 12px rgba(255, 120, 20, .6));
+  animation: flicker 3s ease-in-out infinite;
+}
+.a-brand__text { display: flex; flex-direction: column; }
+.a-brand__name {
+  font-family: 'Nosifer', cursive;
+  font-size: 17px;
+  color: var(--glow);
+  text-shadow: 0 0 12px rgba(255, 138, 43, .6);
+}
+.a-brand__tag { font-size: 11px; letter-spacing: .2em; text-transform: uppercase; color: var(--ink-3); }
+
+.a-nav-label {
+  position: relative;
+  padding: 0 12px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .24em;
+  text-transform: uppercase;
+  color: var(--orange);
+}
+.a-nav { position: relative; display: flex; flex-direction: column; gap: 4px; }
+.a-nav__item {
   display: flex;
   align-items: center;
-  gap: 11px;
+  gap: 10px;
   width: 100%;
-  text-align: left;
-  border: 0;
-  cursor: pointer;
-  font-family: var(--a-font-body);
-  font-size: 14.5px;
-  font-weight: 500;
   padding: 11px 12px;
-  border-radius: 14px;
+  border-radius: 12px;
+  border: 1px solid transparent;
   background: transparent;
-  color: var(--a-purple-1);
-  transition: background .18s, color .18s;
+  color: var(--ink-2);
+  font: 500 14px 'Poppins', sans-serif;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s;
 }
-.admin-nav__item:hover { background: rgba(242, 144, 59, .14); color: #FFC58A; }
-.admin-nav__item--active {
-  font-weight: 700;
-  background: rgba(242, 144, 59, .18);
-  color: #FFD2A3;
+.a-nav__item:hover { background: rgba(255, 138, 43, .1); color: var(--ink); }
+.a-nav__item--active {
+  background: rgba(255, 138, 43, .14);
+  border-color: rgba(255, 138, 43, .45);
+  color: #fff;
+  font-weight: 600;
 }
-.admin-nav__icon {
-  width: 22px;
-  height: 22px;
-  flex: 0 0 22px;
-  object-fit: contain;
-}
-.admin-nav__label { flex: 1; }
-.admin-nav__count {
+.a-nav__icon { width: 22px; height: 22px; object-fit: contain; flex: 0 0 22px; }
+.a-nav__label { flex: 1; }
+.a-nav__count {
   min-width: 24px;
   padding: 2px 8px;
   border-radius: 999px;
@@ -1832,257 +1788,156 @@ h1, h2, h3 {
   color: inherit;
 }
 
-.admin-sidebar__user {
-  margin-top: 20px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(255, 255, 255, .08);
+.a-sidebar__footer { position: relative; margin-top: auto; display: flex; flex-direction: column; gap: 12px; }
+.a-event-card {
+  padding: 14px;
+  border-radius: 14px;
+  background: var(--card-a);
+  border: 1px solid rgba(255, 138, 43, .25);
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
 }
-.admin-sidebar__avatar {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 34px;
-  border-radius: 12px;
-  background: #3B2A5A;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: 13px;
-  color: #FFC58A;
-}
-.admin-sidebar__user-info { min-width: 0; }
-.admin-sidebar__user-name {
-  font-size: 13px;
-  font-weight: 600;
-  color: #F7EBD3;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.admin-sidebar__user-role { font-size: 11.5px; color: var(--a-purple-3); }
+.a-event-card__label { font-size: 13px; font-weight: 600; }
+.a-event-card__note { font-size: 12px; color: var(--ink-3); }
+.a-event-card__bar { height: 6px; border-radius: 99px; background: var(--line-2); overflow: hidden; }
+.a-event-card__bar-fill { height: 100%; background: linear-gradient(90deg, #ffa24a, var(--orange-3)); }
+
+.a-user { display: flex; align-items: center; gap: 10px; }
+.a-user__info { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.a-user__name { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.a-user__role { font-size: 11px; color: var(--ink-3); }
+.a-logout { width: 100%; margin-top: 2px; }
 
 /* -------------------- main / header -------------------- */
 
-.admin-main {
+.a-main {
   position: relative;
   flex: 1 1 560px;
   min-width: 0;
+  padding: 30px 36px 60px;
   display: flex;
   flex-direction: column;
-  gap: 18px;
+  gap: 24px;
 }
+.a-deco { position: absolute; pointer-events: none; z-index: 0; }
+.a-deco--web { top: 0; right: 0; width: 170px; filter: invert(1); opacity: .14; }
+.a-deco--spider { top: 0; right: 150px; }
+.a-deco--hand { right: 30px; bottom: 0; height: 90px; filter: brightness(0) drop-shadow(0 0 1px rgba(255, 138, 43, .6)); }
+.a-deco--walk { top: -6px; left: 4px; width: 30px; opacity: .14; filter: brightness(0) invert(1); }
+.a-deco--pumpkin { top: -6px; right: 4px; width: 30px; opacity: .14; filter: brightness(0) invert(1); }
 
-/* toque atmosférico discreto por página admin (área de gestão é mais
-   profissional/contida que as telas de cliente -- só um ícone pequeno e
-   pálido no canto, nada "festivo"). */
-.admin-deco {
-  position: absolute;
-  width: 30px;
-  height: auto;
-  opacity: .14;
-  filter: brightness(0) invert(1);
-  pointer-events: none;
-  z-index: 0;
-}
-.admin-deco--top-right { top: -6px; right: 4px; }
-.admin-deco--top-left { top: -6px; left: 4px; }
-
-.admin-header {
-  background: var(--a-cream);
-  border-radius: 24px;
-  padding: 18px 22px;
+.a-header {
+  position: relative;
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-end;
   gap: 16px;
-  flex-wrap: wrap;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, .35);
 }
-.admin-header__text { flex: 1 1 220px; min-width: 0; }
-.admin-header__title {
-  font-family: var(--a-font-heading);
-  font-weight: 800;
-  font-size: 24px;
-  line-height: 1.15;
-  color: var(--a-ink);
-  letter-spacing: -.4px;
-}
-.admin-header__subtitle {
-  font-size: 13.5px;
-  color: var(--a-ink-muted);
-  margin-top: 3px;
-}
-.admin-header__actions {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-.admin-search {
-  font-family: var(--a-font-body);
-  font-size: 13.5px;
-  padding: 10px 14px;
-  border-radius: 12px;
-  border: 1px solid var(--a-border-cream);
-  background: var(--a-cream-soft);
-  color: var(--a-ink);
-  width: 230px;
+.a-header__text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.a-header__title { margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 34px; line-height: 1.1; color: #fff; }
+.a-header__subtitle { font-size: 14px; color: var(--ink-3); }
+.a-header__actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.a-search {
+  width: 260px;
   max-width: 100%;
-  outline: none;
+  padding: 12px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--ink);
+  font: 400 14px 'Poppins', sans-serif;
 }
-.admin-cta {
-  display: inline-block;
-  border: 0;
-  cursor: pointer;
-  font-family: var(--a-font-body);
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #FFF3E2;
-  background: linear-gradient(160deg, var(--a-accent), var(--a-accent-dark));
-  padding: 11px 16px;
-  border-radius: 12px;
-  box-shadow: 0 6px 18px rgba(216, 84, 26, .35);
-  transition: filter .15s;
-}
-.admin-cta:hover { filter: brightness(1.08); color: #FFF3E2; }
+.a-search:focus { outline: none; border-color: var(--orange); }
 
-/* -------------------- cards / painéis -------------------- */
+/* -------------------- cards / kpis (handoff 5.1 "componentes do painel") -------------------- */
 
-.admin-panel {
-  background: var(--a-cream);
-  border-radius: 24px;
-  padding: 20px 22px;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, .3);
-}
-.admin-panel__head {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
-}
-.admin-panel__title {
-  margin: 0;
-  font-family: var(--a-font-heading);
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--a-ink);
-}
-.admin-panel__count {
-  font-size: 13px;
-  color: var(--a-ink-muted-2);
-}
-
-.admin-card {
-  background: var(--a-cream);
-  border-radius: 20px;
+.a-card {
+  position: relative;
   padding: 18px;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, .28);
+  border-radius: 16px;
+  background: rgba(15, 10, 20, .9);
+  border: 1px solid rgba(255, 138, 43, .22);
   display: flex;
   flex-direction: column;
   gap: 10px;
 }
+.a-card--row { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 16px; }
+.a-card--empty { align-items: center; text-align: center; padding: 48px; border-style: dashed; border-color: var(--line); }
+.a-card--form { border-color: rgba(255, 138, 43, .4); }
+.a-card__title { margin: 0; font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 22px; color: #fff; }
 
-.admin-grid {
+.a-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 14px; }
+.a-material-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+
+.a-kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 14px; }
+.a-kpi__label { font-size: 11px; font-weight: 600; letter-spacing: .2em; text-transform: uppercase; color: var(--orange); }
+.a-kpi__value { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 32px; line-height: 1; color: #fff; }
+.a-kpi__note { font-size: 12px; color: var(--ink-3); }
+
+/* -------------------- tabela (pedidos / cadastros) -------------------- */
+
+.a-table { display: block; border-radius: 18px; background: rgba(15, 10, 20, .9); border: 1px solid rgba(255, 138, 43, .22); overflow-x: auto; }
+.a-table thead, .a-table tbody { display: block; }
+.a-tr {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 14px;
+  grid-template-columns: 36px 80px minmax(160px, 2fr) 50px 80px 120px 130px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line-3);
+  min-width: 780px;
+}
+.a-tr > th, .a-tr > td { margin: 0; padding: 0; border: 0; text-align: left; font-weight: 400; font: inherit; color: inherit; vertical-align: middle; }
+.a-tr:hover { background: rgba(255, 138, 43, .05); }
+.a-tr:last-child { border-bottom: none; }
+.a-th { font-size: 11px; font-weight: 600; letter-spacing: .16em; text-transform: uppercase; color: var(--ink-4); border-bottom-color: var(--line-2); }
+.a-tr--cadastros { grid-template-columns: 36px minmax(160px, 1.6fr) minmax(140px, 1.2fr) 130px auto; min-width: 620px; }
+
+.a-order__namecell { display: flex; align-items: center; gap: 10px; min-width: 0; }
+.a-order__namecell > .a-order__name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a-empty-icon { width: 70px; }
+.a-order__client { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.a-order__name { font-size: 14px; font-weight: 600; }
+.a-order__email { font-size: 12px; color: var(--ink-4); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.a-order__extra { font-size: 11px; color: var(--ink-4); }
+.a-order__value { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 17px; }
+.a-order__id { font-weight: 600; color: var(--orange-2); }
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 50%;
+  background: var(--line-2);
+  color: var(--orange-2);
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.admin-empty-text {
-  color: #EFE6D6;
-  opacity: .8;
-}
-
-.admin-kpis {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 14px;
-}
-.admin-kpi {
-  background: #1C1330;
-  border: 1px solid rgba(242, 144, 59, .16);
-  border-radius: 20px;
-  padding: 16px 18px;
-}
-.admin-kpi__label {
-  font-size: 11px;
-  letter-spacing: 1.3px;
-  text-transform: uppercase;
-  color: var(--a-purple-3);
-}
-.admin-kpi__value {
-  font-family: var(--a-font-heading);
-  font-weight: 800;
-  font-size: 28px;
-  color: #F7EBD3;
-  margin-top: 8px;
-  letter-spacing: -.6px;
-}
-.admin-kpi__delta {
-  font-size: 12.5px;
-  font-weight: 600;
-  margin-top: 4px;
-  color: #7FC98A;
-}
-.admin-kpi__delta--accent { color: var(--a-accent); }
-.admin-kpi__delta--muted { color: var(--a-purple-1); }
-
-/* -------------------- tabela -------------------- */
-
-.admin-table-scroll { overflow-x: auto; }
-.admin-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: var(--a-font-body);
-}
-.admin-table th {
-  text-align: left;
-  font-size: 11px;
-  letter-spacing: 1.2px;
-  text-transform: uppercase;
-  color: var(--a-ink-muted-2);
-  border-bottom: 1px solid var(--a-border-cream);
-  padding: 0 8px 8px;
-  white-space: nowrap;
-}
-.admin-table td {
-  padding: 12px 8px;
-  border-bottom: 1px solid rgba(42, 19, 48, .08);
-  font-size: 13.5px;
-  color: var(--a-ink);
-  vertical-align: middle;
-}
-.admin-table tbody tr:hover { background: rgba(242, 144, 59, .09); }
-.admin-table tbody tr:last-child td { border-bottom: none; }
-.admin-table td.admin-table__check-col,
-.admin-table th.admin-table__check-col { width: 1%; padding-right: 0; }
-
-/* -------------------- barra de ação em lote -------------------- */
+/* -------------------- barra de ação em lote (admin-bulk-bar--visivel é string literal) -------------------- */
 
 .admin-bulk-bar {
   display: none;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  background: var(--a-cream-soft);
-  border: 1.5px solid var(--a-accent);
+  background: var(--card-a);
+  border: 1.5px solid var(--orange);
   border-radius: 14px;
   padding: 10px 14px;
   margin-bottom: 14px;
 }
 .admin-bulk-bar--visivel { display: flex; }
-.admin-bulk-bar__count {
-  font-family: var(--a-font-body);
-  font-weight: 700;
-  font-size: 13.5px;
-  color: var(--a-ink);
-  margin-right: auto;
-}
+.admin-bulk-bar__count { font-weight: 700; font-size: 13.5px; color: var(--ink); margin-right: auto; }
 
-/* -------------------- aviso flutuante (fetch das ações do admin) -------------------- */
+.admin-table__check-col { padding-right: 0; }
+
+/* -------------------- toast flutuante (classe usada como string literal em _layout.html) -------------------- */
 
 .admin-toast {
   display: none;
@@ -2092,12 +1947,9 @@ h1, h2, h3 {
   transform: translateX(-50%);
   z-index: 60;
   max-width: min(420px, calc(100vw - 32px));
-  /* Fixo escuro, NÃO var(--a-ink) -- o toast é uma superfície flutuante
-     independente dos cards (sempre precisa ficar escuro pra contrastar com
-     o texto #FFF3E2, mesmo agora que --a-ink virou claro pros cards). */
-  background: #1D1330;
-  color: #FFF3E2;
-  font-family: var(--a-font-body);
+  background: #1d1330;
+  color: #fff3e2;
+  font-family: 'Poppins', sans-serif;
   font-weight: 600;
   font-size: 13.5px;
   line-height: 1.4;
@@ -2106,124 +1958,88 @@ h1, h2, h3 {
   box-shadow: 0 10px 28px rgba(0, 0, 0, .28);
 }
 .admin-toast--visivel { display: block; }
-.admin-toast--erro { background: #7A2222; }
-.admin-toast--aviso { background: #8A5A16; }
+.admin-toast--erro { background: #7a2222; }
+.admin-toast--aviso { background: #8a5a16; }
 
-/* Selos de status -- fundo translúcido claro + texto escuro saturado eram
-   pensados pro card CREME de antes. Em card escuro isso é quase ilegível
-   (fundo já escurece por baixo, texto escuro por cima some). Trocado pro
-   par fundo-translúcido-de-cor + texto-claro-da-mesma-cor do mockup
-   (ex.: confirmado = verde translúcido + texto verde claro), que é o
-   padrão de "pílula de status sobre fundo escuro" -- mesma lógica das
-   pílulas de lote (Ativo/Encerrado/Agendado) do mockup. */
+/* -------------------- selos de status (classe usada como string literal em pedidos.html) -------------------- */
+
 .admin-pill {
   display: inline-block;
-  font-size: 12px;
-  font-weight: 700;
-  padding: 5px 11px;
+  padding: 4px 12px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, .1);
-  color: var(--a-purple-1);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
   white-space: nowrap;
 }
-.admin-pill--ok { background: rgba(122, 209, 79, .16); color: #9BE070; }
-.admin-pill--warn { background: rgba(255, 138, 43, .18); color: #FFB15E; }
-.admin-pill--bad { background: rgba(220, 70, 70, .16); color: #FF8F8F; }
-.admin-pill--accent { background: rgba(255, 138, 43, .22); color: #FFB15E; }
-.admin-pill--neutral { background: rgba(160, 120, 230, .16); color: #C9B3FF; }
+.admin-pill--ok { background: var(--ok-bg); color: var(--ok); }
+.admin-pill--warn { background: var(--warn-bg); color: var(--warn); }
+.admin-pill--bad { background: var(--bad-bg); color: var(--bad); }
+.admin-pill--accent { background: rgba(255, 138, 43, .22); color: var(--orange-2); }
+.admin-pill--neutral { background: var(--purple-bg); color: var(--purple); }
 
-/* -------------------- modal de confirmação (substitui window.confirm) --------------------
-   O confirm() nativo do navegador mostra o domínio ("horror-night-party.
-   onrender.com diz...") e não combina em nada com o resto do site -- achado
-   real, usuário achou feio. */
-.confirm-overlay {
-  display: none;
-  position: fixed;
-  inset: 0;
-  background: rgba(11, 7, 19, .72);
-  z-index: 50;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-.confirm-modal {
-  background: var(--a-cream);
-  color: var(--a-ink);
-  border-radius: 14px;
-  padding: 22px 24px;
-  max-width: 360px;
-  width: 100%;
-  box-shadow: 0 24px 54px rgba(0, 0, 0, .5);
-  animation: hwRise .25s ease-out both;
-}
-.confirm-modal__text {
-  margin: 0 0 18px;
-  font-family: var(--a-font-body);
-  font-size: 14px;
-  line-height: 1.5;
-}
-.confirm-modal__actions {
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-}
+/* -------------------- modal de confirmação -------------------- */
 
-/* -------------------- botões admin -------------------- */
+.confirm-overlay { display: none; position: fixed; inset: 0; background: rgba(11, 7, 19, .72); z-index: 50; align-items: center; justify-content: center; padding: 20px; }
+.confirm-modal { background: var(--card-a); color: var(--ink); border-radius: 14px; padding: 22px 24px; max-width: 360px; width: 100%; box-shadow: 0 24px 54px rgba(0, 0, 0, .5); }
+.confirm-modal__text { margin: 0 0 18px; font-size: 14px; line-height: 1.5; }
+.confirm-modal__actions { display: flex; gap: 10px; justify-content: flex-end; }
+
+/* -------------------- botões admin (admin-btn-primary/outline são string literal em pedidos.html) -------------------- */
 
 .admin-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   border: none;
   cursor: pointer;
-  font-family: var(--a-font-body);
-  font-weight: 700;
-  font-size: 14px;
-  color: #FFF3E2;
-  background: linear-gradient(160deg, var(--a-accent), var(--a-accent-dark));
+  font: 700 13px 'Poppins', sans-serif;
+  color: #2a1503;
+  background: linear-gradient(180deg, #ffa24a, var(--orange-3));
   padding: 10px 16px;
-  border-radius: 10px;
+  border-radius: 999px;
   box-shadow: 0 6px 16px rgba(216, 84, 26, .3);
-  transition: filter .15s, transform .15s;
+  transition: filter .15s;
+  white-space: nowrap;
+  text-decoration: none;
 }
-.admin-btn-primary:hover { filter: brightness(1.08); }
+.admin-btn-primary:hover { filter: brightness(1.08); color: #2a1503; }
 .admin-btn-outline {
-  /* Borda e hover eram tunados pra card claro (borda escura translúcida,
-     hover escuro translúcido) -- em card escuro ficavam quase invisíveis.
-     #5a4a70 + branco translúcido é o par usado no mockup pros botões
-     "Cancelar/Recusar" sobre fundo escuro. */
-  border: 1.5px solid #5A4A70;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid var(--btn-line);
   cursor: pointer;
-  font-family: var(--a-font-body);
-  font-weight: 600;
-  font-size: 14px;
-  color: var(--a-ink);
+  font: 600 13px 'Poppins', sans-serif;
+  color: var(--ink);
   background: transparent;
   padding: 10px 16px;
-  border-radius: 10px;
+  border-radius: 999px;
+  transition: background .15s;
+  white-space: nowrap;
+  text-decoration: none;
+}
+.admin-btn-outline:hover { background: rgba(255, 255, 255, .06); color: var(--ink); }
+.admin-btn-dashed {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: flex-start;
+  border: 1px dashed var(--orange);
+  cursor: pointer;
+  font: 600 14px 'Poppins', sans-serif;
+  color: var(--orange-2);
+  background: transparent;
+  padding: 13px 22px;
+  border-radius: 999px;
   transition: background .15s;
 }
-.admin-btn-outline:hover { background: rgba(255, 255, 255, .06); }
+.admin-btn-dashed:hover { background: rgba(255, 138, 43, .08); }
 
-/* Botão de sair da barra lateral -- antes usava .admin-btn-outline, que é
-   feito pra ficar sobre fundo claro (texto/borda escuros); sobre o roxo
-   escuro da sidebar ficava quase invisível (achado real, usuário pediu pra
-   destacar). Preenchido com a cor de destaque, igual .admin-btn-primary. */
-.admin-sidebar__logout {
-  width: 100%;
-  margin-top: 10px;
-  border: none;
-  cursor: pointer;
-  font-family: var(--a-font-body);
-  font-weight: 700;
-  font-size: 14px;
-  color: #FFF3E2;
-  background: linear-gradient(160deg, var(--a-accent), var(--a-accent-dark));
-  padding: 10px 16px;
-  border-radius: 10px;
-  box-shadow: 0 6px 16px rgba(216, 84, 26, .35);
-  transition: filter .15s;
-}
-.admin-sidebar__logout:hover { filter: brightness(1.1); }
-
-/* -------------------- hierarquia: grupos -------------------- */
+/* -------------------- hierarquia -------------------- */
 
 .admin-group + .admin-group { margin-top: 14px; }
 .admin-group__header {
@@ -2231,284 +2047,130 @@ h1, h2, h3 {
   align-items: center;
   gap: 12px;
   padding: 14px 16px;
-  border-radius: 18px;
-  background: var(--a-cream-soft);
-  border: 1px solid var(--a-border-cream);
+  border-radius: 18px 18px 0 0;
+  background: rgba(15, 10, 20, .9);
+  border: 1px solid rgba(255, 138, 43, .22);
+  border-bottom: none;
 }
-.admin-group__title {
-  font-family: var(--a-font-heading);
-  font-weight: 800;
-  font-size: 14.5px;
-  color: var(--a-ink);
-}
-.admin-group__count {
-  font-size: 12.5px;
-  color: var(--a-ink-muted-2);
-  margin-left: 6px;
-}
-.admin-group__select-all {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-left: auto;
-  font-family: var(--a-font-body);
-  font-weight: 600;
-  font-size: 12.5px;
-  color: var(--a-ink-muted-2);
-  cursor: pointer;
-  white-space: nowrap;
-}
+.admin-group__title { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 14.5px; color: var(--ink); }
+.admin-group__count { font-size: 12.5px; color: var(--ink-4); margin-left: 6px; font-weight: 400; font-family: 'Poppins', sans-serif; }
+.admin-group__select-all { display: flex; align-items: center; gap: 6px; margin-left: auto; font-weight: 600; font-size: 12.5px; color: var(--ink-4); cursor: pointer; white-space: nowrap; }
+
+/* Lista em COLUNA ÚNICA (não card-grid) -- é a causa raiz do bug de
+   sobreposição em ~1080px relatado antes: um grid auto-fit cria colunas
+   estreitas o bastante pra apertar avatar/nome/botões em larguras
+   intermediárias; uma lista de largura total nunca precisa espremer, o
+   bug deixa de poder acontecer (o mockup também usa lista de 1 coluna
+   nesta seção, não card-grid). */
 .admin-group__list {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 10px;
-  padding: 14px 4px 4px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(15, 10, 20, .9);
+  border: 1px solid rgba(255, 138, 43, .22);
+  border-radius: 0 0 18px 18px;
+  overflow: hidden;
 }
 .admin-group__row {
-  background: var(--a-cream-soft);
-  border-radius: 14px;
-  padding: 10px 12px;
-  /* Cada linha vira seu próprio container de tamanho -- o card-grid acima
-     usa auto-fit, então a largura real de uma linha depende de QUANTAS
-     colunas cabem no momento, não da largura da janela. Um @media baseado
-     em viewport (achado real, corrigido antes só pra <480px) empilhava
-     certo no celular mas continuava sobrepondo avatar/nome/e-mail com os
-     botões em larguras de desktop intermediárias (a mesma coluna do grid
-     podia ficar tão estreita quanto uma tela de celular). Consultando a
-     largura da própria linha resolve os dois casos com uma regra só.
-     Um elemento não pode ser alvo de @container pelo container-type que
-     ELE MESMO declara -- só descendentes dele podem ser consultados. Por
-     isso o flex fica num wrapper interno (.admin-group__row-inner), e é
-     esse wrapper (descendente de .admin-group__row) que o @container
-     abaixo consegue de fato estilizar. */
+  background: transparent;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line-3);
+  /* container-type mantido como rede de segurança: mesmo numa lista de 1
+     coluna, a própria linha ainda pode ficar estreita se a página for
+     usada dentro de um painel/iframe/split-view mais apertado. */
   container-type: inline-size;
 }
-.admin-group__row-inner {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.admin-group__avatar {
-  /* Bege claro + marrom escuro era pensado pro card creme -- em card escuro
-     viraria uma mancha clara isolada. Roxo escuro + laranja claro (mesmo
-     par do avatar do mockup) combina com o resto do card escuro. */
-  width: 32px;
-  height: 32px;
-  flex: 0 0 32px;
-  border-radius: 10px;
-  background: #2A2036;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  font-weight: 700;
-  color: #FFB15E;
-}
-.admin-group__info { min-width: 0; flex: 1; }
-.admin-group__name {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--a-ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.admin-group__email {
-  font-size: 12px;
-  color: var(--a-ink-muted-2);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
+.admin-group__row:last-child { border-bottom: none; }
+.admin-group__row:hover { background: rgba(255, 138, 43, .05); }
+.admin-group__row-inner { display: flex; align-items: center; gap: 14px; }
+.admin-group__info { min-width: 0; flex: 1; display: flex; flex-direction: column; }
+.admin-group__name { font-size: 13.5px; font-weight: 600; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.admin-group__email { font-size: 12px; color: var(--ink-4); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .admin-group__action { flex: 0 0 auto; }
 .admin-group__action form { margin: 0; }
 .admin-group__action--duplo { display: flex; gap: 8px; }
 
-/* Quando a própria linha (não a janela) fica estreita demais pro avatar +
-   nome/e-mail + os botões de ação caberem lado a lado -- acontecia tanto no
-   celular quanto numa coluna de desktop intermediária do card-grid acima
-   (achado real: o usuário reportou a aba de Hierarquia "bugada" com os
-   botões sobrepondo o nome/e-mail numa janela de ~1080px, bem depois do
-   ajuste anterior que só cobria <480px de viewport). Empilha em duas
-   linhas: dados em cima, ações embaixo, ambas cabendo na própria linha. */
 @container (max-width: 480px) {
   .admin-group__row-inner { flex-wrap: wrap; }
-  .admin-group__action {
-    flex: 1 1 100%;
-    margin-top: 8px;
-  }
+  .admin-group__action { flex: 1 1 100%; margin-top: 8px; }
   .admin-group__action .admin-btn-primary,
   .admin-group__action .admin-btn-outline { width: 100%; }
 }
 
-/* -------------------- eventos: cards de lote -------------------- */
+/* -------------------- material -------------------- */
 
-.admin-event-card {
+.a-material__name { font-weight: 600; font-size: 15px; }
+.a-material__desc { font-size: 12px; color: var(--ink-4); }
+.a-material__value { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 28px; color: var(--orange-2); line-height: 1.1; }
+.a-material__meta { font-size: 12px; color: var(--ink-3); }
+
+/* -------------------- eventos: lotes -------------------- */
+
+.a-lote { border-color: rgba(255, 138, 43, .22); }
+.a-lote--ativo { border-color: rgba(255, 138, 43, .55); }
+.a-lote__badge {
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  border-radius: 14px;
+  background: var(--line-3);
   display: flex;
-  gap: 18px;
+  flex-direction: column;
   align-items: center;
-  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1px;
 }
-.admin-event-card__date {
-  /* Selo de data precisa continuar escuro sempre, independente do card ao
-     redor -- por isso fixo (#1d1330), não var(--a-ink) (que agora é claro,
-     o que inverteria o gradiente e apagaria o contraste com o texto
-     #F7EBD3). */
-  flex: 0 0 74px;
-  text-align: center;
-  background: linear-gradient(160deg, #1D1330, #4A2358);
-  border-radius: 16px;
-  padding: 10px 6px;
-  color: #F7EBD3;
-}
-.admin-event-card__day {
-  font-family: var(--a-font-heading);
-  font-size: 24px;
-  font-weight: 800;
-  line-height: 1;
-}
-.admin-event-card__month {
-  font-size: 11px;
-  letter-spacing: 1.4px;
-  text-transform: uppercase;
-  color: #FFC58A;
-}
-.admin-event-card__body { flex: 1 1 200px; min-width: 0; }
-.admin-event-card__name {
-  font-family: var(--a-font-heading);
-  font-size: 17px;
-  font-weight: 800;
-  color: var(--a-ink);
-}
-.admin-event-card__meta {
-  font-size: 13px;
-  color: var(--a-ink-muted-2);
-  margin-top: 3px;
-}
-
-/* -------------------- material: cards -------------------- */
-
-.admin-material-card__head {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-}
-.admin-material-card__name {
-  font-family: var(--a-font-heading);
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--a-ink);
-}
-.admin-material-card__meta {
-  font-size: 12.5px;
-  color: var(--a-ink-muted-2);
-  margin-top: 2px;
-}
-.admin-material-card__value {
-  font-family: var(--a-font-heading);
-  font-size: 22px;
-  font-weight: 800;
-  color: var(--a-ink);
-  letter-spacing: -.5px;
-  margin-top: 10px;
-}
+.a-lote__badge-tag { font-size: 10px; letter-spacing: .2em; text-transform: uppercase; color: var(--orange); }
+.a-lote__badge-n { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 26px; line-height: 1; color: #fff; }
+.a-lote__info { flex: 1; min-width: 160px; display: flex; flex-direction: column; gap: 2px; }
+.a-lote__price { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 22px; color: #fff; }
+.a-lote__period { font-size: 12px; color: var(--ink-4); }
+.a-lote__meta { font-size: 11px; color: var(--ink-3); }
 
 /* -------------------- index: links rápidos -------------------- */
 
-.admin-quick-links {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 14px;
-}
-.admin-quick-link {
+.a-quick-links { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 14px; }
+.a-quick-link {
   display: flex;
   align-items: center;
   gap: 12px;
-  background: var(--a-cream);
+  background: rgba(15, 10, 20, .9);
+  border: 1px solid rgba(255, 138, 43, .22);
   border-radius: 20px;
   padding: 18px;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, .28);
-  color: var(--a-ink);
+  color: var(--ink);
+  text-decoration: none;
+  transition: background .15s;
 }
-.admin-quick-link:hover { color: var(--a-ink); background: var(--a-cream-soft); }
-.admin-quick-link__icon {
+.a-quick-link:hover { color: var(--ink); background: rgba(255, 138, 43, .08); }
+.a-quick-link__icon {
   width: 42px;
   height: 42px;
   flex: 0 0 42px;
   border-radius: 12px;
-  background: linear-gradient(160deg, var(--a-accent), var(--a-accent-dark));
+  background: linear-gradient(160deg, var(--orange), var(--orange-3));
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.admin-quick-link__icon img { width: 22px; filter: brightness(0) invert(1); }
-.admin-quick-link__label {
-  font-family: var(--a-font-heading);
-  font-weight: 800;
-  font-size: 15px;
-}
+.a-quick-link__icon img { width: 22px; filter: brightness(0) invert(1); }
+.a-quick-link__label { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 15px; }
 
 @media (max-width: 860px) {
-  .admin-shell { flex-direction: column; flex-wrap: nowrap; padding: 12px; gap: 12px; }
-  /* .admin-shell tem align-items: flex-start (pro desktop, onde a sidebar
-     não deve esticar em altura) -- mas em flex-direction: column isso faz
-     os filhos encolherem pro tamanho do CONTEÚDO em vez da largura da tela,
-     que é o que causava a bagunça/desalinhamento no celular (achado real).
-     Força largura cheia nos dois blocos. */
-  .admin-sidebar,
-  .admin-main {
-    width: 100%;
-    flex: 1 1 auto;
-  }
-  .admin-sidebar {
-    position: static;
-    min-width: 0;
-    padding: 12px 14px;
-    border-radius: 18px;
-  }
-
-  /* Sidebar inteira empilhada (marca + menu vertical + usuário + sair)
-     ocupava a tela toda antes do conteúdo aparecer -- vira uma barra
-     compacta: marca sem subtítulo, menu em linha horizontal com scroll,
-     usuário/sair encolhidos. */
-  .admin-sidebar__brand { padding: 0 2px 10px; }
-  .admin-sidebar__brand-tag { display: none; }
-  .admin-sidebar__section-label { display: none; }
-  .admin-nav {
-    flex-direction: row;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    gap: 6px;
-    padding-bottom: 2px;
-    -webkit-overflow-scrolling: touch;
-  }
-  .admin-nav__item {
-    flex: 0 0 auto;
-    width: auto;
-    white-space: nowrap;
-    padding: 9px 13px;
-  }
-  /* Barra horizontal compacta no celular -- mantém o ícone (pequeno, cabe
-     bem) mas esconde a pílula de contagem por item pra não espremer a barra
-     inteira de largura (achado de design deste passe: 5 ícones + 5 rótulos
-     + 5 pílulas de contagem numa barra com scroll horizontal ficava
-     poluído). */
-  .admin-nav__count { display: none; }
-  .admin-sidebar__user { margin-top: 12px; padding-top: 12px; }
-  .admin-sidebar__user-role { display: none; }
-  .admin-sidebar__logout { margin-top: 8px !important; }
-
-  .admin-header { padding: 14px 16px; }
-  .admin-header__title { font-size: 20px; }
-  .admin-kpis { grid-template-columns: 1fr 1fr; }
+  .a-shell { flex-direction: column; }
+  .a-sidebar { flex: 1 1 auto; width: 100%; }
+  .a-main { flex: 1 1 auto; width: 100%; padding: 20px; }
+  .a-sidebar__tree { display: none; }
+  .a-nav-label { display: none; }
+  .a-nav { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; gap: 6px; -webkit-overflow-scrolling: touch; }
+  .a-nav__item { flex: 0 0 auto; width: auto; white-space: nowrap; padding: 9px 13px; }
+  .a-nav__count { display: none; }
+  .a-brand__tag { display: none; }
+  .a-header__title { font-size: 24px; }
+  .a-kpis { grid-template-columns: 1fr 1fr; }
 }
 
 @media (max-width: 480px) {
-  .admin-kpis { grid-template-columns: 1fr; }
-
-  /* barra de ação em lote -- contador em cima, botões empilhados e
-     ocupando a largura toda, igual ao resto dos botões do admin no
-     celular. */
+  .a-kpis { grid-template-columns: 1fr; }
   .admin-bulk-bar { flex-direction: column; align-items: stretch; }
   .admin-bulk-bar__count { margin-right: 0; }
   .admin-bulk-bar .admin-btn-primary,
