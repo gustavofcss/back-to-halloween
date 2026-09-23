@@ -14,27 +14,33 @@
     </div>
 
     <div class="admin-sidebar__section-label">Operação</div>
+    {#
+      Contagem por item (pílula do mockup) -- só fica disponível quando a
+      PRÓPRIA página já carrega essa lista (pedidos.html passa `pedidos`,
+      cadastros.html passa `pendentes`, etc; ver app/admin.py). Sem tocar em
+      app/admin.py pra buscar as 5 contagens em toda página (custaria uma
+      conexão/query nova a mais em TODA página do admin só pra preencher
+      pílulas que nem sempre estão olhando pra seção ativa), a pílula some
+      (`is defined` / `none`) nos itens que não são a página atual --
+      simplificação deliberada: só a seção ativa mostra número ao vivo, os
+      outros 4 itens ficam sem pílula nesta página. Documentado no relatório
+      final do passe.
+    #}
+    {% set admin_nav_items = [
+      ('pedidos', url_for('admin.pedidos'), 'Pedidos', 'pumpkin.png', (pedidos|length if pedidos is defined else none)),
+      ('cadastros', url_for('admin.cadastros'), 'Cadastros', 'eye.png', (pendentes|length if pendentes is defined else none)),
+      ('hierarquia', url_for('admin.hierarquia'), 'Hierarquia', 'witch-hat.png', (usuarios|length if usuarios is defined else none)),
+      ('material', url_for('admin.material'), 'Material', 'coffin.png', (materiais|length if materiais is defined else none)),
+      ('eventos', url_for('admin.eventos'), 'Lotes do evento', 'treat.png', (eventos|length if eventos is defined else none)),
+    ] %}
     <nav class="admin-nav">
-      <a class="admin-nav__item {% if active_nav == 'pedidos' %}admin-nav__item--active{% endif %}" href="/admin/pedidos">
-        <span class="admin-nav__dot"></span>
-        <span class="admin-nav__label">Pedidos</span>
+      {% for nav_id, nav_href, nav_label, nav_icon, nav_count in admin_nav_items %}
+      <a class="admin-nav__item {% if active_nav == nav_id %}admin-nav__item--active{% endif %}" href="{{ nav_href }}">
+        <img class="admin-nav__icon" src="{{ url_for('static', filename='assets/' ~ nav_icon) }}" alt="">
+        <span class="admin-nav__label">{{ nav_label }}</span>
+        {% if nav_count is not none %}<span class="admin-nav__count">{{ nav_count }}</span>{% endif %}
       </a>
-      <a class="admin-nav__item {% if active_nav == 'hierarquia' %}admin-nav__item--active{% endif %}" href="/admin/hierarquia">
-        <span class="admin-nav__dot"></span>
-        <span class="admin-nav__label">Hierarquia</span>
-      </a>
-      <a class="admin-nav__item {% if active_nav == 'cadastros' %}admin-nav__item--active{% endif %}" href="/admin/cadastros">
-        <span class="admin-nav__dot"></span>
-        <span class="admin-nav__label">Cadastros</span>
-      </a>
-      <a class="admin-nav__item {% if active_nav == 'material' %}admin-nav__item--active{% endif %}" href="/admin/material">
-        <span class="admin-nav__dot"></span>
-        <span class="admin-nav__label">Material</span>
-      </a>
-      <a class="admin-nav__item {% if active_nav == 'eventos' %}admin-nav__item--active{% endif %}" href="/admin/eventos">
-        <span class="admin-nav__dot"></span>
-        <span class="admin-nav__label">Lotes do evento</span>
-      </a>
+      {% endfor %}
     </nav>
 
     {% if usuario %}

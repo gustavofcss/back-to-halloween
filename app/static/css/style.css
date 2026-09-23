@@ -1487,25 +1487,35 @@ h1, h2, h3 {
    de admin). */
 
 .admin-shell {
-  --a-bg-void: #0b0713;
-  --a-bg-deep: #120b1f;
+  /* Reskin (2026-09-23, "Painel Admin v2" mockup): cards eram claros
+     (--a-cream* cor de pergaminho) com texto escuro (--a-ink*) -- o mockup
+     novo quer o oposto, cards ESCUROS com texto claro, pra combinar com a
+     sidebar (que já era escura) e com o resto do site. --a-cream* viraram
+     valores rgba translúcidos escuros (não hex sólido) porque é exatamente
+     o valor que o mockup usa pros cards (`rgba(15,10,20,.9)`), sobre o
+     gradiente escuro do .admin-shell -- troca de token, sem tocar em
+     nenhuma regra que consome var(--a-cream)/var(--a-ink). Acento e fontes
+     também alinhados ao token global do site (--accent/--accent-dark,
+     Baloo 2 + Poppins) em vez de uma paleta/fonte própria do admin. */
+  --a-bg-void: #07050d;
+  --a-bg-deep: #120b1c;
   --a-sidebar-1: #1d1330;
   --a-sidebar-2: #170f26;
-  --a-accent: #F2903B;
-  --a-accent-dark: #D8541A;
-  --a-cream: #F7EBD3;
-  --a-cream-soft: #FFF8EA;
-  --a-cream-alt: #F2E3C6;
-  --a-border-cream: #E5D3B4;
-  --a-ink: #2A1330;
-  --a-ink-muted: #7A5C48;
-  --a-ink-muted-2: #87674F;
+  --a-accent: #FF8A2B;
+  --a-accent-dark: #E1690F;
+  --a-cream: rgba(15, 10, 20, .9);
+  --a-cream-soft: rgba(21, 14, 28, .95);
+  --a-cream-alt: rgba(29, 22, 40, .92);
+  --a-border-cream: rgba(255, 138, 43, .22);
+  --a-ink: #F4ECE0;
+  --a-ink-muted: #B9A9D4;
+  --a-ink-muted-2: #8E80A6;
   --a-purple-1: #C3B2D6;
   --a-purple-2: #9A7FB8;
   --a-purple-3: #8B72AB;
   --a-purple-4: #7C649A;
-  --a-font-heading: 'Bricolage Grotesque', serif;
-  --a-font-body: 'DM Sans', system-ui, sans-serif;
+  --a-font-heading: 'Baloo 2', sans-serif;
+  --a-font-body: 'Poppins', sans-serif;
 
   width: 100%;
   min-height: 100vh;
@@ -1523,6 +1533,17 @@ h1, h2, h3 {
   flex-wrap: wrap;
 }
 .admin-shell *, .admin-shell *::before, .admin-shell *::after { box-sizing: border-box; }
+
+/* `.help-text` e `.field label` são classes GLOBAIS do site (definidas lá
+   em cima, pensadas pro card-pergaminho claro das telas de auth/compra --
+   texto marrom escuro). Usadas cruas dentro do admin (ex.: "Nenhum pedido
+   ainda.", rótulos do form de material/lote) elas herdariam essa cor escura
+   sobre o card do admin, que agora é escuro -- texto escuro em cima de
+   fundo escuro, ilegível (achado deste passe, auditando cor por cor após a
+   troca --a-cream/--a-ink). Sobrescreve só dentro de .admin-shell, sem
+   tocar a regra global (que continua certa pras telas de auth/compra). */
+.admin-shell .help-text { color: var(--a-ink-muted); }
+.admin-shell .field label { color: var(--a-accent); }
 
 /* -------------------- sidebar -------------------- */
 
@@ -1557,11 +1578,16 @@ h1, h2, h3 {
 }
 .admin-sidebar__brand-icon img { width: 22px; filter: brightness(0) invert(1); }
 .admin-sidebar__brand-name {
-  font-family: var(--a-font-heading);
-  font-weight: 800;
+  /* Nosifer especificamente pro wordmark "CRIPTA" (mockup) -- é o mesmo
+     token --font-display usado no hero do site público, não o
+     --a-font-heading (Baloo 2) usado no resto do painel admin. */
+  font-family: var(--font-display);
+  font-weight: 400;
   font-size: 17px;
   letter-spacing: -.2px;
-  color: #F7EBD3;
+  text-transform: uppercase;
+  color: #ffe9b8;
+  text-shadow: 0 0 12px rgba(255, 138, 43, .6);
 }
 .admin-sidebar__brand-tag {
   font-size: 11px;
@@ -1606,15 +1632,22 @@ h1, h2, h3 {
   background: rgba(242, 144, 59, .18);
   color: #FFD2A3;
 }
-.admin-nav__dot {
-  width: 7px;
-  height: 7px;
-  flex: 0 0 7px;
-  border-radius: 50%;
-  background: rgba(195, 178, 214, .4);
+.admin-nav__icon {
+  width: 22px;
+  height: 22px;
+  flex: 0 0 22px;
+  object-fit: contain;
 }
-.admin-nav__item--active .admin-nav__dot { background: var(--a-accent); }
 .admin-nav__label { flex: 1; }
+.admin-nav__count {
+  min-width: 24px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .08);
+  font-size: 11px;
+  text-align: center;
+  color: inherit;
+}
 
 .admin-sidebar__user {
   margin-top: 20px;
@@ -1876,7 +1909,10 @@ h1, h2, h3 {
   transform: translateX(-50%);
   z-index: 60;
   max-width: min(420px, calc(100vw - 32px));
-  background: var(--a-ink);
+  /* Fixo escuro, NÃO var(--a-ink) -- o toast é uma superfície flutuante
+     independente dos cards (sempre precisa ficar escuro pra contrastar com
+     o texto #FFF3E2, mesmo agora que --a-ink virou claro pros cards). */
+  background: #1D1330;
   color: #FFF3E2;
   font-family: var(--a-font-body);
   font-weight: 600;
@@ -1890,21 +1926,28 @@ h1, h2, h3 {
 .admin-toast--erro { background: #7A2222; }
 .admin-toast--aviso { background: #8A5A16; }
 
+/* Selos de status -- fundo translúcido claro + texto escuro saturado eram
+   pensados pro card CREME de antes. Em card escuro isso é quase ilegível
+   (fundo já escurece por baixo, texto escuro por cima some). Trocado pro
+   par fundo-translúcido-de-cor + texto-claro-da-mesma-cor do mockup
+   (ex.: confirmado = verde translúcido + texto verde claro), que é o
+   padrão de "pílula de status sobre fundo escuro" -- mesma lógica das
+   pílulas de lote (Ativo/Encerrado/Agendado) do mockup. */
 .admin-pill {
   display: inline-block;
   font-size: 12px;
   font-weight: 700;
   padding: 5px 11px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, .3);
-  color: var(--a-ink);
+  background: rgba(255, 255, 255, .1);
+  color: var(--a-purple-1);
   white-space: nowrap;
 }
-.admin-pill--ok { background: rgba(58, 122, 64, .14); color: #2E6136; }
-.admin-pill--warn { background: rgba(242, 144, 59, .2); color: #A8460F; }
-.admin-pill--bad { background: rgba(160, 40, 40, .14); color: #8E2B2B; }
-.admin-pill--accent { background: rgba(242, 144, 59, .22); color: #A8460F; }
-.admin-pill--neutral { background: rgba(74, 35, 88, .14); color: #4A2358; }
+.admin-pill--ok { background: rgba(122, 209, 79, .16); color: #9BE070; }
+.admin-pill--warn { background: rgba(255, 138, 43, .18); color: #FFB15E; }
+.admin-pill--bad { background: rgba(220, 70, 70, .16); color: #FF8F8F; }
+.admin-pill--accent { background: rgba(255, 138, 43, .22); color: #FFB15E; }
+.admin-pill--neutral { background: rgba(160, 120, 230, .16); color: #C9B3FF; }
 
 /* -------------------- modal de confirmação (substitui window.confirm) --------------------
    O confirm() nativo do navegador mostra o domínio ("horror-night-party.
@@ -1959,7 +2002,11 @@ h1, h2, h3 {
 }
 .admin-btn-primary:hover { filter: brightness(1.08); }
 .admin-btn-outline {
-  border: 1.5px solid rgba(42, 19, 48, .4);
+  /* Borda e hover eram tunados pra card claro (borda escura translúcida,
+     hover escuro translúcido) -- em card escuro ficavam quase invisíveis.
+     #5a4a70 + branco translúcido é o par usado no mockup pros botões
+     "Cancelar/Recusar" sobre fundo escuro. */
+  border: 1.5px solid #5A4A70;
   cursor: pointer;
   font-family: var(--a-font-body);
   font-weight: 600;
@@ -1970,7 +2017,7 @@ h1, h2, h3 {
   border-radius: 10px;
   transition: background .15s;
 }
-.admin-btn-outline:hover { background: rgba(42, 19, 48, .07); }
+.admin-btn-outline:hover { background: rgba(255, 255, 255, .06); }
 
 /* Botão de sair da barra lateral -- antes usava .admin-btn-outline, que é
    feito pra ficar sobre fundo claro (texto/borda escuros); sobre o roxo
@@ -2059,17 +2106,20 @@ h1, h2, h3 {
   gap: 10px;
 }
 .admin-group__avatar {
+  /* Bege claro + marrom escuro era pensado pro card creme -- em card escuro
+     viraria uma mancha clara isolada. Roxo escuro + laranja claro (mesmo
+     par do avatar do mockup) combina com o resto do card escuro. */
   width: 32px;
   height: 32px;
   flex: 0 0 32px;
   border-radius: 10px;
-  background: #EBD9BA;
+  background: #2A2036;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  color: #6B4A34;
+  color: #FFB15E;
 }
 .admin-group__info { min-width: 0; flex: 1; }
 .admin-group__name {
@@ -2117,9 +2167,13 @@ h1, h2, h3 {
   flex-wrap: wrap;
 }
 .admin-event-card__date {
+  /* Selo de data precisa continuar escuro sempre, independente do card ao
+     redor -- por isso fixo (#1d1330), não var(--a-ink) (que agora é claro,
+     o que inverteria o gradiente e apagaria o contraste com o texto
+     #F7EBD3). */
   flex: 0 0 74px;
   text-align: center;
-  background: linear-gradient(160deg, var(--a-ink), #4A2358);
+  background: linear-gradient(160deg, #1D1330, #4A2358);
   border-radius: 16px;
   padding: 10px 6px;
   color: #F7EBD3;
@@ -2251,7 +2305,12 @@ h1, h2, h3 {
     white-space: nowrap;
     padding: 9px 13px;
   }
-  .admin-nav__dot { display: none; }
+  /* Barra horizontal compacta no celular -- mantém o ícone (pequeno, cabe
+     bem) mas esconde a pílula de contagem por item pra não espremer a barra
+     inteira de largura (achado de design deste passe: 5 ícones + 5 rótulos
+     + 5 pílulas de contagem numa barra com scroll horizontal ficava
+     poluído). */
+  .admin-nav__count { display: none; }
   .admin-sidebar__user { margin-top: 12px; padding-top: 12px; }
   .admin-sidebar__user-role { display: none; }
   .admin-sidebar__logout { margin-top: 8px !important; }

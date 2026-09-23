@@ -7,8 +7,9 @@ venv/
 .DS_Store
 
 # Mockups/referências de design (não fazem parte do app publicado --
-# os SVGs já foram copiados pra app/static/assets)
+# os assets já foram copiados pra app/static/assets)
 front/
+entrega/
 Untitled-*.png
 
 # Telemetria interna do dev-squad (log de chamadas de ferramenta) -- não é

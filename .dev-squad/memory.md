@@ -273,3 +273,63 @@ Sem Postgres disponível também (mesma limitação). Verificação de
   mudanças fazia parte do escopo pedido nesta verificação (só 02b0ab5),
   mas foram reverificadas de passagem (boot + rotas anônimas) porque
   aconteceram nos mesmos arquivos -- sem regressão encontrada.
+
+## Reskin do painel admin pro mockup "Painel Admin v2" (2026-09-23)
+
+Só CSS (`app/static/css/style.css`, bloco `.admin-shell` e seletores
+`.admin-*`) + `app/templates/admin/_layout.html` (markup do `<nav>`). Nenhum
+template de conteúdo (pedidos/cadastros/hierarquia/material/eventos) mudou,
+`app/admin.py` **não foi tocado** (restrição explícita do pedido), toda a
+convenção AJAX/JS/data-attributes documentada acima continua igual.
+
+- **Tokens `--a-cream*`/`--a-ink*` inverteram de sentido**: antes eram
+  card CLARO (creme) + texto ESCURO; agora são card ESCURO (`rgba(15,10,20,
+  .9)` etc.) + texto CLARO (`#F4ECE0` etc.), pra bater com o mockup e com a
+  sidebar (que já era escura). `--a-accent`/`--a-accent-dark` alinhados aos
+  tokens globais do site (`--accent`/`--accent-dark`). Fontes trocadas de
+  Bricolage Grotesque/DM Sans pra Baloo 2/Poppins (mesmas do resto do site,
+  já self-hosted via @font-face no mesmo arquivo -- zero fonte nova).
+- **Qualquer regra admin com cor HARDCODED (não `var(--a-*)`) tunada pro
+  card claro de antes precisou de ajuste manual** -- a troca de token sozinha
+  não bastava. Achados corrigidos: `.admin-pill` (selos de status -- fundo
+  translúcido claro + texto escuro saturado virava ilegível em card escuro),
+  `.admin-btn-outline` (borda/hover escuros translúcidos, quase invisíveis
+  em card escuro), `.admin-group__avatar` (bege+marrom -> roxo+laranja),
+  `.admin-event-card__date` (usava `var(--a-ink)` como INÍCIO do gradiente
+  de fundo -- com ink virando claro, o gradiente invertia e o texto branco
+  sumia; trocado pra cor fixa), `.admin-toast` (mesma armadilha -- usava
+  `var(--a-ink)` como fundo, mas o toast é flutuante e precisa ficar escuro
+  SEMPRE, independente do tema do card).
+- **`.help-text` e `.field label` são classes GLOBAIS do site** (definidas
+  fora do bloco admin, pensadas pro card-pergaminho claro das telas de
+  auth/compra). Usadas cruas dentro de cards do admin (texto de "lista
+  vazia" em pedidos/cadastros/eventos, rótulos do form de material/lote)
+  herdavam a cor escura global -- ficava ilegível no card agora escuro.
+  Corrigido com override só dentro do escopo `.admin-shell .help-text` /
+  `.admin-shell .field label`, sem tocar a regra global nem nenhum
+  template (nenhum desses 3 templates precisou de edição pra esse fix).
+- **Nav da sidebar**: trocado o ponto colorido por ícone (pumpkin/eye/
+  witch-hat/coffin/treat.png, já entregues em `static/assets/`) + pílula de
+  contagem, como no mockup. **Contagem por item é uma simplificação
+  deliberada**: só a seção ATIVA mostra número ao vivo (reaproveitando a
+  lista que a própria página já recebe -- `pedidos`, `pendentes`,
+  `usuarios`, `materiais`, `eventos` -- via `is defined` no Jinja); os
+  outros 4 itens ficam sem pílula na página atual, porque buscar as 5
+  contagens em TODA página do admin exigiria mexer nas rotas de
+  `app/admin.py` (uma query/conexão nova por página), e o pedido foi
+  explícito em não tocar nesse arquivo. Documentado aqui pra quem quiser
+  fechar essa lacuna depois (ex.: um `@admin_bp.context_processor` com uma
+  única query agregando as 5 contagens).
+- **Barra de progresso "N de N ingressos vendidos" no rodapé da sidebar
+  (do mockup) foi PULADA** -- mesma razão do item acima (só fica disponível
+  hoje na página de Pedidos via `_totais_pedidos`, mostrar em toda página
+  exigiria a mesma plumbing bloqueada por não tocar `admin.py`).
+- **Validado sem Postgres** (mesma limitação das sessões anteriores): os 6
+  templates de admin renderizados via `render_template()` com dado fake
+  (Flask test_request_context + `auth.current_user` mockado), `python -m
+  py_compile` nos `.py` (nenhum tocado, checado mesmo assim), parse Jinja
+  dos 7 templates, contagem de chaves `{`/`}` do CSS batendo (449/449), e
+  grep confirmando que `admin-ajax-form`, `data-admin-total`, `data-row-id`,
+  `data-material-id`, `admin:sucesso` e as 3 funções JS
+  (`confirmarAcao`/`confirmarAcaoLote`/`enviarAcaoAdmin`) continuam
+  presentes nos mesmos arquivos de antes do passe.

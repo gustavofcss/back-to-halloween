@@ -63,3 +63,30 @@ achado em QA do commit 02b0ab5, 2026-09-23).
 convite, etc.) que use `\d` em vez de `[0-9]` ou `re.ASCII` tem o mesmo
 risco. Testar sempre com um dígito fullwidth ou arábico-índico antes de
 confiar num validador desses.
+
+## Reskin claro->escuro: classe global vazando cor errada pra dentro de um card temático
+
+**Sintoma**: depois de trocar os tokens `--a-cream*`/`--a-ink*` do painel
+admin de "card claro + texto escuro" pra "card escuro + texto claro"
+(2026-09-23), o texto de "Nenhum pedido ainda." e os rótulos do form de
+material/lote continuavam escuros -- quase invisíveis no card agora escuro,
+mesmo com TODAS as regras `.admin-*` já corrigidas.
+
+**Causa raiz**: `.help-text` e `.field label` (usados dentro dos cards do
+admin) são classes GLOBAIS do site, definidas fora do bloco admin do CSS,
+com cor fixa pensada pro card-pergaminho claro das telas de auth/compra
+(`var(--ink-muted)`/`var(--label-muted)`, tons de marrom escuro). Trocar só
+os tokens `--a-*` não afeta essas classes -- elas nunca usaram token do
+admin, usam token GLOBAL do site.
+
+**Fix**: override escopado, sem tocar a regra global nem nenhum template:
+```css
+.admin-shell .help-text { color: var(--a-ink-muted); }
+.admin-shell .field label { color: var(--a-accent); }
+```
+
+**Como recorre**: qualquer reskin de UMA área de um site que reusa classes
+globais (não prefixadas com o namespace da área, tipo `.admin-*`) precisa
+auditar TODA classe global usada dentro dela, não só as regras já
+prefixadas/escopadas -- um grep por `class="` nos templates da área listando
+classes SEM o prefixo do namespace acha essas antes de virarem bug visual.
