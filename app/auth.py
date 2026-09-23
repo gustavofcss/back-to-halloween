@@ -82,6 +82,23 @@ def current_user() -> dict | None:
             return cur.fetchone()
 
 
+def _next_seguro(next_url: str | None) -> str | None:
+    """`next_url` vem sem nenhuma validação de `request.form.get('next')`
+    (form de /login) ou `request.args.get('next')` (query string de
+    /auth/google, repassada via session) -- ambos controlados por quem
+    monta o link, não pelo servidor. Sem essa checagem, `/login?next=
+    https://evil.example/phish` (ou `//evil.example`, redirect
+    "protocol-relative") redireciona a vítima pra fora do site logo depois
+    de um login bem-sucedido (open redirect, achado real nesta revisão de
+    segurança) -- só aceita caminho interno, começando com uma única barra."""
+    if not next_url:
+        return None
+    next_url = next_url.strip()
+    if not next_url.startswith("/") or next_url.startswith("//") or next_url.startswith("/\\"):
+        return None
+    return next_url
+
+
 def _destino_pos_login(id_usuario: int, next_url: str | None = None) -> str:
     """Admin cai direto na área de gestão, sempre -- mesmo se veio de um link
     com `next` (ex.: clicou em "Comprar ingresso" deslogado, que manda pra
@@ -90,6 +107,7 @@ def _destino_pos_login(id_usuario: int, next_url: str | None = None) -> str:
     quando existir; sem next, vai direto pra "Meus pedidos" (se já tiver
     pedido) ou "Seus dados"/comprar (se não tiver) -- nunca a tela inicial,
     pedido explícito do usuário."""
+    next_url = _next_seguro(next_url)
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT hierarquia FROM hierarquia WHERE id_usuario = %s", (id_usuario,))

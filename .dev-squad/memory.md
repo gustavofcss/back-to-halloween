@@ -209,3 +209,67 @@ Sem Postgres disponível nesta sessão também. Cobertura obtida:
   recalculando o total ao vivo via `document.querySelectorAll(...).length`
   dentro de `atualizar()`, nas 3 páginas. Verificado: `node --check` nos
   3 blocos de script depois da correção, sem erro de sintaxe.
+
+## QA funcional do fluxo de compra (2026-09-23) -- commit 02b0ab5
+
+Sem Postgres disponível também (mesma limitação). Verificação de
+`app/pedidos.py`, `app/auth.py`, `comprar.html`, `pagamento.html`:
+
+- **Boot + rotas**: `import app` limpo, as 9 rotas de `pedidos.py`
+  registram (inclusive as novas). Confirmado nas 3 revisões do arquivo
+  (ver nota sobre edição concorrente abaixo).
+- **As 7 rotas `login_required` de `pedidos.py`** (`/comprar` GET+POST,
+  `/pagamento/<id>` GET, `/pagamento/<id>/confirmar`,
+  `/pagamento/<id>/verificar`, `/pagamento/<id>/cartao`, `/meus-pedidos`)
+  -> 302 `/login?next=...` pra request anônima, sem exceção. Todo acesso
+  a banco fica atrás de `login_required`, que corta antes de qualquer
+  `db.get_conn()`.
+- **Bug real encontrado e corrigido**: `_RG_CARACTERES_RE`/`_RG_RE`/
+  `_WHATSAPP_CARACTERES_RE`/`_WHATSAPP_RE` (`app/pedidos.py`) usavam `\d`
+  sem `re.ASCII`. Em Python 3, `\d` sem essa flag casa qualquer dígito
+  Unicode (categoria `Nd`), não só `0-9` ASCII -- um RG ou WhatsApp com
+  dígito fullwidth (`１２３４５６７８９`) ou arábico-índico (`٩`) passava as
+  duas etapas do validador inteiro e ia pro banco como caractere
+  não-ASCII, quebrando exatamente o "só números" que o comentário do
+  código promete. Confirmado executando `_validar_rg`/`_validar_whatsapp`
+  direto com esses inputs antes/depois da correção. Fix: `re.ASCII` nos
+  quatro `re.compile`.
+- **`_confirmar_se_aprovado`/`_verificar_e_confirmar_pagamento`**
+  testados com cursor fake (controla `rowcount`) e `_consultar_pagamento`/
+  `enviar_confirmacao_pedido` mockados -- 20 asserções, todas OK:
+  status não aprovado (sem UPDATE, sem e-mail); aprovado com rowcount=1
+  (UPDATE + e-mail); aprovado com rowcount=0 simulando corrida onde outro
+  request já confirmou (sem e-mail duplicado); pedido já `confirmado`
+  (nunca chama a API do MP); sem `mp_payment_id` (idem); sem
+  `MERCADOPAGO_ACCESS_TOKEN` (idem); falha da API do MP ou do envio de
+  e-mail não propaga exceção (fica só no `logger.warning`).
+- **Templates**: `ja_tem_pedido` (local, só no branch de bloqueio) e
+  `tem_pedido` (global, `context_processor` de `app.py`, mesma query
+  `status_pedido != 'cancelado'`) não têm sobreposição -- o guard
+  `{% if tem_pedido and not ja_tem_pedido %}` em `comprar.html` evita
+  link "Meus pedidos" duplicado quando o branch de bloqueio já mostra o
+  seu próprio link. `limite_atingido` foi limpo, sem resíduo.
+- **pattern/inputmode/maxlength client-side (RG e WhatsApp) são MAIS
+  estritos que o validador do servidor** (servidor aceita pontuação de
+  formatação e normaliza; client `pattern` exige só dígitos crus) --
+  direção seguramente assimétrica (nunca deixa passar no client algo que
+  o servidor rejeitaria) e combina com o placeholder "Só números". Não é
+  bug, é reforço deliberado de UX; documentado aqui só porque era um dos
+  pontos pedidos na verificação.
+- **Achado sem ação**: `mp_configurado`, passado por `/comprar` GET e por
+  `/pagamento/<id>` GET, não é referenciado em `pagamento.html` nenhuma
+  vez -- variável morta, pré-existente (não faz parte do diff de
+  02b0ab5), inofensiva.
+- **Edição concorrente durante esta sessão de QA**: `app/pedidos.py`,
+  `app/schema.sql` e `app/auth.py` mudaram no disco 3x enquanto essa
+  verificação rodava (fora do commit 02b0ab5 que era o alvo) -- outro
+  processo/sessão aplicou, na ordem: (1) índice único parcial
+  `ux_pedido_usuario_evento_ativo` em `schema.sql` + captura de
+  `psycopg2.errors.UniqueViolation` em `/comprar` pra fechar uma corrida
+  TOCTOU real (dois cliques/abas concorrentes liam "zero pedidos" antes
+  de qualquer INSERT comitar); (2) `_next_seguro()` em `auth.py` pra
+  fechar um open redirect real em `next_url` (login e callback do Google
+  não validavam que `next` fosse um caminho interno). Nenhuma dessas
+  mudanças fazia parte do escopo pedido nesta verificação (só 02b0ab5),
+  mas foram reverificadas de passagem (boot + rotas anônimas) porque
+  aconteceram nos mesmos arquivos -- sem regressão encontrada.

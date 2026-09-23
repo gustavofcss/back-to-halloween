@@ -5,6 +5,7 @@ import logging
 import re
 
 import mercadopago
+import psycopg2
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, url_for
 
 import config
@@ -27,10 +28,16 @@ logger = logging.getLogger(__name__)
 # "abc11987654321" não pode virar válido só porque, depois de tirar as
 # letras, sobra um número de 11 dígitos); só DEPOIS de passar nisso é que
 # tira a pontuação e confere o tamanho final.
-_RG_CARACTERES_RE = re.compile(r"^[\d.\-/\sXx]+$")
-_RG_RE = re.compile(r"^\d{5,12}X?$")
-_WHATSAPP_CARACTERES_RE = re.compile(r"^[\d()\-+\s]+$")
-_WHATSAPP_RE = re.compile(r"^\d{10,11}$")
+#
+# re.ASCII é obrigatório nos quatro: sem ele, \d no Python 3 casa qualquer
+# dígito Unicode (categoria Nd) -- não só 0-9 ASCII. Dígito fullwidth
+# ("１２３４５６７８９") ou arábico-índico ("٩") passava as duas etapas inteiro e
+# ia pro banco como caractere não-ASCII, quebrando o "só números" que o
+# validador promete (achado real em QA, verificado executando o validador).
+_RG_CARACTERES_RE = re.compile(r"^[\d.\-/\sXx]+$", re.ASCII)
+_RG_RE = re.compile(r"^\d{5,12}X?$", re.ASCII)
+_WHATSAPP_CARACTERES_RE = re.compile(r"^[\d()\-+\s]+$", re.ASCII)
+_WHATSAPP_RE = re.compile(r"^\d{10,11}$", re.ASCII)
 
 
 def _validar_rg(bruto: str | None) -> str | None:
@@ -146,6 +153,22 @@ def _verificar_e_confirmar_pagamento(cur, pedido: dict, usuario: dict) -> str:
 def comprar():
     usuario = current_user()
 
+    try:
+        return _comprar_impl(usuario)
+    except psycopg2.errors.UniqueViolation:
+        # Rede de segurança contra a condição de corrida: o SELECT de
+        # "ja_comprados" acima e o INSERT abaixo não são atômicos -- dois
+        # envios concorrentes do MESMO usuário (duplo clique, duas abas)
+        # podem os dois ler "zero pedidos" antes de qualquer um dos dois
+        # commitar. O índice único parcial em schema.sql
+        # (ux_pedido_usuario_evento_ativo) faz o segundo INSERT estourar
+        # essa exceção em vez de criar um pedido duplicado -- capturada
+        # aqui pra virar a mesma tela de erro amigável, não um 500
+        # (achado real nesta revisão de segurança).
+        return render_template("comprar.html", ja_tem_pedido=True)
+
+
+def _comprar_impl(usuario: dict):
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             evento = _evento_ativo(cur)
@@ -314,8 +337,15 @@ def pagamento_confirmar(id_pedido: int):
             if not pedido:
                 abort(404)
             status_atual = _verificar_e_confirmar_pagamento(cur, pedido, usuario)
-            pedido = dict(pedido)
-            pedido["status_pedido"] = status_atual
+            # Só troca o dict quando o MP realmente aprovou -- mesmo padrão do
+            # GET /pagamento/<id>. status_atual pode vir no vocabulário do
+            # Mercado Pago (ex. "rejected", "in_process", "pending"), que não
+            # é o enum da coluna status_pedido ('pendente'/'confirmado'/
+            # 'cancelado'); gravar esse valor bruto em pedido["status_pedido"]
+            # contaminaria a condição do template (achado real nesta revisão).
+            if status_atual == "confirmado":
+                pedido = dict(pedido)
+                pedido["status_pedido"] = "confirmado"
 
     return render_template(
         "pagamento.html",

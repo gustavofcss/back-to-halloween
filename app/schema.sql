@@ -61,6 +61,15 @@ CREATE TABLE IF NOT EXISTS pedido (
     data_pedido    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- "Um pedido por pessoa" (app/pedidos.py, rota /comprar) era só checado com
+-- SELECT-antes-de-INSERT -- sem essa trava no banco, dois envios concorrentes
+-- do mesmo usuário (duplo clique, duas abas) podiam ler "zero pedidos" os
+-- dois ANTES de qualquer um dos dois commitar o INSERT, e os dois passavam
+-- (TOCTOU real, achado nesta revisão de segurança). Índice único parcial
+-- (só entre pedidos não cancelados) faz o Postgres rejeitar o segundo INSERT
+-- concorrente com uma UniqueViolation, que a rota captura.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_pedido_usuario_evento_ativo ON pedido (id_usuario, id_evento) WHERE status_pedido != 'cancelado';
+
 CREATE TABLE IF NOT EXISTS despesa_material (
     id                SERIAL PRIMARY KEY,
     nome_material     VARCHAR(160) NOT NULL,

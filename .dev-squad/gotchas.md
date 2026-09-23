@@ -41,3 +41,25 @@ Ver `.dev-squad/memory.md`, seção "Convenção AJAX do admin" -- envelope
 JSON, status codes, `after_request` que reescreve redirect-pro-login em 401
 pra requests AJAX. Toda rota de mutação nova em `/admin/*` deve seguir esse
 mesmo padrão.
+
+## `\d` do Python sem `re.ASCII` casa dígito Unicode, não só 0-9
+
+**Sintoma**: um validador de "só números" (`re.match(r"^\d+$", valor)`)
+aceita RG/WhatsApp/qualquer campo numérico digitado com dígito fullwidth
+(`１２３`, comum em teclado CJK) ou arábico-índico (`٩`) -- o valor "válido"
+vai pro banco com caractere não-ASCII escondido no meio.
+
+**Causa raiz**: em Python 3, `\d` em uma string pattern (não bytes) casa
+qualquer caractere da categoria Unicode `Nd` por padrão -- não é limitado a
+`0-9` a menos que o regex seja compilado com a flag `re.ASCII` (ou `(?a)`
+inline).
+
+**Fix**: `re.compile(padrao, re.ASCII)` em todo regex que pretende validar
+"só dígito ASCII". Aplicado em `app/pedidos.py`
+(`_RG_CARACTERES_RE`/`_RG_RE`/`_WHATSAPP_CARACTERES_RE`/`_WHATSAPP_RE`,
+achado em QA do commit 02b0ab5, 2026-09-23).
+
+**Como recorre**: qualquer novo campo "só números" (CPF, código de
+convite, etc.) que use `\d` em vez de `[0-9]` ou `re.ASCII` tem o mesmo
+risco. Testar sempre com um dígito fullwidth ou arábico-índico antes de
+confiar num validador desses.
