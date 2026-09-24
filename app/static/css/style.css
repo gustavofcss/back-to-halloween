@@ -352,6 +352,13 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .admin-table__check-col{width:40px}
 .a-order__id{font-weight:600;color:var(--orange-2);white-space:nowrap}
 .a-order__client{display:flex;flex-direction:column;gap:2px}
+/* .a-order__client é flex-column sem align-items -- o padrão (stretch)
+   esticava a pill "CORTESIA" pra largura inteira da célula, um brilho
+   enorme em vez de só abraçar o texto (achado real, usuário reportou em
+   print). align-self só nela, os outros filhos (nome, e-mail, "+
+   fulano") continuam esticando normal (fazem sentido ocupando a largura
+   toda). */
+.a-order__client .admin-pill{align-self:flex-start}
 .a-order__name{font-weight:600}
 .a-order__extra{font-size:12px;color:var(--ink-4)}
 .a-order__email{font-size:12px;color:var(--ink-4)}
