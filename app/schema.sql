@@ -72,6 +72,12 @@ CREATE TABLE IF NOT EXISTS pedido (
     valor          NUMERIC(10,2) NOT NULL,
     quantidade     INTEGER NOT NULL CHECK (quantidade > 0),
     status_pedido  VARCHAR(20) NOT NULL DEFAULT 'pendente' CHECK (status_pedido IN ('pendente', 'confirmado', 'cancelado')),
+    -- TRUE só quando o cancelamento foi automático por estourar a janela de
+    -- pagamento (_JANELA_PAGAMENTO, 5 min -- pedido explícito do usuário:
+    -- forçar pagar dentro do prazo), pra distinguir de um cancelamento
+    -- manual do admin na tela de pagamento ("Pagamento expirado" vs
+    -- "Pedido cancelado").
+    expirado       BOOLEAN NOT NULL DEFAULT FALSE,
     mp_payment_id     VARCHAR(40),  -- id do pagamento Pix criado no Mercado Pago
     mp_preference_id  VARCHAR(40),  -- id da preference do Checkout Pro (cartão)
     -- 2º ingresso (quantidade = 2) pode ser pra um acompanhante -- não
@@ -95,6 +101,15 @@ CREATE TABLE IF NOT EXISTS pedido (
 -- slot ao mesmo tempo. Postgres rejeita o INSERT concorrente com uma
 -- UniqueViolation, que a rota captura.
 CREATE UNIQUE INDEX IF NOT EXISTS ux_pedido_usuario_evento_slot_ativo ON pedido (id_usuario, id_evento, slot) WHERE status_pedido != 'cancelado';
+
+-- Pix direto na chave (app/pedidos.py, _tentar_conciliar_pix_direto): o
+-- mesmo pagamento real do Mercado Pago nunca pode ser reivindicado por
+-- dois pedidos -- sem essa trava, dois pedidos pendentes do MESMO valor
+-- concorrendo (2 pessoas pagando quase ao mesmo tempo) podiam os dois
+-- reivindicar o mesmo mp_payment_id antes de qualquer um commitar,
+-- contando o mesmo dinheiro duas vezes. Parcial (só quando preenchido) --
+-- mp_payment_id continua NULL até alguém pagar.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_pedido_mp_payment_id ON pedido (mp_payment_id) WHERE mp_payment_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS despesa_material (
     id                SERIAL PRIMARY KEY,

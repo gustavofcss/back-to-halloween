@@ -49,6 +49,11 @@
           <p class="ticket__note">Seu ingresso está garantido. Te esperamos na festa.</p></div>
         <div style="padding:0 20px 22px"><a href="/meus-pedidos" class="btn-paper" style="text-decoration:none;text-align:center;display:block">Ver meus pedidos</a></div>
 
+      {% elif pedido.status_pedido == 'cancelado' and pedido.expirado %}
+        <div class="status-box"><span class="pill pill--bad">Expirado</span><strong>Pagamento expirado</strong>
+          <p class="ticket__note">Os 5 minutos pra pagar esse Pix acabaram e a vaga foi liberada. Pode tentar de novo.</p></div>
+        <div style="padding:0 20px 22px"><a href="/comprar" class="btn-paper" style="text-decoration:none;text-align:center;display:block">Comprar de novo</a></div>
+
       {% elif pedido.status_pedido == 'cancelado' %}
         <div class="status-box"><span class="pill pill--bad">Cancelado</span><strong>Pedido cancelado</strong>
           <p class="ticket__note">Se foi engano, fale com a organização.</p></div>
@@ -66,6 +71,9 @@
 
         <div class="pay-pix">
           <p class="pay-pix-label">Pague com Pix</p>
+          {% if segundos_restantes %}
+          <p class="pay-expira" id="pay-expira">Expira em <strong id="pay-expira-tempo">5:00</strong></p>
+          {% endif %}
 
           {% if qr_code_base64 %}
           <img class="pay-qr" src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code para pagamento Pix">
@@ -107,8 +115,32 @@
         {% if qr_code_base64 or qr_code or pedido.mp_payment_id %}
         <script>
           (function () {
+            // Contagem regressiva visual (achado do usuário: forçar pagar
+            // dentro de uma margem de tempo) -- calculada no servidor a
+            // partir de quando o PEDIDO foi criado (_segundos_restantes),
+            // não do momento em que a página carregou, senão recarregar a
+            // tela "resetava" o prazo pra mais 5 minutos de novo.
+            var restante = {{ segundos_restantes|default(0) }};
+            var elTempo = document.getElementById('pay-expira-tempo');
+            function mostrarTempo() {
+              if (!elTempo) { return; }
+              var m = Math.floor(restante / 60);
+              var s = restante % 60;
+              elTempo.textContent = m + ':' + (s < 10 ? '0' : '') + s;
+            }
+            mostrarTempo();
+            var timerVisual = setInterval(function () {
+              restante = Math.max(0, restante - 1);
+              mostrarTempo();
+              if (restante <= 0) { clearInterval(timerVisual); }
+            }, 1000);
+
             var tentativas = 0;
-            var maxTentativas = 60; // 60 x 5s ~= 5 minutos
+            // +4 tentativas de folga (20s) além do tempo restante -- garante
+            // pelo menos uma consulta ao servidor DEPOIS do prazo acabar,
+            // que é quem realmente decide (expira só depois de reconsultar
+            // o Mercado Pago) e devolve o status final pra essa tela recarregar.
+            var maxTentativas = Math.ceil({{ segundos_restantes|default(300) }} / 5) + 4;
             var intervalo = setInterval(function () {
               tentativas += 1;
               if (tentativas > maxTentativas) {
@@ -118,8 +150,9 @@
               fetch('/pagamento/{{ pedido.id_pedido }}/verificar', { method: 'POST' })
                 .then(function (resp) { return resp.json(); })
                 .then(function (data) {
-                  if (data.status === 'confirmado') {
+                  if (data.status === 'confirmado' || data.status === 'cancelado') {
                     clearInterval(intervalo);
+                    clearInterval(timerVisual);
                     window.location.reload();
                   }
                 })

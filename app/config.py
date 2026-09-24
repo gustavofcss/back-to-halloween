@@ -33,7 +33,16 @@ BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 BREVO_FROM_EMAIL = os.environ.get("BREVO_FROM_EMAIL", "horrornightparty2026@gmail.com")
 BREVO_FROM_NOME = os.environ.get("BREVO_FROM_NOME", "Horror Night Party")
 
-PIX_KEY = os.environ.get("PIX_KEY", "")
+# Uma chave Pix DIFERENTE por valor possível de pedido (preço do lote x
+# quantidade) -- pedido explícito do usuário: 1 ingresso paga numa chave,
+# 2 ingressos pagam noutra, cada uma criada à parte no Mercado Pago. Mesmo
+# padrão de LINKS_PAGAMENTO_CARTAO logo abaixo. Se o preço do lote mudar,
+# precisa cadastrar uma chave nova pro valor novo (e a variável de
+# ambiente correspondente).
+PIX_KEYS = {
+    30.0: os.environ.get("PIX_KEY_30", ""),
+    60.0: os.environ.get("PIX_KEY_60", ""),
+}
 BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:5000")
 
 MERCADOPAGO_ACCESS_TOKEN = os.environ.get("MERCADOPAGO_ACCESS_TOKEN", "")
