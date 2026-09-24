@@ -429,7 +429,16 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 
 /* ============ RESPONSIVO ============ */
 @media (max-width:860px){
-  .a-shell{flex-direction:column}
+  /* align-items:flex-start (base, ver .a-shell acima) existe só pra sidebar
+     STICKY não esticar na largura da tela desktop -- em coluna (mobile,
+     sidebar static) esse valor também afeta o eixo cruzado horizontal do
+     flex, encolhendo .a-main pro tamanho do conteúdo em vez de ocupar a
+     largura inteira. Sobrava um vão morto do lado direito em páginas com
+     conteúdo mais estreito (ex. Painel admin, cartões de atalho) -- outras
+     abas com tabela/lista larga escondiam o bug por acaso (achado real,
+     usuário mandou print comparando com Hierarquia). Stretch = volta ao
+     comportamento padrão do flex, cada filho ocupa a largura toda.  */
+  .a-shell{flex-direction:column;align-items:stretch}
   .a-sidebar{position:static;flex:none;height:auto;padding:18px}
   .a-sidebar__tree{display:none}
   .a-nav{flex-direction:row;flex-wrap:wrap}
