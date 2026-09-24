@@ -38,6 +38,12 @@ CREATE TABLE IF NOT EXISTS evento (
     nome_evento               VARCHAR(160) NOT NULL,
     data_evento               DATE,
     hora_evento               TIME,
+    -- endereco/bairro (ex. "Rua Mário Bhering, 171" / "Tamarineira") --
+    -- mesmo padrão de nome_evento/data_evento: editado no admin (Lotes do
+    -- evento) e herdado pro próximo lote cadastrado, porque é sempre a
+    -- MESMA festa, só o preço muda a cada lote.
+    endereco                  VARCHAR(200),
+    bairro                    VARCHAR(100),
     numero_lote               INTEGER NOT NULL DEFAULT 1,
     valor_entrada             NUMERIC(10,2) NOT NULL,
     quantidade_max_ingressos  INTEGER NOT NULL DEFAULT 2,

@@ -1035,6 +1035,8 @@ def eventos():
         nome_evento = ultimo["nome_evento"] if ultimo else "Halloween"
         data_evento = ultimo["data_evento"] if ultimo else None
         hora_evento = ultimo["hora_evento"] if ultimo else None
+        endereco = ultimo["endereco"] if ultimo else None
+        bairro = ultimo["bairro"] if ultimo else None
         capacidade_maxima = ultimo["capacidade_maxima"] if ultimo else 60
         numero_lote = (ultimo["numero_lote"] + 1) if ultimo else 1
 
@@ -1043,14 +1045,16 @@ def eventos():
                 cur.execute(
                     """
                     INSERT INTO evento
-                        (nome_evento, data_evento, hora_evento, numero_lote, valor_entrada,
-                         quantidade_max_ingressos, capacidade_maxima, usuario_cadastro)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        (nome_evento, data_evento, hora_evento, endereco, bairro, numero_lote,
+                         valor_entrada, quantidade_max_ingressos, capacidade_maxima, usuario_cadastro)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (
                         nome_evento,
                         data_evento,
                         hora_evento,
+                        endereco,
+                        bairro,
                         numero_lote,
                         valor_entrada,
                         quantidade_max_ingressos,
@@ -1081,12 +1085,16 @@ def eventos():
 
     proximo_lote = (ultimo["numero_lote"] + 1) if ultimo else 1
     capacidade_maxima = ultimo["capacidade_maxima"] if ultimo else 60
+    endereco = ultimo["endereco"] if ultimo else ""
+    bairro = ultimo["bairro"] if ultimo else ""
     return render_template(
         "admin/eventos.html",
         eventos=lista,
         ultimo=ultimo,
         proximo_lote=proximo_lote,
         capacidade_maxima=capacidade_maxima,
+        endereco=endereco,
+        bairro=bairro,
         ingressos_vendidos_total=ingressos_vendidos_total,
     )
 
@@ -1103,6 +1111,28 @@ def eventos_capacidade():
                 cur.execute(
                     "UPDATE evento SET capacidade_maxima = %s WHERE id_evento = %s",
                     (capacidade_maxima, ultimo["id_evento"]),
+                )
+    return redirect(url_for("admin.eventos"))
+
+
+@admin_bp.route("/eventos/endereco", methods=["POST"])
+@admin_required
+def eventos_endereco():
+    # Mesmo padrão de eventos_capacidade: só atualiza o lote mais recente
+    # (o "ativo" -- ver comentário em eventos_apagar), porque endereco/
+    # bairro são propriedade da FESTA, não do lote em si -- lotes antigos
+    # (encerrados) não precisam refletir a mudança, e a tela pública
+    # (convite.html) só lê o evento mais recente mesmo.
+    endereco = (request.form.get("endereco") or "").strip()
+    bairro = (request.form.get("bairro") or "").strip()
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1")
+            ultimo = cur.fetchone()
+            if ultimo:
+                cur.execute(
+                    "UPDATE evento SET endereco = %s, bairro = %s WHERE id_evento = %s",
+                    (endereco, bairro, ultimo["id_evento"]),
                 )
     return redirect(url_for("admin.eventos"))
 

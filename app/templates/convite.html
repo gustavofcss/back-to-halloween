@@ -49,7 +49,7 @@
 
     <div class="info-grid">
       <div><span>Quando</span><strong>{{ data_formatada or "Data a definir" }}</strong><small>a partir das 21:00</small></div>
-      <div><span>Onde</span><strong>Rua Mário Bhering, 171</strong><small>Tamarineira</small></div>
+      <div><span>Onde</span><strong>{{ (evento.endereco if evento else none) or "Endereço a definir" }}</strong><small>{{ evento.bairro if evento else "" }}</small></div>
       <div><span>Traje</span><strong>A rigor</strong><small>quanto mais assustador, melhor</small></div>
     </div>
 

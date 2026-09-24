@@ -16,6 +16,22 @@
   </form>
 </section>
 
+<section class="a-card">
+  <h2 class="a-card__title" style="font-size: 18px;">Endereço do evento</h2>
+  <p class="help-text" style="margin: 0;">Aparece na tela de convite (Onde)</p>
+  <form method="post" action="/admin/eventos/endereco" style="display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;">
+    <div class="field" style="margin-bottom: 0; flex: 1 1 240px;">
+      <label for="endereco">Rua e número</label>
+      <input id="endereco" name="endereco" class="input" type="text" maxlength="200" placeholder="Rua Mário Bhering, 171" value="{{ endereco }}">
+    </div>
+    <div class="field" style="margin-bottom: 0; flex: 1 1 160px;">
+      <label for="bairro">Bairro</label>
+      <input id="bairro" name="bairro" class="input" type="text" maxlength="100" placeholder="Tamarineira" value="{{ bairro }}">
+    </div>
+    <button type="submit" class="admin-btn-outline">Atualizar endereço</button>
+  </form>
+</section>
+
 <section class="a-card a-card--form" id="form-lote" style="display: none;">
   <h2 class="a-card__title">Cadastrar novo lote</h2>
   <p class="help-text" style="margin: 0;">
