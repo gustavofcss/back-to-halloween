@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 # vaga, em vez de ficar "pendente" pra sempre esperando alguém que talvez
 # nunca pague (pedido explícito do usuário: forçar o cliente a pagar dentro
 # de uma margem de tempo). Só vale quando o Mercado Pago está configurado
-# (o modo manual de chave Pix -- config.PIX_KEY sem token -- não expira
+# (o modo manual de chave Pix -- config.PIX_KEYS sem token -- não expira
 # sozinho, porque não tem como confirmar automaticamente rápido o
 # suficiente pra isso ser justo com quem pagou e só não foi conferido a
 # tempo pelo admin).
@@ -105,7 +105,7 @@ def _buscar_pagamentos_pix_aprovados(desde: datetime) -> list[dict]:
 
 
 def _tentar_conciliar_pix_direto(cur, pedido: dict, usuario: dict) -> str:
-    """Pix pago DIRETO na chave (config.PIX_KEY, sem passar pela API de
+    """Pix pago DIRETO na chave (config.PIX_KEYS, sem passar pela API de
     Checkout -- evita a taxa de ~1%) não tem um mp_payment_id conhecido de
     antemão, porque a gente nunca chamou o Mercado Pago pra criar nada; o
     QR mostrado ao cliente é só um payload Pix comum, gerado localmente
@@ -210,6 +210,13 @@ def _titular_do_pedido(pedido: dict, nome_conta: str, email_conta: str) -> dict:
         "nome": pedido.get("titular_nome") or nome_conta,
         "email": pedido.get("titular_email") or email_conta,
     }
+
+
+def _chave_pix_do_pedido(pedido: dict) -> str | None:
+    """Uma chave Pix DIFERENTE por valor (config.PIX_KEYS) -- mesmo padrão
+    de config.LINKS_PAGAMENTO_CARTAO/pagamento_cartao. `round(...)` porque
+    valor vem do Postgres como Decimal, e a chave do dict é float."""
+    return config.PIX_KEYS.get(round(float(pedido["valor"]), 2))
 
 
 def _confirmar_se_aprovado(cur, pedido: dict, usuario: dict, pagamento_mp: dict) -> str:
@@ -473,7 +480,8 @@ def pagamento(id_pedido: int):
 
             if not config.MERCADOPAGO_ACCESS_TOKEN:
                 return render_template(
-                    "pagamento.html", pedido=pedido, pix_key=config.PIX_KEY, mp_configurado=False
+                    "pagamento.html", pedido=pedido, pix_key=_chave_pix_do_pedido(pedido) or "",
+                    mp_configurado=False,
                 )
 
             qr_code_base64 = qr_code = mp_erro = None
@@ -493,8 +501,11 @@ def pagamento(id_pedido: int):
                     status_atual = _verificar_com_expiracao(cur, pedido, titular)
                     pedido = dict(pedido)
                     pedido["status_pedido"] = status_atual
-                elif not config.PIX_KEY:
-                    logger.warning("PIX_KEY não configurado -- não dá pra gerar o Pix direto")
+                elif not _chave_pix_do_pedido(pedido):
+                    logger.warning(
+                        "Sem chave Pix cadastrada pro valor %s -- não dá pra gerar o Pix direto",
+                        pedido["valor"],
+                    )
                     mp_erro = "Não foi possível gerar o Pix agora. Tente novamente em instantes."
                     segundos_restantes = _segundos_restantes(pedido)
                 else:
@@ -505,7 +516,7 @@ def pagamento(id_pedido: int):
                     # Pix da própria chave; a gente só concilia depois (ver
                     # _tentar_conciliar_pix_direto).
                     qr_code = gerar_copia_cola(
-                        config.PIX_KEY, pedido["valor"], txid=f"HNP{id_pedido}"
+                        _chave_pix_do_pedido(pedido), pedido["valor"], txid=f"HNP{id_pedido}"
                     )
                     qr_code_base64 = gerar_qr_base64(qr_code)
 
@@ -525,7 +536,7 @@ def pagamento(id_pedido: int):
     return render_template(
         "pagamento.html",
         pedido=pedido,
-        pix_key=config.PIX_KEY,
+        pix_key=_chave_pix_do_pedido(pedido) or "",
         mp_configurado=True,
         qr_code_base64=qr_code_base64,
         qr_code=qr_code,
@@ -564,7 +575,7 @@ def pagamento_confirmar(id_pedido: int):
     return render_template(
         "pagamento.html",
         pedido=pedido,
-        pix_key=config.PIX_KEY,
+        pix_key=_chave_pix_do_pedido(pedido) or "",
         aguardando=(status_atual not in ("confirmado", "cancelado")),
     )
 
