@@ -545,33 +545,6 @@ def pagamento(id_pedido: int):
     )
 
 
-@pedidos_bp.route("/pagamento/<int:id_pedido>/confirmar", methods=["POST"])
-@login_required
-def pagamento_confirmar(id_pedido: int):
-    # "Já paguei, confirmar" consulta a API do Mercado Pago/concilia o Pix
-    # direto na hora (não espera o polling em background) -- mas SEMPRE
-    # redireciona pro GET /pagamento/<id> depois, nunca renderiza a página
-    # direto daqui. Sem isso (achado real, usuário testou: clicou em
-    # "confirmar" ANTES de pagar de verdade, pagou 30s depois, e o pedido
-    # nunca confirmou sozinho) -- renderizar aqui mostrava uma página
-    # "Em análise" SEM QR Code e SEM o script de verificação automática (só
-    # o GET tem isso), virando um beco sem saída: se o clique não confirmou
-    # na hora, nada mais verificava esse pedido de novo sozinho depois,
-    # nem quando a pessoa pagasse de verdade em seguida. O GET sempre
-    # recalcula tudo do zero (QR, polling, ou a tela final certa) a partir
-    # do status ATUAL do pedido no banco.
-    usuario = current_user()
-    with db.get_conn() as conn:
-        with conn.cursor() as cur:
-            pedido = _pedido_do_usuario(cur, id_pedido, usuario["id_usuario"])
-            if not pedido:
-                abort(404)
-            titular = _titular_do_pedido(pedido, usuario["nome"], usuario["email"])
-            _verificar_com_expiracao(cur, pedido, titular)
-
-    return redirect(url_for("pedidos.pagamento", id_pedido=id_pedido))
-
-
 @pedidos_bp.route("/pagamento/<int:id_pedido>/verificar", methods=["POST"])
 @login_required
 def pagamento_verificar(id_pedido: int):

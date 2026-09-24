@@ -201,7 +201,6 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .pay-pix{padding:22px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
 .pay-key{margin:0;font-size:13px;color:var(--paper-ink);word-break:break-all}
 .pay-actions{display:flex;gap:10px;padding:0 20px 22px}
-.pay-actions__confirm{flex:1;margin:0}
 /* .btn-ghost usa --ink (quase branco), certo no fundo escuro do resto da
    página -- mas .pay-actions mora dentro de .ticket, que é um cartão CLARO
    (--paper, quase branco também). Texto quase-branco em fundo quase-branco
