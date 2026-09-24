@@ -16,7 +16,7 @@
       {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
       <form method="post" action="/signup" id="signup-form" style="display:flex;flex-direction:column;gap:14px">
         <label class="field" for="nome">Nome completo
-          <input class="input" id="nome" name="nome" type="text" placeholder="Seu nome" required autocomplete="name">
+          <input class="input" id="nome" name="nome" type="text" placeholder="Seu nome completo" required autocomplete="name" pattern="\s*\S+(\s+\S+)+\s*" title="Digite nome e sobrenome">
         </label>
         <label class="field" for="email">E-mail
           <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email">

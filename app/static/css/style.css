@@ -40,9 +40,16 @@ p{margin:0}
 .sil{filter:brightness(0)}
 .inv{filter:invert(1)}
 .glow-pumpkin{filter:drop-shadow(0 0 16px rgba(255,120,20,.7));animation:flicker 3s ease-in-out infinite}
-.spider{position:absolute;top:0;display:flex;flex-direction:column;align-items:center;animation:spiderBob 5s ease-in-out infinite;pointer-events:none;z-index:1}
-.spider i{display:block;width:1px;height:120px;background:rgba(230,220,255,.45)}
-.spider img{width:40px;margin-top:-6px;filter:brightness(0) drop-shadow(0 0 6px rgba(255,160,60,.4))}
+/* O topo do fio tem que ficar PARADO (grudado no teto) o tempo todo -- se
+   anima o .spider inteiro (fio + aranha) com translateY, o topo do fio
+   também desce junto, abrindo um vão entre ele e o topo da página toda vez
+   que ela desce (achado real, usuário reportou -- alongar o fio sozinho
+   não resolve, o vão tem o mesmo tamanho não importa a altura). Fio fixo
+   no topo com scaleY (transform-origin:top, só a ponta de baixo se move) e
+   aranha com translateY andam juntos, mesma duração/curva, sem vão. */
+.spider{position:absolute;top:0;display:flex;flex-direction:column;align-items:center;pointer-events:none;z-index:1}
+.spider i{display:block;width:1px;height:120px;background:rgba(230,220,255,.45);transform-origin:top;--spider-grow:1.3333;animation:spiderThreadGrow 5s ease-in-out infinite}
+.spider img{width:40px;margin-top:-6px;filter:brightness(0) drop-shadow(0 0 6px rgba(255,160,60,.4));animation:spiderBob 5s ease-in-out infinite}
 
 /* ============ TIPOGRAFIA ============ */
 .eyebrow{font-size:12px;font-weight:600;letter-spacing:.34em;text-transform:uppercase;color:var(--orange)}
@@ -291,7 +298,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .a-main{position:relative;flex:1;min-width:0;min-height:100vh;padding:30px 36px 130px;display:flex;flex-direction:column;gap:24px}
 .a-deco--web{top:0;right:0;width:170px;opacity:.14}
 .a-deco--spider{right:150px}
-.a-deco--spider.spider i{height:120px}
+.a-deco--spider.spider i{height:70px;--spider-grow:1.5714}
 .a-deco--spider.spider img{width:30px}
 .a-deco--hand{right:30px;bottom:0;height:110px;filter:brightness(0) drop-shadow(0 0 1px rgba(255,138,43,.6))}
 .a-header{position:relative;z-index:1;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:flex-end;gap:16px;padding-right:clamp(0px,12vw,200px)}
@@ -393,6 +400,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 @keyframes witchFly{0%{transform:translate(-30vw,40px) rotate(-4deg)}100%{transform:translate(130vw,-60px) rotate(-8deg)}}
 @keyframes batFly{0%{transform:translate(-10vw,0) scale(1)}25%{transform:translate(25vw,-30px) scale(.9)}50%{transform:translate(55vw,10px) scale(1)}75%{transform:translate(85vw,-20px) scale(.9)}100%{transform:translate(115vw,0) scale(1)}}
 @keyframes spiderBob{0%,100%{transform:translateY(0)}50%{transform:translateY(40px)}}
+@keyframes spiderThreadGrow{0%,100%{transform:scaleY(1)}50%{transform:scaleY(var(--spider-grow,1.3333))}}
 @keyframes ghostFloat{0%,100%{transform:translate(0,0);opacity:.18}50%{transform:translate(22px,-18px);opacity:.32}}
 @keyframes float{0%,100%{transform:translate(0,0)}50%{transform:translate(12px,-10px)}}
 @keyframes zFrames{from{background-position:0 0}to{background-position:-1000px 0}}

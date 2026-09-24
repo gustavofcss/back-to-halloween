@@ -146,8 +146,8 @@ def signup():
     email = (request.form.get("email") or "").strip().lower()
     senha = request.form.get("senha") or ""
 
-    if not nome or not EMAIL_RE.match(email) or len(senha) < 6:
-        flash("Preencha nome, e-mail válido e senha com pelo menos 6 caracteres.")
+    if len(nome.split()) < 2 or not EMAIL_RE.match(email) or len(senha) < 6:
+        flash("Preencha o nome completo (nome e sobrenome), e-mail válido e senha com pelo menos 6 caracteres.")
         return render_template("signup.html"), 400
 
     with db.get_conn() as conn:
