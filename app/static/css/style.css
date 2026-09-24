@@ -248,11 +248,17 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .info-grid{margin-top:40px;width:100%;max-width:640px;display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:1px;
   background:var(--border-o);border:1px solid var(--border-o);border-radius:16px;overflow:hidden}
 .info-grid > div{background:var(--card);padding:20px 16px;display:flex;flex-direction:column;gap:6px}
-.info-grid span{font-size:11px;font-weight:600;letter-spacing:.24em;text-transform:uppercase;color:var(--orange)}
-.info-grid strong{font-family:var(--f-title);font-weight:800;font-size:22px;color:#fff;line-height:1.2}
-.info-grid small{font-size:14px;color:var(--ink-2)}
+.info-grid span{font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--orange)}
+.info-grid strong{font-family:var(--f-title);font-weight:800;font-size:26px;color:#fff;line-height:1.25}
+.info-grid small{font-size:15px;color:var(--ink-2)}
 .invite__cta{margin-top:32px;box-shadow:0 0 0 4px rgba(255,138,43,.18),0 18px 40px rgba(225,105,15,.45)}
 .invite__skeleton{left:3%;bottom:40px;height:clamp(90px,13vw,160px);opacity:.85;transform:rotate(-6deg);z-index:1}
+/* Ossos de dinossauro no canto superior direito da cena -- mesma posição
+   de quando entraram no site (commit aadbbc7), só que ancorados em .scene
+   em vez do antigo .hero. Usuário reportou que sumiram num redesenho. */
+.margin-dino{width:100px;height:auto;filter:brightness(.5) saturate(.55) contrast(1.1) drop-shadow(0 4px 10px rgba(0,0,0,.5))}
+.margin-dino--1{top:60px;right:90px;transform:rotate(-6deg)}
+.margin-dino--2{top:170px;right:120px;width:70px;opacity:.9;transform:rotate(10deg)}
 
 /* ============ ADMIN ============ */
 .a-shell{position:relative;display:flex;align-items:flex-start;min-height:100vh;background:radial-gradient(ellipse 900px 500px at 70% -10%,#2c1a3a 0%,#120b1c 45%,#07050d 80%)}
@@ -428,6 +434,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 @media (max-width:480px){
   .g-coffin,.g-hand-2{display:none}
   .btn-lg{min-width:0;width:100%}
+  .margin-dino{display:none}
 }
 @container (max-width:480px){
   .admin-group__row-inner{flex-wrap:wrap}
