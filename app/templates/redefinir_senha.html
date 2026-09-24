@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+{% block title %}Redefinir senha — Horror Night Party{% endblock %}
+{% block content %}
+<div class="screen">
+  <img class="deco sil" src="{{ url_for('static', filename='assets/lTree.svg') }}" alt="" aria-hidden="true" style="left:-60px;top:-20px;height:380px;opacity:.9">
+  <img class="deco sil" src="{{ url_for('static', filename='assets/deco-zombie-hand.png') }}" alt="" aria-hidden="true" style="left:30px;bottom:0;height:110px;filter:brightness(0) drop-shadow(0 0 1px rgba(255,138,43,.5))">
+
+  <div class="content">
+    <div class="brand-head">
+      <p class="eyebrow">Horror Night Party</p>
+      <h1 class="display" style="font-size:30px">REDEFINIR SENHA</h1>
+    </div>
+    <div class="card">
+      <p class="lead">Digite o código de 6 dígitos que enviamos por e-mail e escolha uma senha nova.</p>
+      <form method="post" action="/redefinir-senha" id="redefinir-form" style="display:flex;flex-direction:column;gap:14px">
+        <label class="field" for="email">E-mail
+          <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email" value="{{ request.args.get('email', '') }}">
+        </label>
+        <label class="field" for="codigo">Código de 6 dígitos
+          <input class="input" id="codigo" name="codigo" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required autocomplete="one-time-code">
+        </label>
+        <label class="field" for="senha">Nova senha
+          <input class="input" id="senha" name="senha" type="password" placeholder="Mín. 6" required minlength="6" autocomplete="new-password">
+        </label>
+        <label class="field" for="confirmar_senha">Confirmar
+          <input class="input" id="confirmar_senha" name="confirmar_senha" type="password" placeholder="Repita" required minlength="6" autocomplete="new-password">
+        </label>
+        <p class="alert" id="senha-erro" style="display:none;">As senhas não coincidem.</p>
+        <button type="submit" class="btn btn-primary btn-block">Redefinir senha</button>
+      </form>
+      <p class="muted center" style="margin-top:14px">Não recebeu o código? <a href="/esqueci-senha">Pedir de novo</a></p>
+    </div>
+  </div>
+</div>
+<script>
+  (function () {
+    var form = document.getElementById('redefinir-form');
+    var senha = document.getElementById('senha');
+    var confirmar = document.getElementById('confirmar_senha');
+    var aviso = document.getElementById('senha-erro');
+    form.addEventListener('submit', function (evt) {
+      if (senha.value !== confirmar.value) {
+        evt.preventDefault();
+        aviso.style.display = 'block';
+      } else {
+        aviso.style.display = 'none';
+      }
+    });
+  })();
+</script>
+{% endblock %}

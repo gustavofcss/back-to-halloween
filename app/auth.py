@@ -330,7 +330,7 @@ def esqueci_senha():
             logger.warning("Falha ao enviar código de recuperação por e-mail", exc_info=True)
 
     flash("Se esse e-mail existir, enviamos um código de recuperação.")
-    return render_template("esqueci_senha.html")
+    return redirect(url_for("auth.redefinir_senha", email=email))
 
 
 @auth_bp.route("/redefinir-senha", methods=["GET", "POST"])
