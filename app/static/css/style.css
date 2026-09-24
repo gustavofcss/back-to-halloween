@@ -209,11 +209,6 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
   background:linear-gradient(180deg,#1b1236 0%,#2a1840 28%,#3a1d33 50%,#1a0f1c 66%,#0a060e 72%,#07050d 100%)}
 .invite__nav{position:absolute;top:16px;right:16px;z-index:10;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .invite__nav form{margin:0}
-/* Variante em fluxo normal (não flutuando sobre a cena) -- usada em telas
-   que não têm hero por trás pra flutuar por cima, tipo pagamento.html. Sem
-   isso o nav absoluto não reservava espaço e caía em cima do .steps em
-   telas estreitas (achado real, usuário reportou sobreposição no iPhone). */
-.invite__nav--inline{position:static;margin-bottom:14px}
 .scene{position:relative;height:clamp(440px,66vh,680px);overflow:hidden}
 .stars{position:absolute;inset:0;background-repeat:repeat;background-size:620px 413px;opacity:.6;animation:twinkle 6s ease-in-out infinite}
 .moon{position:absolute;left:50%;top:clamp(40px,7vh,80px);width:clamp(220px,30vw,400px);aspect-ratio:1/1;transform:translateX(-50%);border-radius:50%;
