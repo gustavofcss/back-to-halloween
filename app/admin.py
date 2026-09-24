@@ -281,7 +281,8 @@ def pedidos():
                 SELECT p.id_pedido, p.quantidade, p.valor, p.status_pedido, p.data_pedido,
                        p.acompanhante_nome, p.slot,
                        COALESCE(p.titular_nome, u.nome) AS nome,
-                       COALESCE(p.titular_email, u.email) AS email
+                       COALESCE(p.titular_email, u.email) AS email,
+                       u.nome AS comprador_nome, u.email AS comprador_email
                 FROM pedido p
                 JOIN login_usuario u ON u.id_usuario = p.id_usuario
                 ORDER BY p.data_pedido DESC
@@ -312,7 +313,8 @@ def pedidos_lista():
                 SELECT p.id_pedido, p.quantidade, p.valor, p.status_pedido, p.data_pedido,
                        p.acompanhante_nome, p.slot,
                        COALESCE(p.titular_nome, u.nome) AS nome,
-                       COALESCE(p.titular_email, u.email) AS email
+                       COALESCE(p.titular_email, u.email) AS email,
+                       u.nome AS comprador_nome, u.email AS comprador_email
                 FROM pedido p
                 JOIN login_usuario u ON u.id_usuario = p.id_usuario
                 ORDER BY p.data_pedido DESC
@@ -332,6 +334,8 @@ def pedidos_lista():
                     "status": p["status_pedido"],
                     "data": _data_hora_br(p["data_pedido"]),
                     "acompanhante_nome": p["acompanhante_nome"],
+                    "slot": p["slot"],
+                    "comprador_nome": p["comprador_nome"],
                 }
                 for p in lista
             ],

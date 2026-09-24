@@ -67,6 +67,7 @@
         <td class="a-order__client" data-label="Cliente">
           <span class="a-order__name">{{ p.nome }}</span>
           {% if p.acompanhante_nome %}<span class="a-order__extra">+ {{ p.acompanhante_nome }}</span>{% endif %}
+          {% if p.slot == 2 %}<span class="a-order__extra">Comprado por {{ p.comprador_nome }}</span>{% endif %}
           <span class="a-order__email">{{ p.email }}</span>
           <span class="a-order__extra">{{ p.data_pedido|data_hora_br }}</span>
         </td>
@@ -183,6 +184,7 @@
       if (!tbody) { location.reload(); return; } // tabela vazia antes (sem nenhum pedido) -- não dá pra inserir linha sem recarregar essa vez
       var esc = window.escaparHtmlAdmin;
       var extra = item.acompanhante_nome ? '<span class="a-order__extra">+ ' + esc(item.acompanhante_nome) + '</span>' : '';
+      var compradoPor = item.slot === 2 ? '<span class="a-order__extra">Comprado por ' + esc(item.comprador_nome) + '</span>' : '';
       var acoes = '';
       if (item.status === 'pendente') {
         acoes =
@@ -199,7 +201,7 @@
       tr.innerHTML =
         '<td class="admin-table__check-col"><input type="checkbox" name="ids" value="' + item.id + '" class="pedidos-check-item" aria-label="Selecionar pedido #' + item.id + '"></td>' +
         '<td class="a-order__id" data-label="Pedido">#' + item.id + '</td>' +
-        '<td class="a-order__client" data-label="Cliente"><span class="a-order__name">' + esc(item.nome) + '</span>' + extra +
+        '<td class="a-order__client" data-label="Cliente"><span class="a-order__name">' + esc(item.nome) + '</span>' + extra + compradoPor +
         '<span class="a-order__email">' + esc(item.email) + '</span><span class="a-order__extra">' + esc(item.data) + '</span></td>' +
         '<td data-label="Qtd.">' + item.quantidade + '×</td>' +
         '<td class="a-order__value" data-label="Valor">R$ ' + item.valor + '</td>' +
