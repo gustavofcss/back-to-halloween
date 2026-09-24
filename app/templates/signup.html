@@ -44,12 +44,21 @@
     var senha = document.getElementById('senha');
     var confirmar = document.getElementById('confirmar_senha');
     var aviso = document.getElementById('senha-erro');
+    // Reavalia a cada letra digitada, não só no submit -- sem isso, quem
+    // via o aviso aparecer (senhas diferentes), corrigia o campo e não
+    // clicava em "Criar conta" de novo antes de olhar a tela, continuava
+    // vendo "não coincidem" preso na tela mesmo já estando certo (achado
+    // real, usuário reportou em print).
+    function revalidar() {
+      aviso.style.display = (senha.value && confirmar.value && senha.value !== confirmar.value)
+        ? 'block' : 'none';
+    }
+    senha.addEventListener('input', revalidar);
+    confirmar.addEventListener('input', revalidar);
     form.addEventListener('submit', function (evt) {
       if (senha.value !== confirmar.value) {
         evt.preventDefault();
         aviso.style.display = 'block';
-      } else {
-        aviso.style.display = 'none';
       }
     });
   })();
