@@ -23,7 +23,7 @@
         {% include "_ticket_topo.html" %}
         <div class="ticket__row ticket__row--compact">
           <div>
-            <p class="ticket__qty ticket__qty--sm">{{ p.quantidade }} &times; Entrada</p>
+            <p class="ticket__qty ticket__qty--sm">{{ p.quantidade }} &times; Entrada{% if p.titular_nome %} · pra {{ p.titular_nome }}{% endif %}</p>
             <p class="ticket__meta">Pedido #{{ p.id_pedido }} · {{ p.data_pedido|data_hora_br }}</p>
           </div>
           <p class="ticket__price">R$ {{ p.valor }}</p>

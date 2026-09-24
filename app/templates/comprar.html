@@ -22,10 +22,46 @@
       <h2 class="h2">Esgotado</h2>
       <p class="lead">Os ingressos acabaram. Fique de olho, pode abrir um novo lote.</p>
       <a href="/" class="btn btn-ghost btn-block">Voltar pro convite</a>
-    {% elif ja_tem_pedido %}
-      <h2 class="h2">Você já tem pedido</h2>
-      <p class="lead">Você já tem um pedido pra esse evento -- não dá pra comprar outro em separado. Confira o status e o pagamento em Meus pedidos.</p>
+    {% elif limite_atingido %}
+      <h2 class="h2">Limite atingido</h2>
+      <p class="lead">Essa conta já tem 2 pedidos pra esse evento -- não dá pra comprar mais. Confira o status e o pagamento em Meus pedidos.</p>
       <a href="/meus-pedidos" class="btn btn-primary btn-block">Ver meus pedidos</a>
+    {% elif ja_tem_pedido %}
+      <h2 class="h2">Algo deu errado</h2>
+      <p class="lead">Parece que esse pedido já foi criado (talvez em outra aba). Confira o status e o pagamento em Meus pedidos.</p>
+      <a href="/meus-pedidos" class="btn btn-primary btn-block">Ver meus pedidos</a>
+    {% elif slot == 2 %}
+      <h2 class="h2">Ingresso pra outra pessoa</h2>
+      <div class="price-strip">
+        <span class="lead">{{ evento.nome_evento }} — Lote {{ evento.numero_lote }}</span>
+        <strong>R$ {{ evento.valor_entrada }}</strong>
+      </div>
+      <p class="muted">Esse é um pedido à parte, pra outra pessoa -- preenche os dados de quem vai usar o ingresso, não os seus.</p>
+      {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
+
+      <form method="post" action="/comprar" style="display:flex;flex-direction:column;gap:14px">
+        <label class="field" for="titular_nome">Nome de quem vai usar o ingresso
+          <input class="input" id="titular_nome" name="titular_nome" placeholder="Nome completo" required>
+        </label>
+        <label class="field" for="titular_email">E-mail de quem vai usar o ingresso
+          <input class="input" id="titular_email" name="titular_email" type="email" placeholder="pessoa@email.com" required>
+        </label>
+        <label class="field" for="rg">RG (de quem vai usar o ingresso)
+          <input class="input" id="rg" name="rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)" required>
+        </label>
+        <label class="field" for="whatsapp">WhatsApp (de quem vai usar o ingresso)
+          <input class="input" id="whatsapp" name="whatsapp" placeholder="DDD + número, só números" inputmode="numeric" pattern="[0-9]{10,11}" maxlength="11" title="DDD + número, só números (10 ou 11 dígitos)" required>
+        </label>
+
+        <div style="display:flex;gap:10px;margin-top:4px">
+          <a href="/meus-pedidos" class="btn btn-ghost">Voltar</a>
+          <button type="submit" class="btn btn-primary" style="flex:1">Continuar &middot; R$ {{ evento.valor_entrada }}</button>
+        </div>
+      </form>
+
+      <form method="post" action="/logout" style="display:flex;justify-content:center;margin:0">
+        <button type="submit" class="btn-link">Sair</button>
+      </form>
     {% else %}
       <h2 class="h2">Seus dados</h2>
       <div class="price-strip">

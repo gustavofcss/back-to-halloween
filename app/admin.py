@@ -279,7 +279,9 @@ def pedidos():
             cur.execute(
                 """
                 SELECT p.id_pedido, p.quantidade, p.valor, p.status_pedido, p.data_pedido,
-                       p.acompanhante_nome, u.nome, u.email
+                       p.acompanhante_nome, p.slot,
+                       COALESCE(p.titular_nome, u.nome) AS nome,
+                       COALESCE(p.titular_email, u.email) AS email
                 FROM pedido p
                 JOIN login_usuario u ON u.id_usuario = p.id_usuario
                 ORDER BY p.data_pedido DESC
@@ -308,7 +310,9 @@ def pedidos_lista():
             cur.execute(
                 """
                 SELECT p.id_pedido, p.quantidade, p.valor, p.status_pedido, p.data_pedido,
-                       p.acompanhante_nome, u.nome, u.email
+                       p.acompanhante_nome, p.slot,
+                       COALESCE(p.titular_nome, u.nome) AS nome,
+                       COALESCE(p.titular_email, u.email) AS email
                 FROM pedido p
                 JOIN login_usuario u ON u.id_usuario = p.id_usuario
                 ORDER BY p.data_pedido DESC
@@ -344,7 +348,9 @@ def pedido_confirmar(id_pedido: int):
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT p.*, u.nome, u.email
+                SELECT p.*,
+                       COALESCE(p.titular_nome, u.nome) AS nome,
+                       COALESCE(p.titular_email, u.email) AS email
                 FROM pedido p
                 JOIN login_usuario u ON u.id_usuario = p.id_usuario
                 WHERE p.id_pedido = %s
@@ -421,7 +427,9 @@ def pedidos_confirmar_lote():
             if ids:
                 cur.execute(
                     """
-                    SELECT p.*, u.nome, u.email
+                    SELECT p.*,
+                           COALESCE(p.titular_nome, u.nome) AS nome,
+                           COALESCE(p.titular_email, u.email) AS email
                     FROM pedido p
                     JOIN login_usuario u ON u.id_usuario = p.id_usuario
                     WHERE p.id_pedido = ANY(%s)

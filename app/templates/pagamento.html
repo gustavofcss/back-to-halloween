@@ -30,7 +30,12 @@
       {% if usuario %}
       <div class="ticket__holders">
         <div>
-          <p class="ticket__holder-name">{{ usuario.nome }}</p>
+          {# pedido.titular_nome só existe quando esse pedido é pra OUTRA
+             pessoa (slot 2, ver pedidos.py) -- sem isso, o ingresso de
+             alguém mostraria o nome de quem comprou (a conta), não de
+             quem vai usar. usuario.nome (a conta logada) continua sendo o
+             padrão pro pedido "normal" (slot 1). #}
+          <p class="ticket__holder-name">{{ pedido.titular_nome or usuario.nome }}</p>
           {% if pedido.rg %}<p class="ticket__holder-rg">RG {{ pedido.rg }}</p>{% endif %}
         </div>
         {% if pedido.acompanhante_nome %}

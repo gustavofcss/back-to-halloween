@@ -90,15 +90,6 @@ def _evento_ativo(cur):
     return cur.fetchone()
 
 
-def _ingressos_comprados(cur, id_usuario: int, id_evento: int) -> int:
-    cur.execute(
-        "SELECT COALESCE(SUM(quantidade), 0) AS total FROM pedido "
-        "WHERE id_usuario = %s AND id_evento = %s AND status_pedido != 'cancelado'",
-        (id_usuario, id_evento),
-    )
-    return cur.fetchone()["total"]
-
-
 def _ingressos_vendidos_total(cur) -> int:
     cur.execute(
         "SELECT COALESCE(SUM(quantidade), 0) AS total FROM pedido WHERE status_pedido != 'cancelado'"
@@ -112,6 +103,27 @@ def _pedido_do_usuario(cur, id_pedido: int, id_usuario: int):
         (id_pedido, id_usuario),
     )
     return cur.fetchone()
+
+
+def _pedidos_ativos(cur, id_usuario: int, id_evento: int) -> list:
+    cur.execute(
+        "SELECT * FROM pedido WHERE id_usuario = %s AND id_evento = %s "
+        "AND status_pedido != 'cancelado' ORDER BY slot",
+        (id_usuario, id_evento),
+    )
+    return cur.fetchall()
+
+
+def _titular_do_pedido(pedido: dict, nome_conta: str, email_conta: str) -> dict:
+    """Nome/e-mail de quem vai USAR esse pedido -- titular_nome/titular_email
+    preenchidos (pedido de slot 2, comprado pra outra pessoa) têm
+    prioridade; sem isso (slot 1, o padrão desde sempre), é a própria
+    conta logada. Usado em todo lugar que manda e-mail de confirmação ou
+    cria o pagamento no Mercado Pago, pra chegar na pessoa certa."""
+    return {
+        "nome": pedido.get("titular_nome") or nome_conta,
+        "email": pedido.get("titular_email") or email_conta,
+    }
 
 
 def _confirmar_se_aprovado(cur, pedido: dict, usuario: dict, pagamento_mp: dict) -> str:
@@ -166,14 +178,15 @@ def comprar():
         return _comprar_impl(usuario)
     except psycopg2.errors.UniqueViolation:
         # Rede de segurança contra a condição de corrida: o SELECT de
-        # "ja_comprados" acima e o INSERT abaixo não são atômicos -- dois
-        # envios concorrentes do MESMO usuário (duplo clique, duas abas)
-        # podem os dois ler "zero pedidos" antes de qualquer um dos dois
-        # commitar. O índice único parcial em schema.sql
-        # (ux_pedido_usuario_evento_ativo) faz o segundo INSERT estourar
-        # essa exceção em vez de criar um pedido duplicado -- capturada
-        # aqui pra virar a mesma tela de erro amigável, não um 500
-        # (achado real nesta revisão de segurança).
+        # "existentes"/slot acima e o INSERT abaixo não são atômicos -- dois
+        # envios concorrentes do MESMO usuário pro MESMO slot (duplo clique,
+        # duas abas) podem os dois ler o mesmo slot livre antes de qualquer
+        # um dos dois commitar. O índice único parcial em schema.sql
+        # (ux_pedido_usuario_evento_slot_ativo, agora incluindo "slot") faz
+        # o segundo INSERT estourar essa exceção em vez de criar um pedido
+        # duplicado no mesmo slot -- capturada aqui pra virar a mesma tela
+        # de erro amigável, não um 500 (achado real nesta revisão de
+        # segurança).
         return render_template("comprar.html", ja_tem_pedido=True)
 
 
@@ -184,16 +197,22 @@ def _comprar_impl(usuario: dict):
             if not evento:
                 return render_template("comprar.html", sem_evento=True)
 
-            # Um pedido por pessoa -- não é "até quantidade_max_ingressos ao
-            # longo do tempo" (isso já tinha sido comprado antes e deixava
-            # comprar de novo depois, achado real, usuário reportou). O
-            # limite de quantidade_max_ingressos vale só DENTRO de um mesmo
-            # pedido (você + 1 acompanhante no mesmo checkout).
-            ja_comprados = _ingressos_comprados(cur, usuario["id_usuario"], evento["id_evento"])
-            if ja_comprados > 0:
-                return render_template("comprar.html", ja_tem_pedido=True)
+            # Até 2 PEDIDOS por conta+evento (não é "até quantidade_max_
+            # ingressos ao longo do tempo", achado real de antes que deixava
+            # comprar de novo depois de já ter pedido). O 1º (slot 1) é
+            # sempre o titular = a própria conta, com o limite de
+            # quantidade_max_ingressos valendo DENTRO dele (você + 1
+            # acompanhante no mesmo checkout). O 2º (slot 2) é um pedido À
+            # PARTE pra OUTRA pessoa -- pedido explícito do usuário: quem já
+            # comprou pode comprar mais 1 ingresso, mas só se for pra
+            # alguém diferente (nome/e-mail/RG/WhatsApp não podem ser os
+            # mesmos já usados pela conta).
+            existentes = _pedidos_ativos(cur, usuario["id_usuario"], evento["id_evento"])
+            if len(existentes) >= 2:
+                return render_template("comprar.html", limite_atingido=True)
 
-            max_permitido = evento["quantidade_max_ingressos"]
+            slot = 2 if existentes else 1
+            max_permitido = evento["quantidade_max_ingressos"] if slot == 1 else 1
 
             vagas_restantes = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)
             max_permitido = max(0, min(max_permitido, vagas_restantes))
@@ -203,15 +222,21 @@ def _comprar_impl(usuario: dict):
 
             if request.method == "GET":
                 return render_template(
-                    "comprar.html", usuario=usuario, evento=evento, max_permitido=max_permitido
+                    "comprar.html", usuario=usuario, evento=evento,
+                    max_permitido=max_permitido, slot=slot,
                 )
 
             rg = _validar_rg(request.form.get("rg"))
             whatsapp = _validar_whatsapp(request.form.get("whatsapp"))
-            try:
-                quantidade = int(request.form.get("quantidade") or 0)
-            except ValueError:
-                quantidade = 0
+            if slot == 1:
+                try:
+                    quantidade = int(request.form.get("quantidade") or 0)
+                except ValueError:
+                    quantidade = 0
+            else:
+                # Slot 2 é sempre 1 ingresso -- já É o pedido de uma outra
+                # pessoa, não tem "acompanhante do acompanhante".
+                quantidade = 1
 
             vagas_restantes_atual = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)
 
@@ -225,11 +250,41 @@ def _comprar_impl(usuario: dict):
             ):
                 erro = "Preencha RG (só números) e WhatsApp (DDD + número, só números) válidos, e uma quantidade válida."
 
-            # O 2º ingresso pode ser pra um acompanhante -- não precisa ser
-            # a mesma pessoa logada comprando. Só exige esses dados quando
-            # quantidade = 2; com quantidade = 1 eles ficam NULL mesmo.
+            titular_nome = titular_email = None
+            if not erro and slot == 2:
+                titular_nome = (request.form.get("titular_nome") or "").strip()
+                titular_email = (request.form.get("titular_email") or "").strip().lower()
+                if not titular_nome or not EMAIL_RE.match(titular_email):
+                    erro = "Preencha nome e e-mail válidos de quem vai usar esse ingresso."
+                elif (
+                    titular_nome.casefold() == usuario["nome"].strip().casefold()
+                    or titular_email == usuario["email"]
+                ):
+                    erro = "Esse ingresso é pra OUTRA pessoa -- use o nome e e-mail dela, não os seus."
+                else:
+                    # RG/WhatsApp também não podem repetir o que a própria
+                    # conta já usou (nos dados dela ou do acompanhante do
+                    # slot 1) -- sem isso, dava pra "disfarçar" um 2º
+                    # ingresso pra si mesmo só trocando nome/e-mail.
+                    usados_rg = set()
+                    usados_whatsapp = set()
+                    for p in existentes:
+                        for campo, destino in (
+                            ("rg", usados_rg), ("acompanhante_rg", usados_rg),
+                            ("whatsapp", usados_whatsapp), ("acompanhante_whatsapp", usados_whatsapp),
+                        ):
+                            if p[campo]:
+                                destino.add(p[campo])
+                    if rg in usados_rg or whatsapp in usados_whatsapp:
+                        erro = "Esse RG ou WhatsApp já foi usado num pedido seu -- use os dados de quem vai usar esse ingresso."
+
+            # O 2º ingresso DENTRO do pedido de slot 1 pode ser pra um
+            # acompanhante -- não precisa ser a mesma pessoa logada
+            # comprando. Só exige esses dados quando quantidade = 2; com
+            # quantidade = 1 eles ficam NULL mesmo. Não existe no slot 2
+            # (que já É o pedido de outra pessoa, sempre quantidade 1).
             acompanhante_nome = acompanhante_email = acompanhante_rg = acompanhante_whatsapp = None
-            if not erro and quantidade == 2:
+            if not erro and slot == 1 and quantidade == 2:
                 acompanhante_nome = (request.form.get("acompanhante_nome") or "").strip()
                 acompanhante_email = (request.form.get("acompanhante_email") or "").strip().lower()
                 acompanhante_rg = _validar_rg(request.form.get("acompanhante_rg"))
@@ -248,6 +303,7 @@ def _comprar_impl(usuario: dict):
                     usuario=usuario,
                     evento=evento,
                     max_permitido=max_permitido,
+                    slot=slot,
                     erro=erro,
                 ), 400
 
@@ -255,14 +311,16 @@ def _comprar_impl(usuario: dict):
             cur.execute(
                 """
                 INSERT INTO pedido (
-                    id_usuario, id_evento, rg, whatsapp, valor, quantidade, status_pedido,
+                    id_usuario, id_evento, slot, titular_nome, titular_email,
+                    rg, whatsapp, valor, quantidade, status_pedido,
                     acompanhante_nome, acompanhante_email, acompanhante_rg, acompanhante_whatsapp
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, 'pendente', %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'pendente', %s, %s, %s, %s)
                 RETURNING id_pedido
                 """,
                 (
-                    usuario["id_usuario"], evento["id_evento"], rg, whatsapp, valor, quantidade,
+                    usuario["id_usuario"], evento["id_evento"], slot, titular_nome, titular_email,
+                    rg, whatsapp, valor, quantidade,
                     acompanhante_nome, acompanhante_email, acompanhante_rg, acompanhante_whatsapp,
                 ),
             )
@@ -290,10 +348,13 @@ def pagamento(id_pedido: int):
 
             if pedido["status_pedido"] == "pendente":
                 try:
+                    # Titular deste pedido -- pode ser outra pessoa (slot 2),
+                    # não necessariamente a conta logada (ver _titular_do_pedido).
+                    titular = _titular_do_pedido(pedido, usuario["nome"], usuario["email"])
                     if pedido["mp_payment_id"]:
                         pagamento_mp = _consultar_pagamento(pedido["mp_payment_id"])
                     else:
-                        pagamento_mp = _criar_pagamento_pix(pedido, usuario)
+                        pagamento_mp = _criar_pagamento_pix(pedido, titular)
                         cur.execute(
                             "UPDATE pedido SET mp_payment_id = %s WHERE id_pedido = %s",
                             (str(pagamento_mp["id"]), id_pedido),
@@ -305,7 +366,7 @@ def pagamento(id_pedido: int):
                     # tinha parado) continuava vendo o QR Code de um pedido
                     # que na verdade já tinha sido aprovado pelo Mercado
                     # Pago (achado real nesta revisão).
-                    status_atual = _confirmar_se_aprovado(cur, pedido, usuario, pagamento_mp)
+                    status_atual = _confirmar_se_aprovado(cur, pedido, titular, pagamento_mp)
                     if status_atual == "confirmado":
                         pedido = dict(pedido)
                         pedido["status_pedido"] = "confirmado"
@@ -345,7 +406,8 @@ def pagamento_confirmar(id_pedido: int):
             pedido = _pedido_do_usuario(cur, id_pedido, usuario["id_usuario"])
             if not pedido:
                 abort(404)
-            status_atual = _verificar_e_confirmar_pagamento(cur, pedido, usuario)
+            titular = _titular_do_pedido(pedido, usuario["nome"], usuario["email"])
+            status_atual = _verificar_e_confirmar_pagamento(cur, pedido, titular)
             # Só troca o dict quando o MP realmente aprovou -- mesmo padrão do
             # GET /pagamento/<id>. status_atual pode vir no vocabulário do
             # Mercado Pago (ex. "rejected", "in_process", "pending"), que não
@@ -373,7 +435,8 @@ def pagamento_verificar(id_pedido: int):
             pedido = _pedido_do_usuario(cur, id_pedido, usuario["id_usuario"])
             if not pedido:
                 abort(404)
-            status_atual = _verificar_e_confirmar_pagamento(cur, pedido, usuario)
+            titular = _titular_do_pedido(pedido, usuario["nome"], usuario["email"])
+            status_atual = _verificar_e_confirmar_pagamento(cur, pedido, titular)
 
     return jsonify({"status": status_atual})
 
@@ -426,8 +489,8 @@ def webhook_mercadopago():
             pedido = cur.fetchone()
             if not pedido:
                 return jsonify({"ok": True}), 200
-            usuario = {"nome": pedido["nome"], "email": pedido["email"]}
-            _verificar_e_confirmar_pagamento(cur, pedido, usuario)
+            titular = _titular_do_pedido(pedido, pedido["nome"], pedido["email"])
+            _verificar_e_confirmar_pagamento(cur, pedido, titular)
 
     return jsonify({"ok": True}), 200
 
@@ -465,16 +528,18 @@ def meus_pedidos():
             )
             pedidos = cur.fetchall()
 
-            # Mesma regra de "um pedido por pessoa" do /comprar: só mostra o
-            # link de comprar mais quando o usuário ainda não tem NENHUM
-            # pedido ativo (não é mais quantidade_max_ingressos - ja_comprados,
-            # que reabria a compra depois de já ter um pedido).
+            # Mesma regra de "até 2 pedidos por conta" do /comprar: só mostra
+            # o link de comprar mais enquanto ainda não bateu esse limite.
+            # Com 1 pedido ativo, o próximo é sempre pra OUTRA pessoa (slot
+            # 2, 1 ingresso só) -- por isso o teto aqui já reflete isso, não
+            # mais quantidade_max_ingressos completo de novo.
             pode_comprar_mais = 0
             evento = _evento_ativo(cur)
             if evento:
-                ja_comprados = _ingressos_comprados(cur, usuario["id_usuario"], evento["id_evento"])
-                if ja_comprados == 0:
+                existentes = _pedidos_ativos(cur, usuario["id_usuario"], evento["id_evento"])
+                if len(existentes) < 2:
                     vagas_restantes = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)
-                    pode_comprar_mais = max(0, min(evento["quantidade_max_ingressos"], vagas_restantes))
+                    max_seguinte = evento["quantidade_max_ingressos"] if not existentes else 1
+                    pode_comprar_mais = max(0, min(max_seguinte, vagas_restantes))
 
     return render_template("meus_pedidos.html", pedidos=pedidos, pode_comprar_mais=pode_comprar_mais)

@@ -50,6 +50,17 @@ CREATE TABLE IF NOT EXISTS pedido (
     id_pedido      SERIAL PRIMARY KEY,
     id_usuario     INTEGER NOT NULL REFERENCES login_usuario(id_usuario) ON DELETE CASCADE,
     id_evento      INTEGER NOT NULL REFERENCES evento(id_evento),
+    -- slot 1 = o pedido "principal" da conta (titular = a própria conta,
+    -- nome/email vêm de login_usuario, como sempre foi). slot 2 = um 2º
+    -- pedido pra OUTRA pessoa (titular_nome/titular_email preenchidos,
+    -- diferentes da conta) -- no máximo 2 pedidos ativos por conta+evento,
+    -- garantido pelo índice único abaixo (não é "até 2 ingressos", é "até
+    -- 2 pedidos", cada um com seu próprio titular).
+    slot           INTEGER NOT NULL DEFAULT 1 CHECK (slot IN (1, 2)),
+    -- Preenchidos só no pedido de slot 2 (titular diferente da conta
+    -- logada) -- NULL no slot 1, onde o titular é sempre a própria conta.
+    titular_nome   VARCHAR(120),
+    titular_email  VARCHAR(160),
     rg             VARCHAR(20),
     whatsapp       VARCHAR(20),
     valor          NUMERIC(10,2) NOT NULL,
@@ -59,7 +70,8 @@ CREATE TABLE IF NOT EXISTS pedido (
     mp_preference_id  VARCHAR(40),  -- id da preference do Checkout Pro (cartão)
     -- 2º ingresso (quantidade = 2) pode ser pra um acompanhante -- não
     -- precisa ser a mesma pessoa que está logada/comprando. NULL quando
-    -- quantidade = 1 (só o titular).
+    -- quantidade = 1 (só o titular). Só existe no slot 1 -- o slot 2 é
+    -- sempre quantidade = 1 (o próprio titular do slot 2).
     acompanhante_nome      VARCHAR(120),
     acompanhante_email     VARCHAR(160),
     acompanhante_rg        VARCHAR(20),
@@ -72,9 +84,11 @@ CREATE TABLE IF NOT EXISTS pedido (
 -- do mesmo usuário (duplo clique, duas abas) podiam ler "zero pedidos" os
 -- dois ANTES de qualquer um dos dois commitar o INSERT, e os dois passavam
 -- (TOCTOU real, achado nesta revisão de segurança). Índice único parcial
--- (só entre pedidos não cancelados) faz o Postgres rejeitar o segundo INSERT
--- concorrente com uma UniqueViolation, que a rota captura.
-CREATE UNIQUE INDEX IF NOT EXISTS ux_pedido_usuario_evento_ativo ON pedido (id_usuario, id_evento) WHERE status_pedido != 'cancelado';
+-- (só entre pedidos não cancelados), agora incluindo "slot" -- permite até 2
+-- pedidos ativos por conta+evento (um por slot), mas nunca dois no mesmo
+-- slot ao mesmo tempo. Postgres rejeita o INSERT concorrente com uma
+-- UniqueViolation, que a rota captura.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_pedido_usuario_evento_slot_ativo ON pedido (id_usuario, id_evento, slot) WHERE status_pedido != 'cancelado';
 
 CREATE TABLE IF NOT EXISTS despesa_material (
     id                SERIAL PRIMARY KEY,
