@@ -141,7 +141,16 @@
             totalDisplay.textContent = (price * parseInt(input.value, 10)).toFixed(2);
             if (acompanhanteBox) {
               var precisa = parseInt(input.value, 10) === 2;
-              acompanhanteBox.style.display = precisa ? 'block' : 'none';
+              // 'flex', não 'block' -- .dashed-top é display:flex;gap:12px
+              // no CSS, mas style inline sempre vence a classe. Com
+              // 'block' o gap não tinha efeito nenhum (só funciona em
+              // flex/grid) e os campos do acompanhante ficavam colados,
+              // sem espaço nenhum entre um e outro (achado real, usuário
+              // reportou em print comparando com os campos do titular,
+              // que são filhos diretos do form -- esses sim recebiam o
+              // gap:14px do form, por isso só o acompanhante parecia
+              // "apertado").
+              acompanhanteBox.style.display = precisa ? 'flex' : 'none';
               acompanhanteInputs.forEach(function (campo) {
                 if (precisa) { campo.setAttribute('required', 'required'); }
                 else { campo.removeAttribute('required'); }

@@ -11,22 +11,44 @@
       <h1 class="display" style="font-size:30px">REDEFINIR SENHA</h1>
     </div>
     <div class="card">
-      <p class="lead">Digite o código de 6 dígitos que enviamos por e-mail e escolha uma senha nova.</p>
       <form method="post" action="/redefinir-senha" id="redefinir-form" style="display:flex;flex-direction:column;gap:14px">
-        <label class="field" for="email">E-mail
-          <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email" value="{{ request.args.get('email', '') }}">
-        </label>
-        <label class="field" for="codigo">Código de 6 dígitos
-          <input class="input" id="codigo" name="codigo" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required autocomplete="one-time-code">
-        </label>
-        <label class="field" for="senha">Nova senha
-          <input class="input" id="senha" name="senha" type="password" placeholder="Mín. 6" required minlength="6" autocomplete="new-password">
-        </label>
-        <label class="field" for="confirmar_senha">Confirmar
-          <input class="input" id="confirmar_senha" name="confirmar_senha" type="password" placeholder="Repita" required minlength="6" autocomplete="new-password">
-        </label>
-        <p class="alert" id="senha-erro" style="display:none;">As senhas não coincidem.</p>
-        <button type="submit" class="btn btn-primary btn-block">Redefinir senha</button>
+        {#
+          Duas etapas visuais (pedido explícito do usuário: "devia ter uma
+          tela pra código, outra pra senha") -- continua sendo UM form só,
+          UM POST só no fim (o backend já valida tudo de uma vez, ver
+          auth.py redefinir_senha; separar em duas requisições exigiria uma
+          rota nova só pra validar o código, sem necessidade real aqui). O
+          botão "Continuar" da etapa 1 só troca qual bloco aparece -- se o
+          código estiver errado, só se descobre no fim mesmo (o servidor
+          reconfere de qualquer forma, nunca confia no client).
+        #}
+        <div id="etapa-codigo">
+          <p class="lead">Digite o código de 6 dígitos que enviamos por e-mail.</p>
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <label class="field" for="email">E-mail
+              <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email" value="{{ request.args.get('email', '') }}">
+            </label>
+            <label class="field" for="codigo">Código de 6 dígitos
+              <input class="input" id="codigo" name="codigo" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required autocomplete="one-time-code">
+            </label>
+          </div>
+          <button type="button" id="btn-continuar" class="btn btn-primary btn-block" style="margin-top:14px">Continuar</button>
+        </div>
+
+        <div id="etapa-senha" style="display:none;flex-direction:column;gap:14px">
+          <p class="lead">Escolha uma senha nova.</p>
+          <label class="field" for="senha">Nova senha
+            <input class="input" id="senha" name="senha" type="password" placeholder="Mín. 6" minlength="6" autocomplete="new-password">
+          </label>
+          <label class="field" for="confirmar_senha">Confirmar
+            <input class="input" id="confirmar_senha" name="confirmar_senha" type="password" placeholder="Repita" minlength="6" autocomplete="new-password">
+          </label>
+          <p class="alert" id="senha-erro" style="display:none;">As senhas não coincidem.</p>
+          <div style="display:flex;gap:10px">
+            <button type="button" id="btn-voltar" class="btn btn-ghost">Voltar</button>
+            <button type="submit" class="btn btn-primary btn-block">Redefinir senha</button>
+          </div>
+        </div>
       </form>
       <p class="muted center" style="margin-top:14px">Não recebeu o código? <a href="/esqueci-senha">Pedir de novo</a></p>
     </div>
@@ -35,15 +57,49 @@
 <script>
   (function () {
     var form = document.getElementById('redefinir-form');
+    var etapaCodigo = document.getElementById('etapa-codigo');
+    var etapaSenha = document.getElementById('etapa-senha');
+    var email = document.getElementById('email');
+    var codigo = document.getElementById('codigo');
     var senha = document.getElementById('senha');
     var confirmar = document.getElementById('confirmar_senha');
     var aviso = document.getElementById('senha-erro');
+
+    document.getElementById('btn-continuar').addEventListener('click', function () {
+      // required/pattern dos campos da etapa 1 ainda valem (reportValidity
+      // mostra o balão nativo do navegador se algo estiver errado) -- só
+      // avança se email/código já estiverem preenchidos direito.
+      if (!email.reportValidity() || !codigo.reportValidity()) { return; }
+      etapaCodigo.style.display = 'none';
+      etapaSenha.style.display = 'flex';
+      senha.setAttribute('required', 'required');
+      confirmar.setAttribute('required', 'required');
+      senha.focus();
+    });
+
+    document.getElementById('btn-voltar').addEventListener('click', function () {
+      etapaSenha.style.display = 'none';
+      etapaCodigo.style.display = 'block';
+      senha.removeAttribute('required');
+      confirmar.removeAttribute('required');
+    });
+
+    // Reavalia a cada letra digitada, não só no submit -- sem isso, quem
+    // via o aviso aparecer (senhas diferentes), corrigia o campo e não
+    // clicava em "Redefinir senha" de novo antes de olhar a tela, continuava
+    // vendo "não coincidem" preso na tela mesmo já estando certo (achado
+    // real, usuário reportou em print -- mesmo bug já corrigido em
+    // signup.html).
+    function revalidar() {
+      aviso.style.display = (senha.value && confirmar.value && senha.value !== confirmar.value)
+        ? 'block' : 'none';
+    }
+    senha.addEventListener('input', revalidar);
+    confirmar.addEventListener('input', revalidar);
     form.addEventListener('submit', function (evt) {
       if (senha.value !== confirmar.value) {
         evt.preventDefault();
         aviso.style.display = 'block';
-      } else {
-        aviso.style.display = 'none';
       }
     });
   })();

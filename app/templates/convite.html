@@ -48,14 +48,18 @@
     <p class="invite__sub">Horror Night Party</p>
 
     <div class="info-grid">
-      <div><span>Quando</span><strong>{{ data_formatada or "Data a definir" }}</strong><small>a partir das 21:00</small></div>
+      <div><span>Quando</span><strong>{{ data_formatada or "Data a definir" }}</strong></div>
       <div><span>Onde</span><strong>{{ (evento.endereco if evento else none) or "Endereço a definir" }}</strong><small>{{ evento.bairro if evento else "" }}</small></div>
       <div><span>Traje</span><strong>A rigor</strong><small>quanto mais assustador, melhor</small></div>
     </div>
 
     <a class="btn btn-primary btn-lg invite__cta"
        href="{% if not usuario %}/login?next=/comprar{% elif usuario.hierarquia in ['adm', 'superadm'] %}/admin{% elif tem_pedido %}/meus-pedidos{% else %}/comprar{% endif %}">
-      {% if not usuario %}Comprar ingresso{% elif usuario.hierarquia in ['adm', 'superadm'] %}Ir pro painel{% elif tem_pedido %}Ver meus ingressos{% else %}Comprar ingresso{% endif %}
+      {% if not usuario %}Comprar ingresso{% if evento %} · Lote {{ evento.numero_lote }} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
+      {%- elif usuario.hierarquia in ['adm', 'superadm'] %}Ir pro painel
+      {%- elif tem_pedido %}Ver meus ingressos
+      {%- else %}Comprar ingresso{% if evento %} · Lote {{ evento.numero_lote }} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
+      {%- endif %}
     </a>
     <p class="muted" style="margin-top:14px">Vagas limitadas · Pagamento via Pix</p>
   </section>
