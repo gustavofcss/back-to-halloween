@@ -57,7 +57,7 @@ def admin_required(view_func):
         if not session.get("user_id"):
             return redirect(url_for("auth.login", next=request.path))
         user = current_user()
-        if not user or user["hierarquia"] != "adm":
+        if not user or user["hierarquia"] not in ("adm", "superadm"):
             abort(403)
         return view_func(*args, **kwargs)
 
@@ -112,7 +112,7 @@ def _destino_pos_login(id_usuario: int, next_url: str | None = None) -> str:
         with conn.cursor() as cur:
             cur.execute("SELECT hierarquia FROM hierarquia WHERE id_usuario = %s", (id_usuario,))
             row = cur.fetchone()
-    if row and row["hierarquia"] == "adm":
+    if row and row["hierarquia"] in ("adm", "superadm"):
         return url_for("admin.index")
 
     with db.get_conn() as conn:

@@ -15,12 +15,15 @@ CREATE TABLE IF NOT EXISTS login_usuario (
     data_atualizacao TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Papel do usuário (cliente/adm) -- tabela separada (não uma coluna em
--- login_usuario) porque foi assim que o usuário desenhou no fluxograma.
+-- Papel do usuário (cliente/adm/superadm) -- tabela separada (não uma coluna
+-- em login_usuario) porque foi assim que o usuário desenhou no fluxograma.
+-- "superadm" é um único usuário fixo, promovido só via script (ver
+-- tornar_superadmin.py), nunca pela UI -- protegido contra rebaixamento
+-- mesmo por outro admin (ver hierarquia_rebaixar em admin.py).
 CREATE TABLE IF NOT EXISTS hierarquia (
     id          SERIAL PRIMARY KEY,
     id_usuario  INTEGER NOT NULL UNIQUE REFERENCES login_usuario(id_usuario) ON DELETE CASCADE,
-    hierarquia  VARCHAR(20) NOT NULL DEFAULT 'cliente' CHECK (hierarquia IN ('cliente', 'adm'))
+    hierarquia  VARCHAR(20) NOT NULL DEFAULT 'cliente' CHECK (hierarquia IN ('cliente', 'adm', 'superadm'))
 );
 
 -- Um admin pode cadastrar mais de um evento (ex.: festas futuras) -- por isso

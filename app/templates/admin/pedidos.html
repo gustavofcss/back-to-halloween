@@ -51,6 +51,7 @@
     <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/cancelar-lote', 'Cancelar os pedidos selecionados?')">Cancelar selecionados</button>
     <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/apagar-lote', 'Apagar os pedidos cancelados selecionados? Pedidos pendentes/confirmados na seleção são ignorados. Não tem como desfazer.')">Apagar selecionados</button>
   </div>
+  <div class="a-table-wrap">
   <table class="a-table" id="admin-pedidos-table">
     <thead>
       <tr class="a-tr a-th">
@@ -86,6 +87,7 @@
     {% endfor %}
     </tbody>
   </table>
+  </div>
 </form>
 {% else %}
   <p class="help-text">Nenhum pedido ainda.</p>
@@ -129,6 +131,12 @@
       atualizar();
     });
     itens.forEach(function (item) { item.addEventListener('change', atualizar); });
+    // Exposta pro polling (abaixo) conseguir religar uma linha nova no
+    // "selecionar todos" e recalcular o total sem duplicar essa lógica.
+    window.religarSelecaoPedido = function (checkbox) {
+      checkbox.addEventListener('change', atualizar);
+      atualizar();
+    };
   })();
 
   // Confirmar/cancelar trocam o selo de status e os botões da linha;
@@ -156,5 +164,57 @@
       }
     });
   });
+
+  // Polling suave (10s) -- pedido novo de outro cliente aparece sozinho no
+  // topo da tabela, com uma animação, sem recarregar a página inteira nem
+  // mexer no que já estava na tela (achado real, pedido do usuário: não
+  // queria o reload cheio de antes, só que o item novo "surgisse" com uma
+  // transição em vez de aparecer do nada).
+  (function () {
+    var tbody = document.querySelector('#admin-pedidos-table tbody');
+    var idsConhecidos = new Set(
+      Array.prototype.map.call(document.querySelectorAll('.pedidos-check-item'), function (cb) {
+        return parseInt(cb.value, 10);
+      })
+    );
+    var pillClasses = { confirmado: 'admin-pill--ok', pendente: 'admin-pill--warn', cancelado: 'admin-pill--bad' };
+
+    function inserirNovoPedido(item) {
+      if (!tbody) { location.reload(); return; } // tabela vazia antes (sem nenhum pedido) -- não dá pra inserir linha sem recarregar essa vez
+      var esc = window.escaparHtmlAdmin;
+      var extra = item.acompanhante_nome ? '<span class="a-order__extra">+ ' + esc(item.acompanhante_nome) + '</span>' : '';
+      var acoes = '';
+      if (item.status === 'pendente') {
+        acoes =
+          '<button type="submit" formaction="/admin/pedidos/' + item.id + '/confirmar" class="admin-btn-primary">Confirmar Pix</button> ' +
+          '<button type="submit" formaction="/admin/pedidos/' + item.id + '/cancelar" class="admin-btn-outline">Cancelar</button>';
+      } else if (item.status === 'confirmado') {
+        acoes = '<button type="submit" formaction="/admin/pedidos/' + item.id + '/cancelar" class="admin-btn-outline">Cancelar</button>';
+      } else if (item.status === 'cancelado') {
+        acoes =
+          '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'pedidos-lote-form\'), \'/admin/pedidos/' + item.id + '/apagar\', \'Apagar esse pedido cancelado? Não tem como desfazer.\')">Apagar</button>';
+      }
+      var tr = document.createElement('tr');
+      tr.className = 'a-tr a-item-novo';
+      tr.innerHTML =
+        '<td class="admin-table__check-col"><input type="checkbox" name="ids" value="' + item.id + '" class="pedidos-check-item" aria-label="Selecionar pedido #' + item.id + '"></td>' +
+        '<td class="a-order__id">#' + item.id + '</td>' +
+        '<td class="a-order__client"><span class="a-order__name">' + esc(item.nome) + '</span>' + extra +
+        '<span class="a-order__email">' + esc(item.email) + '</span><span class="a-order__extra">' + esc(item.data) + '</span></td>' +
+        '<td>' + item.quantidade + '×</td>' +
+        '<td class="a-order__value">R$ ' + item.valor + '</td>' +
+        '<td><span class="admin-pill ' + (pillClasses[item.status] || 'admin-pill--neutral') + '">' + esc(item.status) + '</span></td>' +
+        '<td>' + acoes + '</td>';
+      tbody.insertBefore(tr, tbody.firstChild);
+      if (window.religarSelecaoPedido) { window.religarSelecaoPedido(tr.querySelector('.pedidos-check-item')); }
+    }
+
+    window.iniciarPollingAdmin({
+      url: '/admin/pedidos/lista',
+      intervaloMs: 10000,
+      idsConhecidos: idsConhecidos,
+      inserirNovo: inserirNovoPedido,
+    });
+  })();
 </script>
 {% endblock %}

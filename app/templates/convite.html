@@ -5,7 +5,7 @@
 
   <nav class="invite__nav">
     {% if usuario %}
-      {% if usuario.hierarquia == 'adm' %}<a href="/admin" class="btn btn-ghost btn-sm">Painel admin</a>{% endif %}
+      {% if usuario.hierarquia in ['adm', 'superadm'] %}<a href="/admin" class="btn btn-ghost btn-sm">Painel admin</a>{% endif %}
       {% if tem_pedido %}<a href="/meus-pedidos" class="btn btn-ghost btn-sm">Meus pedidos</a>{% endif %}
       <form method="post" action="/logout"><button type="submit" class="btn btn-ghost btn-sm">Sair ({{ usuario.nome }})</button></form>
     {% else %}
@@ -58,8 +58,8 @@
     </div>
 
     <a class="btn btn-primary btn-lg invite__cta"
-       href="{% if not usuario %}/login?next=/comprar{% elif usuario.hierarquia == 'adm' %}/admin{% elif tem_pedido %}/meus-pedidos{% else %}/comprar{% endif %}">
-      {% if not usuario %}Comprar ingresso{% elif usuario.hierarquia == 'adm' %}Ir pro painel{% elif tem_pedido %}Ver meus ingressos{% else %}Comprar ingresso{% endif %}
+       href="{% if not usuario %}/login?next=/comprar{% elif usuario.hierarquia in ['adm', 'superadm'] %}/admin{% elif tem_pedido %}/meus-pedidos{% else %}/comprar{% endif %}">
+      {% if not usuario %}Comprar ingresso{% elif usuario.hierarquia in ['adm', 'superadm'] %}Ir pro painel{% elif tem_pedido %}Ver meus ingressos{% else %}Comprar ingresso{% endif %}
     </a>
     <p class="muted" style="margin-top:14px">Vagas limitadas · Pagamento via Pix</p>
   </section>

@@ -10,8 +10,34 @@
 {% macro initials(nome) -%}
 {% set partes = nome.split(' ') %}{{- (partes[0][0] ~ (partes[1][0] if partes|length > 1 else ''))|upper -}}
 {%- endmacro %}
+{% set superadmins = usuarios|selectattr('hierarquia', 'equalto', 'superadm')|list %}
 {% set admins = usuarios|selectattr('hierarquia', 'equalto', 'adm')|list %}
 {% set clientes = usuarios|selectattr('hierarquia', 'equalto', 'cliente')|list %}
+
+{% if superadmins %}
+<div class="admin-group">
+  <div class="admin-group__header">
+    <span class="admin-pill admin-pill--super">Superadm</span>
+    <span class="admin-group__title">Superadmin<span class="admin-group__count"><span data-admin-total="superadmins">{{ superadmins|length }}</span> pessoa(s)</span></span>
+  </div>
+  <div class="admin-group__list">
+    {% for u in superadmins %}
+    <div class="admin-group__row" data-row-id="{{ u.id_usuario }}">
+      <div class="admin-group__row-inner">
+        <span class="avatar avatar--me">{{ initials(u.nome) }}</span>
+        <span class="admin-group__info">
+          <span class="admin-group__name">{{ u.nome }}</span>
+          <span class="admin-group__email">{{ u.email }}</span>
+        </span>
+        <span class="admin-group__action">
+          <span class="help-text" style="margin: 0;">protegido, não pode ser rebaixado</span>
+        </span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+{% endif %}
 
 <div class="admin-group">
   <div class="admin-group__header">
@@ -121,6 +147,11 @@
       atualizar();
     });
     itens.forEach(function (item) { item.addEventListener('change', atualizar); });
+
+    window.religarSelecaoCliente = function (checkbox) {
+      checkbox.addEventListener('change', atualizar);
+      atualizar();
+    };
   })();
 
   // Promover/rebaixar/remover sempre tiram a pessoa do grupo em que ela
@@ -134,5 +165,47 @@
       if (linha) { linha.remove(); }
     });
   });
+
+  (function () {
+    var lista = document.querySelector('#clientes-lote-form .admin-group__list');
+    var idsConhecidos = new Set(
+      Array.prototype.map.call(document.querySelectorAll('.clientes-check-item'), function (cb) {
+        return parseInt(cb.value, 10);
+      })
+    );
+
+    function iniciais(nome) {
+      var partes = String(nome || '').split(' ');
+      var s = (partes[0] ? partes[0][0] : '') + (partes.length > 1 && partes[1] ? partes[1][0] : '');
+      return s.toUpperCase();
+    }
+
+    function inserirNovoCliente(item) {
+      if (!lista) { location.reload(); return; }
+      var esc = window.escaparHtmlAdmin;
+      var div = document.createElement('div');
+      div.className = 'admin-group__row a-item-novo';
+      div.setAttribute('data-row-id', item.id);
+      div.innerHTML =
+        '<div class="admin-group__row-inner">' +
+        '<input type="checkbox" name="ids" value="' + item.id + '" class="clientes-check-item" aria-label="Selecionar ' + esc(item.nome) + '">' +
+        '<span class="avatar">' + esc(iniciais(item.nome)) + '</span>' +
+        '<span class="admin-group__info"><span class="admin-group__name">' + esc(item.nome) + '</span><span class="admin-group__email">' + esc(item.email) + '</span></span>' +
+        '<span class="admin-group__action admin-group__action--duplo">' +
+        '<button type="submit" formaction="/admin/hierarquia/' + item.id + '/promover" class="admin-btn-primary">Promover a admin</button>' +
+        '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'clientes-lote-form\'), \'/admin/hierarquia/' + item.id + '/remover\', \'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.\')">Apagar</button>' +
+        '</span>' +
+        '</div>';
+      lista.insertBefore(div, lista.firstChild);
+      if (window.religarSelecaoCliente) { window.religarSelecaoCliente(div.querySelector('.clientes-check-item')); }
+    }
+
+    window.iniciarPollingAdmin({
+      url: '/admin/hierarquia/lista',
+      intervaloMs: 10000,
+      idsConhecidos: idsConhecidos,
+      inserirNovo: inserirNovoCliente,
+    });
+  })();
 </script>
 {% endblock %}

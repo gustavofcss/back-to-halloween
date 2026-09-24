@@ -13,6 +13,7 @@ from __future__ import annotations
 import logging
 from functools import wraps
 from urllib.parse import urlsplit
+from zoneinfo import ZoneInfo
 
 import psycopg2
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, session, url_for
@@ -22,6 +23,17 @@ from auth import admin_required, current_user
 from email_utils import enviar_cadastro_aprovado, enviar_confirmacao_pedido
 
 logger = logging.getLogger(__name__)
+
+_TZ_BRASIL = ZoneInfo("America/Sao_Paulo")
+
+
+def _data_hora_br(valor) -> str:
+    # Mesma lógica do filtro Jinja `data_hora_br` (app.py) -- duplicada aqui
+    # de propósito, pequena o bastante pra não valer o risco de import
+    # circular (app.py já importa admin_bp DESTE módulo).
+    if not valor:
+        return "--"
+    return valor.astimezone(_TZ_BRASIL).strftime("%d/%m/%Y %H:%M")
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -207,7 +219,19 @@ def _totais_hierarquia(cur) -> dict:
         """
     )
     contagens = {r["hierarquia"]: r["n"] for r in cur.fetchall()}
-    return {"admins": contagens.get("adm", 0), "clientes": contagens.get("cliente", 0)}
+    admins = contagens.get("adm", 0)
+    clientes = contagens.get("cliente", 0)
+    superadmins = contagens.get("superadm", 0)
+    # "hierarquia" (admins + clientes + superadmins) é o mesmo número que a
+    # pílula da sidebar mostra (ver admin/_layout.html, nav_counts) --
+    # devolvido aqui pra ela também poder ser atualizada ao vivo depois de
+    # promover/rebaixar/remover, igual as outras já são via data-admin-total.
+    return {
+        "admins": admins,
+        "clientes": clientes,
+        "superadmins": superadmins,
+        "hierarquia": admins + clientes + superadmins,
+    }
 
 
 def _totais_cadastros(cur) -> dict:
@@ -218,13 +242,18 @@ def _totais_cadastros(cur) -> dict:
 def _totais_material(cur) -> dict:
     cur.execute("SELECT COALESCE(SUM(valor), 0) AS total FROM pedido WHERE status_pedido = 'confirmado'")
     total_arrecadado = cur.fetchone()["total"]
-    cur.execute("SELECT COALESCE(SUM(valor), 0) AS total FROM despesa_material")
-    total_gasto = cur.fetchone()["total"]
+    # COUNT(*) junto com o SUM (uma query só) -- "material" é o mesmo
+    # número que a pílula da sidebar mostra (nav_counts), devolvido aqui
+    # pra ela atualizar ao vivo depois de cadastrar/apagar material.
+    cur.execute("SELECT COUNT(*) AS n, COALESCE(SUM(valor), 0) AS total FROM despesa_material")
+    linha = cur.fetchone()
+    total_gasto = linha["total"]
     saldo = total_arrecadado - total_gasto
     return {
         "total_arrecadado": f"{total_arrecadado:.2f}",
         "total_gasto": f"{total_gasto:.2f}",
         "saldo": f"{saldo:.2f}",
+        "material": linha["n"],
     }
 
 
@@ -258,6 +287,46 @@ def pedidos():
         pedidos=lista,
         capacidade_maxima=totais["capacidade_maxima"],
         ingressos_vendidos_total=totais["ingressos_vendidos_total"],
+    )
+
+
+@admin_bp.route("/pedidos/lista")
+@admin_required
+def pedidos_lista():
+    # Polling leve (10s, ver admin/_layout.html) pra detectar pedido novo
+    # sem recarregar a página inteira -- devolve só os campos que a linha
+    # da tabela precisa pra se desenhar, no mesmo formato que data_hora_br
+    # já usa no HTML renderizado no servidor.
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT p.id_pedido, p.quantidade, p.valor, p.status_pedido, p.data_pedido,
+                       p.acompanhante_nome, u.nome, u.email
+                FROM pedido p
+                JOIN login_usuario u ON u.id_usuario = p.id_usuario
+                ORDER BY p.data_pedido DESC
+                """
+            )
+            lista = cur.fetchall()
+            totais = _totais_pedidos(cur)
+    return jsonify(
+        {
+            "itens": [
+                {
+                    "id": p["id_pedido"],
+                    "nome": p["nome"],
+                    "email": p["email"],
+                    "quantidade": p["quantidade"],
+                    "valor": f"{p['valor']:.2f}",
+                    "status": p["status_pedido"],
+                    "data": _data_hora_br(p["data_pedido"]),
+                    "acompanhante_nome": p["acompanhante_nome"],
+                }
+                for p in lista
+            ],
+            "totais": totais,
+        }
     )
 
 
@@ -505,6 +574,34 @@ def hierarquia():
     return render_template("admin/hierarquia.html", usuarios=usuarios, eu=current_user())
 
 
+@admin_bp.route("/hierarquia/lista")
+@admin_required
+def hierarquia_lista():
+    # Polling leve (10s) só da lista de CLIENTES -- é onde item "novo"
+    # aparece de verdade (um cadastro que acabou de ser confirmado vira
+    # cliente aqui). Admins mudam raramente e só por ação manual de outro
+    # admin (que já vê o resultado na hora, sem precisar de polling).
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT u.id_usuario, u.nome, u.email
+                FROM login_usuario u
+                JOIN hierarquia h ON h.id_usuario = u.id_usuario
+                WHERE u.email_confirmado = TRUE AND h.hierarquia = 'cliente'
+                ORDER BY u.nome
+                """
+            )
+            clientes = cur.fetchall()
+            totais = _totais_hierarquia(cur)
+    return jsonify(
+        {
+            "itens": [{"id": c["id_usuario"], "nome": c["nome"], "email": c["email"]} for c in clientes],
+            "totais": totais,
+        }
+    )
+
+
 @admin_bp.route("/hierarquia/<int:id_usuario>/promover", methods=["POST"])
 @admin_required
 @_exigir_ajax
@@ -531,6 +628,13 @@ def hierarquia_rebaixar(id_usuario: int):
         return _json_err("Não é possível rebaixar a si mesmo.", "regra", 400)
     with db.get_conn() as conn:
         with conn.cursor() as cur:
+            # SUPERADM nunca pode ser rebaixado, nem por outro admin -- essa
+            # checagem tem que ficar aqui (não só escondendo o botão no
+            # template), senão dá pra chamar a rota direto via fetch.
+            cur.execute("SELECT hierarquia FROM hierarquia WHERE id_usuario = %s", (id_usuario,))
+            atual = cur.fetchone()
+            if atual and atual["hierarquia"] == "superadm":
+                return _json_err("O SUPERADM não pode ser rebaixado.", "regra", 403)
             cur.execute(
                 "UPDATE hierarquia SET hierarquia = 'cliente' WHERE id_usuario = %s AND hierarquia != 'cliente'",
                 (id_usuario,),
@@ -644,6 +748,34 @@ def cadastros():
             )
             pendentes = cur.fetchall()
     return render_template("admin/cadastros.html", pendentes=pendentes)
+
+
+@admin_bp.route("/cadastros/lista")
+@admin_required
+def cadastros_lista():
+    # Polling leve (10s) pra detectar cadastro novo sem recarregar a página.
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id_usuario, nome, email, data_cadastro FROM login_usuario "
+                "WHERE email_confirmado = FALSE ORDER BY data_cadastro"
+            )
+            pendentes = cur.fetchall()
+            totais = _totais_cadastros(cur)
+    return jsonify(
+        {
+            "itens": [
+                {
+                    "id": p["id_usuario"],
+                    "nome": p["nome"],
+                    "email": p["email"],
+                    "data": _data_hora_br(p["data_cadastro"]),
+                }
+                for p in pendentes
+            ],
+            "totais": totais,
+        }
+    )
 
 
 @admin_bp.route("/cadastros/<int:id_usuario>/confirmar", methods=["POST"])
@@ -812,6 +944,42 @@ def material():
         total_arrecadado=totais["total_arrecadado"],
         total_gasto=totais["total_gasto"],
         saldo=totais["saldo"],
+    )
+
+
+@admin_bp.route("/material/lista")
+@admin_required
+def material_lista():
+    # Polling leve (30s -- material muda bem menos que pedido/cadastro,
+    # pedido explícito do usuário) pra detectar material novo sem
+    # recarregar a página.
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT m.id, m.nome_material, m.valor, m.descricao, m.data_compra, u.nome AS cadastrado_por
+                FROM despesa_material m
+                LEFT JOIN login_usuario u ON u.id_usuario = m.usuario_cadastro
+                ORDER BY m.data_compra DESC
+                """
+            )
+            materiais = cur.fetchall()
+            totais = _totais_material(cur)
+    return jsonify(
+        {
+            "itens": [
+                {
+                    "id": m["id"],
+                    "nome": m["nome_material"],
+                    "descricao": m["descricao"] or "—",
+                    "valor": f"{m['valor']:.2f}",
+                    "data": m["data_compra"].strftime("%d/%m/%Y"),
+                    "cadastrado_por": m["cadastrado_por"] or "--",
+                }
+                for m in materiais
+            ],
+            "totais": totais,
+        }
     )
 
 

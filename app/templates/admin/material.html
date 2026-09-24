@@ -78,5 +78,38 @@
       if (card) { card.remove(); }
     });
   });
+
+  (function () {
+    var grid = document.querySelector('.a-material-grid');
+    var idsConhecidos = new Set(
+      Array.prototype.map.call(document.querySelectorAll('[data-material-id]'), function (card) {
+        return parseInt(card.getAttribute('data-material-id'), 10);
+      })
+    );
+
+    function inserirNovoMaterial(item) {
+      if (!grid) { location.reload(); return; }
+      var esc = window.escaparHtmlAdmin;
+      var div = document.createElement('div');
+      div.className = 'a-card a-item-novo';
+      div.setAttribute('data-material-id', item.id);
+      div.innerHTML =
+        '<span class="a-material__name">' + esc(item.nome) + '</span>' +
+        '<span class="a-material__desc">' + esc(item.descricao) + '</span>' +
+        '<span class="a-material__value">R$ ' + esc(item.valor) + '</span>' +
+        '<span class="a-material__meta">' + esc(item.data) + ' &middot; ' + esc(item.cadastrado_por) + '</span>' +
+        '<form method="post" action="/admin/material/' + item.id + '/apagar" onsubmit="return confirmarAcao(this, \'Apagar esse material?\')">' +
+        '<button type="submit" class="admin-btn-outline">Apagar</button>' +
+        '</form>';
+      grid.insertBefore(div, grid.firstChild);
+    }
+
+    window.iniciarPollingAdmin({
+      url: '/admin/material/lista',
+      intervaloMs: 30000,
+      idsConhecidos: idsConhecidos,
+      inserirNovo: inserirNovoMaterial,
+    });
+  })();
 </script>
 {% endblock %}

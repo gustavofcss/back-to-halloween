@@ -19,20 +19,30 @@
       a seção ativa mostrava número, porque cada página só tinha a conta de
       SI mesma (achado real, usuário queria ver o número mesmo fora da
       aba). Agora as 5 pílulas aparecem sempre, em qualquer página.
+
+      O 5º item de cada tupla é a MESMA chave que a rota de mutação daquela
+      seção já devolve em `totais` (total_pedidos/pendentes/hierarquia/
+      material) -- reaproveita o mecanismo de data-admin-total que já
+      existe (atualizarTotais em _layout.html) pra também atualizar a
+      pílula da sidebar na hora, sem esperar os 60s do auto-refresh (achado
+      real: usuário reportou o número ficando desatualizado depois de uma
+      ação). "eventos" fica sem chave -- apagar lote já recarrega a página
+      inteira sozinho (ver eventos.html), então não precisa de patch ao
+      vivo.
     #}
     {% set admin_nav_items = [
-      ('pedidos', url_for('admin.pedidos'), 'Pedidos', 'deco-pumpkin-new.png'),
-      ('cadastros', url_for('admin.cadastros'), 'Cadastros', 'deco-eye.png'),
-      ('hierarquia', url_for('admin.hierarquia'), 'Hierarquia', 'deco-witch-hat.png'),
-      ('material', url_for('admin.material'), 'Material', 'deco-coffin.png'),
-      ('eventos', url_for('admin.eventos'), 'Lotes do evento', 'deco-trick-or-treat.png'),
+      ('pedidos', url_for('admin.pedidos'), 'Pedidos', 'deco-pumpkin-new.png', 'total_pedidos'),
+      ('cadastros', url_for('admin.cadastros'), 'Cadastros', 'deco-eye.png', 'pendentes'),
+      ('hierarquia', url_for('admin.hierarquia'), 'Hierarquia', 'deco-witch-hat.png', 'hierarquia'),
+      ('material', url_for('admin.material'), 'Material', 'deco-coffin.png', 'material'),
+      ('eventos', url_for('admin.eventos'), 'Lotes do evento', 'deco-trick-or-treat.png', none),
     ] %}
     <nav class="a-nav">
-      {% for nav_id, nav_href, nav_label, nav_icon in admin_nav_items %}
+      {% for nav_id, nav_href, nav_label, nav_icon, nav_total_key in admin_nav_items %}
       <a class="a-nav__item {% if active_nav == nav_id %}a-nav__item--active{% endif %}" href="{{ nav_href }}">
         <img class="a-nav__icon" src="{{ url_for('static', filename='assets/' ~ nav_icon) }}" alt="">
         <span class="a-nav__label">{{ nav_label }}</span>
-        {% if nav_counts is defined %}<span class="a-nav__count">{{ nav_counts[nav_id] }}</span>{% endif %}
+        {% if nav_counts is defined %}<span class="a-nav__count"{% if nav_total_key %} data-admin-total="{{ nav_total_key }}"{% endif %}>{{ nav_counts[nav_id] }}</span>{% endif %}
       </a>
       {% endfor %}
     </nav>
@@ -54,6 +64,7 @@
 
   <main class="a-main">
     <img class="deco a-deco--web inv" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true">
+    <div class="spider a-deco--spider" aria-hidden="true"><i></i><img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt=""></div>
 
     <header class="a-header">
       <div>
@@ -116,6 +127,10 @@
         });
       });
     }
+    // Exposta pra window.iniciarPollingAdmin (definido mais abaixo) também
+    // poder atualizar os KPIs/pílulas quando o polling encontra item novo,
+    // sem duplicar essa lógica.
+    window.atualizarTotaisAdmin = atualizarTotais;
 
     function desmarcarSelecao(form) {
       if (!form) { return; }
@@ -242,22 +257,48 @@
     });
   })();
 
-  // Atualiza a aba sozinha a cada 60s (pedidos/cadastros novos aparecem sem
-  // precisar recarregar na mão) -- pausa se o admin estiver digitando em
-  // algum campo, com o modal de confirmação aberto, ou com alguma seleção
-  // em lote marcada (um reload do zero perderia a seleção sem necessidade,
-  // já que a ação em si não recarrega mais nada).
-  (function () {
-    var overlayEl = document.getElementById('confirm-overlay');
+  // Escapa string do usuário (nome, e-mail, descrição...) antes de entrar
+  // em innerHTML -- o Jinja escapa sozinho no HTML que o servidor manda,
+  // mas o polling abaixo monta HTML NO CLIENTE a partir de JSON, então
+  // precisa escapar na mão pra não abrir um caminho de XSS armazenado
+  // (nome de usuário/material vira HTML cru sem isso).
+  window.escaparHtmlAdmin = function (valor) {
+    var mapa = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+    return String(valor == null ? '' : valor).replace(/[&<>"']/g, function (c) { return mapa[c]; });
+  };
+
+  // Polling leve por página (10s em Pedidos/Cadastros/Hierarquia, 30s em
+  // Material -- cada template chama isso com sua própria config) no lugar
+  // do location.reload() de 60s que existia antes: reload cheio perdia
+  // scroll/seleção e fazia item novo "surgir do nada" (achado real, pedido
+  // do usuário). Busca só a lista via fetch() e insere com uma animação
+  // suave só o que é realmente NOVO -- o que já estava na tela não é
+  // tocado. Pausa se o admin estiver digitando em algum campo ou com o
+  // modal de confirmação aberto (não precisa mais pausar por seleção em
+  // lote marcada -- essa técnica não mexe nas linhas existentes).
+  window.iniciarPollingAdmin = function (opts) {
     setInterval(function () {
       var ativo = document.activeElement;
       var editando = ativo && ['INPUT', 'TEXTAREA', 'SELECT'].indexOf(ativo.tagName) !== -1;
+      var overlayEl = document.getElementById('confirm-overlay');
       var modalAberto = overlayEl && overlayEl.style.display === 'flex';
-      var algumaSelecao = document.querySelector('input[name="ids"]:checked');
-      if (!editando && !modalAberto && !algumaSelecao) {
-        location.reload();
-      }
-    }, 60000);
-  })();
+      if (editando || modalAberto) { return; }
+
+      fetch(opts.url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (resp) { return resp.ok ? resp.json() : null; })
+        .then(function (dados) {
+          if (!dados || !dados.itens) { return; }
+          var novos = 0;
+          dados.itens.forEach(function (item) {
+            if (opts.idsConhecidos.has(item.id)) { return; }
+            opts.idsConhecidos.add(item.id);
+            opts.inserirNovo(item);
+            novos += 1;
+          });
+          if (novos > 0) { window.atualizarTotaisAdmin(dados.totais); }
+        })
+        .catch(function () {});
+    }, opts.intervaloMs);
+  };
 </script>
 {% endblock %}
