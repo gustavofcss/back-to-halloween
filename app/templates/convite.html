@@ -3,16 +3,11 @@
 {% block content %}
 <div class="invite">
 
-  {% if usuario %}
-  {# Sem "Entrar" aqui quando deslogado -- o CTA principal (mais abaixo)
-     já leva pro login quando precisa, um botão a mais no canto era
-     redundante (achado real, usuário reportou "não tem pra que existir"). #}
-  <nav class="invite__nav">
-      {% if usuario.hierarquia in ['adm', 'superadm'] %}<a href="/admin" class="btn btn-ghost btn-sm">Painel admin</a>{% endif %}
-      {% if tem_pedido %}<a href="/meus-pedidos" class="btn btn-ghost btn-sm">Meus pedidos</a>{% endif %}
-      <form method="post" action="/logout"><button type="submit" class="btn btn-ghost btn-sm">Sair ({{ usuario.nome }})</button></form>
-  </nav>
-  {% endif %}
+  {# Sem nav aqui em cima (nem logado, nem deslogado) -- o CTA principal
+     (mais abaixo) já leva pro destino certo em qualquer caso (login,
+     painel admin, meus ingressos ou comprar), um botão a mais no canto
+     era redundante (achado real, usuário reportou "não tem pra que
+     existir"). #}
 
   <div class="scene" aria-hidden="true">
     <div class="stars" style="background-image:url('{{ url_for('static', filename='assets/stars.svg') }}')"></div>

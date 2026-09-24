@@ -213,8 +213,6 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 /* ============ CONVITE ============ */
 .invite{position:relative;min-height:100vh;overflow:hidden;
   background:linear-gradient(180deg,#1b1236 0%,#2a1840 28%,#3a1d33 50%,#1a0f1c 66%,#0a060e 72%,#07050d 100%)}
-.invite__nav{position:absolute;top:16px;right:16px;z-index:10;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
-.invite__nav form{margin:0}
 .scene{position:relative;height:clamp(440px,66vh,680px);overflow:hidden}
 .stars{position:absolute;inset:0;background-repeat:repeat;background-size:620px 413px;opacity:.6;animation:twinkle 6s ease-in-out infinite}
 .moon{position:absolute;left:50%;top:clamp(40px,7vh,80px);width:clamp(220px,30vw,400px);aspect-ratio:1/1;transform:translateX(-50%);border-radius:50%;
@@ -257,6 +255,16 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .info-grid span{font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--orange)}
 .info-grid strong{font-family:var(--f-title);font-weight:800;font-size:26px;color:#fff;line-height:1.25}
 .info-grid small{font-size:15px;color:var(--ink-2)}
+/* Abaixo do max-width:640px do próprio .info-grid, o auto-fit encaixa
+   exatamente 2 colunas (170px x 2) pros 3 itens (Quando/Onde/Traje) --
+   sobra uma célula vazia (o 4º espaço do grid 2x2) mostrando só o fundo
+   do container, que aparece como um bloco marrom sólido sem texto nenhum
+   (achado real, usuário mandou print do celular). 1 coluna só evita
+   qualquer resto de célula; a 640px o container sempre cabe as 3 colunas
+   inteiras (170x3=510 < 640), sem sobra também. */
+@media (max-width:640px){
+  .info-grid{grid-template-columns:1fr}
+}
 .invite__cta{margin-top:32px;box-shadow:0 0 0 4px rgba(255,138,43,.18),0 18px 40px rgba(225,105,15,.45)}
 
 /* ============ ADMIN ============ */
