@@ -50,7 +50,7 @@
           <input class="input" id="rg" name="rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)" required>
         </label>
         <label class="field" for="whatsapp">WhatsApp (de quem vai usar o ingresso)
-          <input class="input" id="whatsapp" name="whatsapp" placeholder="DDD + número, só números" inputmode="numeric" pattern="[0-9]{10,11}" maxlength="11" title="DDD + número, só números (10 ou 11 dígitos)" required>
+          <input class="input" id="whatsapp" name="whatsapp" placeholder="(DDD) número" inputmode="numeric" pattern="\(\d{2}\)\s\d{4,5}-\d{4}" maxlength="15" title="DDD + número (10 ou 11 dígitos)" required>
         </label>
 
         <div class="buy-actions">
@@ -79,7 +79,7 @@
           <input class="input" id="rg" name="rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)" required>
         </label>
         <label class="field" for="whatsapp">WhatsApp
-          <input class="input" id="whatsapp" name="whatsapp" placeholder="DDD + número, só números" inputmode="numeric" pattern="[0-9]{10,11}" maxlength="11" title="DDD + número, só números (10 ou 11 dígitos)" required>
+          <input class="input" id="whatsapp" name="whatsapp" placeholder="(DDD) número" inputmode="numeric" pattern="\(\d{2}\)\s\d{4,5}-\d{4}" maxlength="15" title="DDD + número (10 ou 11 dígitos)" required>
         </label>
 
         <input type="hidden" id="quantidade" name="quantidade" value="1">
@@ -109,7 +109,7 @@
             <input class="input" id="acompanhante_rg" name="acompanhante_rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)">
           </label>
           <label class="field" for="acompanhante_whatsapp">WhatsApp do acompanhante
-            <input class="input" id="acompanhante_whatsapp" name="acompanhante_whatsapp" placeholder="DDD + número, só números" inputmode="numeric" pattern="[0-9]{10,11}" maxlength="11" title="DDD + número, só números (10 ou 11 dígitos)">
+            <input class="input" id="acompanhante_whatsapp" name="acompanhante_whatsapp" placeholder="(DDD) número" inputmode="numeric" pattern="\(\d{2}\)\s\d{4,5}-\d{4}" maxlength="15" title="DDD + número (10 ou 11 dígitos)">
           </label>
         </div>
         {% endif %}
@@ -166,4 +166,28 @@
     {% endif %}
   </div>
 </div>
+<script>
+  (function () {
+    // Formata WhatsApp ao vivo -- (DD) DDDDD-DDDD (celular, 9 dígitos) ou
+    // (DD) DDDD-DDDD (fixo, 8 dígitos) -- pedido do usuário, via print
+    // mostrando o campo só com números crus enquanto digitava. O backend
+    // já tolera essa formatação (tira tudo que não é dígito antes de
+    // validar, ver _validar_whatsapp em pedidos.py) -- só isso aqui muda.
+    // Fora dos blocos condicionais do template de propósito: roda pros
+    // dois formulários possíveis (titular ou acompanhante) sem duplicar
+    // o script.
+    function formatarWhatsapp(digitos) {
+      if (digitos.length <= 2) { return digitos.replace(/^(\d*)/, '($1'); }
+      if (digitos.length <= 6) { return digitos.replace(/^(\d{2})(\d*)/, '($1) $2'); }
+      if (digitos.length <= 10) { return digitos.replace(/^(\d{2})(\d{4})(\d*)/, '($1) $2-$3'); }
+      return digitos.replace(/^(\d{2})(\d{5})(\d*)/, '($1) $2-$3');
+    }
+    document.querySelectorAll('input[name="whatsapp"], input[name="acompanhante_whatsapp"]').forEach(function (campo) {
+      campo.addEventListener('input', function () {
+        var digitos = campo.value.replace(/\D/g, '').slice(0, 11);
+        campo.value = formatarWhatsapp(digitos);
+      });
+    });
+  })();
+</script>
 {% endblock %}
