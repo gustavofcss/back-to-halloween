@@ -63,17 +63,17 @@
     {% for p in pedidos %}
       <tr class="a-tr">
         <td class="admin-table__check-col"><input type="checkbox" name="ids" value="{{ p.id_pedido }}" class="pedidos-check-item" aria-label="Selecionar pedido #{{ p.id_pedido }}"></td>
-        <td class="a-order__id">#{{ p.id_pedido }}</td>
-        <td class="a-order__client">
+        <td class="a-order__id" data-label="Pedido">#{{ p.id_pedido }}</td>
+        <td class="a-order__client" data-label="Cliente">
           <span class="a-order__name">{{ p.nome }}</span>
           {% if p.acompanhante_nome %}<span class="a-order__extra">+ {{ p.acompanhante_nome }}</span>{% endif %}
           <span class="a-order__email">{{ p.email }}</span>
           <span class="a-order__extra">{{ p.data_pedido|data_hora_br }}</span>
         </td>
-        <td>{{ p.quantidade }}×</td>
-        <td class="a-order__value">R$ {{ p.valor }}</td>
-        <td><span class="admin-pill {{ status_pill.get(p.status_pedido, 'admin-pill--neutral') }}">{{ p.status_pedido }}</span></td>
-        <td>
+        <td data-label="Qtd.">{{ p.quantidade }}×</td>
+        <td class="a-order__value" data-label="Valor">R$ {{ p.valor }}</td>
+        <td data-label="Status"><span class="admin-pill {{ status_pill.get(p.status_pedido, 'admin-pill--neutral') }}">{{ p.status_pedido }}</span></td>
+        <td data-label="Ações">
           {% if p.status_pedido == 'pendente' %}
           <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/confirmar" class="admin-btn-primary">Confirmar Pix</button>
           <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/cancelar" class="admin-btn-outline">Cancelar</button>
@@ -198,13 +198,13 @@
       tr.className = 'a-tr a-item-novo';
       tr.innerHTML =
         '<td class="admin-table__check-col"><input type="checkbox" name="ids" value="' + item.id + '" class="pedidos-check-item" aria-label="Selecionar pedido #' + item.id + '"></td>' +
-        '<td class="a-order__id">#' + item.id + '</td>' +
-        '<td class="a-order__client"><span class="a-order__name">' + esc(item.nome) + '</span>' + extra +
+        '<td class="a-order__id" data-label="Pedido">#' + item.id + '</td>' +
+        '<td class="a-order__client" data-label="Cliente"><span class="a-order__name">' + esc(item.nome) + '</span>' + extra +
         '<span class="a-order__email">' + esc(item.email) + '</span><span class="a-order__extra">' + esc(item.data) + '</span></td>' +
-        '<td>' + item.quantidade + '×</td>' +
-        '<td class="a-order__value">R$ ' + item.valor + '</td>' +
-        '<td><span class="admin-pill ' + (pillClasses[item.status] || 'admin-pill--neutral') + '">' + esc(item.status) + '</span></td>' +
-        '<td>' + acoes + '</td>';
+        '<td data-label="Qtd.">' + item.quantidade + '×</td>' +
+        '<td class="a-order__value" data-label="Valor">R$ ' + item.valor + '</td>' +
+        '<td data-label="Status"><span class="admin-pill ' + (pillClasses[item.status] || 'admin-pill--neutral') + '">' + esc(item.status) + '</span></td>' +
+        '<td data-label="Ações">' + acoes + '</td>';
       tbody.insertBefore(tr, tbody.firstChild);
       if (window.religarSelecaoPedido) { window.religarSelecaoPedido(tr.querySelector('.pedidos-check-item')); }
     }

@@ -436,6 +436,29 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
   .a-main{min-height:0;padding:22px 16px 130px}
   .a-header{padding-right:0}
   .a-deco--spider{display:none}
+  /* Tabelas (Pedidos/Cadastros) viravam scroll horizontal escondido em
+     telas estreitas -- funcionava, mas ninguém percebia que dava pra
+     arrastar (achado real, usuário comparou com Hierarquia/Material, que
+     já são cartão empilhado, e achou "não adaptado"). Vira lista, uma
+     linha = um cartão, sem precisar rolar de lado -- mesmo espírito das
+     outras páginas do admin. */
+  .a-table-wrap{overflow-x:visible}
+  .a-table{min-width:0}
+  .a-table thead{display:none}
+  .a-table,.a-table tbody,.a-table tr{display:block;width:100%}
+  .a-table tr{padding:14px 16px;border-bottom:1px solid var(--line-3)}
+  .a-table tr:last-child{border-bottom:none}
+  .a-table td{display:block;padding:3px 0;border-bottom:none}
+  .a-table td.admin-table__check-col{display:inline-block;margin-bottom:6px}
+  .a-table td[data-label]::before{content:attr(data-label);display:block;font-size:10px;font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-4);margin-bottom:2px}
+  /* .a-table td{display:block} (acima) tem mais especificidade que
+     .a-order__client/.a-order__namecell sozinhas e vencia a cascata,
+     quebrando o flex delas -- nome e e-mail ficavam lado a lado em vez de
+     empilhados (achado meu, revisando o resultado). Reafirma o flex aqui,
+     com especificidade maior (.a-table td.X bate .a-table td). */
+  .a-table td.a-order__client{display:flex;flex-direction:column}
+  .a-table td.a-order__namecell{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+  .a-table td.a-order__namecell::before{flex-basis:100%}
 }
 @media (max-width:480px){
   .g-coffin,.g-hand-2{display:none}

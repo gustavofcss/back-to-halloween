@@ -31,13 +31,13 @@
     {% for p in pendentes %}
       <tr class="a-tr a-tr--cadastros">
         <td class="admin-table__check-col"><input type="checkbox" name="ids" value="{{ p.id_usuario }}" class="cadastros-check-item" aria-label="Selecionar {{ p.nome }}"></td>
-        <td class="a-order__namecell">
+        <td class="a-order__namecell" data-label="Nome">
           <span class="avatar">{{ initials(p.nome) }}</span>
           <span class="a-order__name">{{ p.nome }}</span>
         </td>
-        <td class="a-order__email">{{ p.email }}</td>
-        <td class="a-order__extra">{{ p.data_cadastro|data_hora_br }}</td>
-        <td>
+        <td class="a-order__email" data-label="E-mail">{{ p.email }}</td>
+        <td class="a-order__extra" data-label="Cadastrado em">{{ p.data_cadastro|data_hora_br }}</td>
+        <td data-label="Ações">
           <button type="submit" formaction="/admin/cadastros/{{ p.id_usuario }}/confirmar" class="admin-btn-primary">Confirmar cadastro</button>
           <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('cadastros-lote-form'), '/admin/cadastros/{{ p.id_usuario }}/recusar', 'Recusar e apagar esse cadastro?')">Recusar</button>
         </td>
@@ -115,10 +115,10 @@
       tr.className = 'a-tr a-tr--cadastros a-item-novo';
       tr.innerHTML =
         '<td class="admin-table__check-col"><input type="checkbox" name="ids" value="' + item.id + '" class="cadastros-check-item" aria-label="Selecionar ' + esc(item.nome) + '"></td>' +
-        '<td class="a-order__namecell"><span class="avatar">' + esc(iniciais(item.nome)) + '</span><span class="a-order__name">' + esc(item.nome) + '</span></td>' +
-        '<td class="a-order__email">' + esc(item.email) + '</td>' +
-        '<td class="a-order__extra">' + esc(item.data) + '</td>' +
-        '<td>' +
+        '<td class="a-order__namecell" data-label="Nome"><span class="avatar">' + esc(iniciais(item.nome)) + '</span><span class="a-order__name">' + esc(item.nome) + '</span></td>' +
+        '<td class="a-order__email" data-label="E-mail">' + esc(item.email) + '</td>' +
+        '<td class="a-order__extra" data-label="Cadastrado em">' + esc(item.data) + '</td>' +
+        '<td data-label="Ações">' +
         '<button type="submit" formaction="/admin/cadastros/' + item.id + '/confirmar" class="admin-btn-primary">Confirmar cadastro</button> ' +
         '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'cadastros-lote-form\'), \'/admin/cadastros/' + item.id + '/recusar\', \'Recusar e apagar esse cadastro?\')">Recusar</button>' +
         '</td>';
