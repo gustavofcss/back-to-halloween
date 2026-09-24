@@ -282,7 +282,7 @@ def pedidos():
             cur.execute(
                 """
                 SELECT p.id_pedido, p.quantidade, p.valor, p.status_pedido, p.data_pedido,
-                       p.acompanhante_nome, p.slot,
+                       p.acompanhante_nome, p.slot, p.cortesia,
                        COALESCE(p.titular_nome, u.nome) AS nome,
                        COALESCE(p.titular_email, u.email) AS email,
                        u.nome AS comprador_nome, u.email AS comprador_email
@@ -447,7 +447,7 @@ def pedidos_lista():
             cur.execute(
                 """
                 SELECT p.id_pedido, p.quantidade, p.valor, p.status_pedido, p.data_pedido,
-                       p.acompanhante_nome, p.slot,
+                       p.acompanhante_nome, p.slot, p.cortesia,
                        COALESCE(p.titular_nome, u.nome) AS nome,
                        COALESCE(p.titular_email, u.email) AS email,
                        u.nome AS comprador_nome, u.email AS comprador_email
@@ -472,6 +472,7 @@ def pedidos_lista():
                     "acompanhante_nome": p["acompanhante_nome"],
                     "slot": p["slot"],
                     "comprador_nome": p["comprador_nome"],
+                    "cortesia": p["cortesia"],
                 }
                 for p in lista
             ],
