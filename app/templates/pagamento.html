@@ -100,11 +100,14 @@
           <p class="pay-how">A confirmação chega por e-mail assim que o pagamento cair.</p>
         </div>
 
+        {#
+          Sem botão "Já paguei, confirmar" de propósito -- pedido do
+          usuário: só o pagamento de verdade dispara alguma coisa (o
+          polling abaixo), sem uma ação manual que deixava confuso se o
+          pedido tinha confirmado ou não sem checar de verdade.
+        #}
         <div class="pay-actions">
-          <a href="/comprar" class="btn btn-ghost">Voltar</a>
-          <form method="post" action="/pagamento/{{ pedido.id_pedido }}/confirmar" class="pay-actions__confirm">
-            <button type="submit" class="btn btn-primary btn-block">Já paguei, confirmar</button>
-          </form>
+          <a href="/comprar" class="btn btn-ghost btn-block">Voltar</a>
         </div>
 
         {% if qr_code_base64 or qr_code or pedido.mp_payment_id %}
@@ -145,7 +148,17 @@
               fetch('/pagamento/{{ pedido.id_pedido }}/verificar', { method: 'POST' })
                 .then(function (resp) { return resp.json(); })
                 .then(function (data) {
-                  if (data.status === 'confirmado' || data.status === 'cancelado') {
+                  if (data.status === 'confirmado') {
+                    // Pagou de verdade -- encaminha sozinho pra "Meus
+                    // pedidos" (pedido do usuário: sem botão manual, quem
+                    // paga já cai direto lá, sem precisar clicar em nada).
+                    clearInterval(intervalo);
+                    clearInterval(timerVisual);
+                    window.location.href = '/meus-pedidos';
+                  } else if (data.status === 'cancelado') {
+                    // Expirou -- recarrega ESSA tela (não meus-pedidos),
+                    // que mostra a mensagem de "Pagamento expirado" com
+                    // link pra comprar de novo.
                     clearInterval(intervalo);
                     clearInterval(timerVisual);
                     window.location.reload();
