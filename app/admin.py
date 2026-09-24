@@ -157,7 +157,10 @@ def _injetar_contadores_nav():
         with conn.cursor() as cur:
             cur.execute("SELECT COUNT(*) AS n FROM pedido")
             total_pedidos = cur.fetchone()["n"]
-            cur.execute("SELECT COUNT(*) AS n FROM login_usuario WHERE email_confirmado = FALSE")
+            cur.execute(
+                "SELECT COUNT(*) AS n FROM login_usuario "
+                "WHERE email_confirmado = FALSE AND email_verificado = TRUE"
+            )
             total_cadastros = cur.fetchone()["n"]
             cur.execute(
                 "SELECT COUNT(*) AS n FROM login_usuario u "
@@ -235,7 +238,10 @@ def _totais_hierarquia(cur) -> dict:
 
 
 def _totais_cadastros(cur) -> dict:
-    cur.execute("SELECT COUNT(*) AS total FROM login_usuario WHERE email_confirmado = FALSE")
+    cur.execute(
+        "SELECT COUNT(*) AS total FROM login_usuario "
+        "WHERE email_confirmado = FALSE AND email_verificado = TRUE"
+    )
     return {"pendentes": cur.fetchone()["total"]}
 
 
@@ -744,7 +750,7 @@ def cadastros():
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT id_usuario, nome, email, data_cadastro FROM login_usuario "
-                "WHERE email_confirmado = FALSE ORDER BY data_cadastro"
+                "WHERE email_confirmado = FALSE AND email_verificado = TRUE ORDER BY data_cadastro"
             )
             pendentes = cur.fetchall()
     return render_template("admin/cadastros.html", pendentes=pendentes)
@@ -758,7 +764,7 @@ def cadastros_lista():
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT id_usuario, nome, email, data_cadastro FROM login_usuario "
-                "WHERE email_confirmado = FALSE ORDER BY data_cadastro"
+                "WHERE email_confirmado = FALSE AND email_verificado = TRUE ORDER BY data_cadastro"
             )
             pendentes = cur.fetchall()
             totais = _totais_cadastros(cur)

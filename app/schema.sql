@@ -8,7 +8,10 @@ CREATE TABLE IF NOT EXISTS login_usuario (
     email            VARCHAR(160) NOT NULL UNIQUE,
     senha_hash       VARCHAR(255),        -- NULL se a conta só usa login Google
     google_id        VARCHAR(60) UNIQUE,  -- NULL se a conta só usa login por senha
-    email_confirmado BOOLEAN NOT NULL DEFAULT FALSE,
+    email_confirmado BOOLEAN NOT NULL DEFAULT FALSE,  -- aprovação manual do admin (fila "Cadastros pendentes")
+    email_verificado BOOLEAN NOT NULL DEFAULT FALSE,  -- dono provou que é dono do e-mail (código); login Google já entra TRUE
+    email_verificacao_codigo_hash   VARCHAR(255), -- hash do código de confirmação de e-mail, NULL fora do fluxo
+    email_verificacao_codigo_expira TIMESTAMPTZ,  -- validade do código acima (15 min)
     reset_codigo_hash    VARCHAR(255),        -- hash do código de "esqueci a senha", NULL fora do fluxo
     reset_codigo_expira  TIMESTAMPTZ,         -- validade do código acima (15 min)
     data_cadastro    TIMESTAMPTZ NOT NULL DEFAULT now(),

@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Verifique seu e-mail — Horror Night Party{% endblock %}
+{% block title %}Confirme seu e-mail — Horror Night Party{% endblock %}
 {% block content %}
 <div class="screen" style="background:radial-gradient(circle at 50% 40%,#3d2440 0%,#1c1230 35%,#0a060e 75%)">
   <img class="deco inv" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="" aria-hidden="true" style="left:10%;top:12%;width:70px;opacity:.2;animation:float 8s ease-in-out infinite">
@@ -9,9 +9,24 @@
       <div style="position:absolute;inset:-30px;border-radius:50%;background:radial-gradient(circle,rgba(255,160,60,.35),rgba(0,0,0,0) 70%)"></div>
       <img src="{{ url_for('static', filename='assets/deco-eye.png') }}" alt="" aria-hidden="true" style="position:relative;width:120px;animation:float 6s ease-in-out infinite">
     </div>
-    <h1 class="h2" style="margin-top:34px">Verifique seu e-mail</h1>
-    <p class="lead" style="margin-top:12px;max-width:320px;line-height:1.65">Sua conta foi criada! Você vai receber um e-mail assim que o administrador confirmar seu cadastro. Aí é só entrar normalmente.</p>
-    <a href="/login" class="btn btn-ghost" style="margin-top:28px">Voltar pro login</a>
+    <h1 class="h2" style="margin-top:34px">Confirme seu e-mail</h1>
+    <p class="lead" style="margin-top:12px;max-width:320px;line-height:1.65">Mandamos um código de 6 dígitos pra <strong>{{ email }}</strong>. Digite ele abaixo pra confirmar que a conta é sua -- depois disso é só esperar o administrador aprovar.</p>
+
+    <div class="card" style="margin-top:24px;width:100%;max-width:320px">
+      <form method="post" action="/confirmar-email" style="display:flex;flex-direction:column;gap:14px">
+        <input type="hidden" name="email" value="{{ email }}">
+        <label class="field" for="codigo">Código de 6 dígitos
+          <input class="input" id="codigo" name="codigo" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required autocomplete="one-time-code">
+        </label>
+        <button type="submit" class="btn btn-primary btn-block">Confirmar e-mail</button>
+      </form>
+      <form method="post" action="/confirmar-email/reenviar" style="margin-top:10px">
+        <input type="hidden" name="email" value="{{ email }}">
+        <button type="submit" class="btn btn-ghost btn-block">Reenviar código</button>
+      </form>
+    </div>
+
+    <a href="/login" class="btn btn-ghost" style="margin-top:20px">Voltar pro login</a>
   </div>
 </div>
 {% endblock %}

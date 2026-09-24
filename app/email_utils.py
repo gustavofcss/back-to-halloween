@@ -171,6 +171,17 @@ def enviar_confirmacao_pedido(destinatario: str, nome: str, pedido) -> None:
     )
 
 
+def enviar_codigo_verificacao_email(destinatario: str, nome: str, codigo: str) -> None:
+    corpo = (
+        f"Oi, {nome}! \U0001f383\n\n"
+        "Falta só confirmar que esse e-mail é seu pra continuar seu cadastro na "
+        f"Horror Night Party. Use o código abaixo (válido por 15 minutos):\n\n"
+        f"{codigo}\n\n"
+        "Se você não pediu esse cadastro, pode ignorar este e-mail."
+    )
+    _enviar(destinatario, "Confirme seu e-mail — Horror Night Party", corpo)
+
+
 def enviar_codigo_recuperacao(destinatario: str, nome: str, codigo: str) -> None:
     corpo = (
         f"Oi, {nome}! \U0001f47b\n\n"

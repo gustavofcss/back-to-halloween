@@ -24,7 +24,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import config
 import db
-from email_utils import enviar_codigo_recuperacao
+from email_utils import enviar_codigo_recuperacao, enviar_codigo_verificacao_email
 
 auth_bp = Blueprint("auth", __name__)
 logger = logging.getLogger(__name__)
@@ -157,14 +157,19 @@ def signup():
                 flash("Já existe uma conta com esse e-mail.")
                 return render_template("signup.html"), 400
 
+            codigo = f"{secrets.randbelow(1000000):06d}"
+            codigo_hash = generate_password_hash(codigo)
             senha_hash = generate_password_hash(senha)
             cur.execute(
                 """
-                INSERT INTO login_usuario (nome, email, senha_hash, email_confirmado)
-                VALUES (%s, %s, %s, FALSE)
+                INSERT INTO login_usuario (
+                    nome, email, senha_hash, email_confirmado,
+                    email_verificado, email_verificacao_codigo_hash, email_verificacao_codigo_expira
+                )
+                VALUES (%s, %s, %s, FALSE, FALSE, %s, now() + interval '15 minutes')
                 RETURNING id_usuario
                 """,
-                (nome, email, senha_hash),
+                (nome, email, senha_hash, codigo_hash),
             )
             id_usuario = cur.fetchone()["id_usuario"]
             cur.execute(
@@ -172,6 +177,84 @@ def signup():
                 (id_usuario,),
             )
 
+    try:
+        enviar_codigo_verificacao_email(email, nome, codigo)
+    except Exception:
+        logger.warning("Falha ao enviar código de verificação de e-mail", exc_info=True)
+
+    return render_template("verifique_email.html", email=email)
+
+
+@auth_bp.route("/confirmar-email", methods=["GET", "POST"])
+def confirmar_email():
+    if request.method == "GET":
+        email = (request.args.get("email") or "").strip().lower()
+        return render_template("verifique_email.html", email=email)
+
+    email = (request.form.get("email") or "").strip().lower()
+    codigo = (request.form.get("codigo") or "").strip()
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id_usuario, email_verificado, email_verificacao_codigo_hash, "
+                "email_verificacao_codigo_expira FROM login_usuario WHERE email = %s",
+                (email,),
+            )
+            usuario = cur.fetchone()
+
+            valido = (
+                usuario
+                and not usuario["email_verificado"]
+                and usuario["email_verificacao_codigo_hash"]
+                and usuario["email_verificacao_codigo_expira"]
+                and usuario["email_verificacao_codigo_expira"] > datetime.now(timezone.utc)
+                and check_password_hash(usuario["email_verificacao_codigo_hash"], codigo)
+            )
+
+            if not valido:
+                flash("Código inválido ou expirado.")
+                return render_template("verifique_email.html", email=email), 400
+
+            cur.execute(
+                "UPDATE login_usuario SET email_verificado = TRUE, "
+                "email_verificacao_codigo_hash = NULL, email_verificacao_codigo_expira = NULL, "
+                "data_atualizacao = now() WHERE id_usuario = %s",
+                (usuario["id_usuario"],),
+            )
+
+    return render_template("cadastro_pendente.html")
+
+
+@auth_bp.route("/confirmar-email/reenviar", methods=["POST"])
+def confirmar_email_reenviar():
+    email = (request.form.get("email") or "").strip().lower()
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id_usuario, nome FROM login_usuario WHERE email = %s AND email_verificado = FALSE",
+                (email,),
+            )
+            usuario = cur.fetchone()
+
+            if usuario:
+                codigo = f"{secrets.randbelow(1000000):06d}"
+                codigo_hash = generate_password_hash(codigo)
+                cur.execute(
+                    "UPDATE login_usuario SET email_verificacao_codigo_hash = %s, "
+                    "email_verificacao_codigo_expira = now() + interval '15 minutes' "
+                    "WHERE id_usuario = %s",
+                    (codigo_hash, usuario["id_usuario"]),
+                )
+
+    if usuario:
+        try:
+            enviar_codigo_verificacao_email(email, usuario["nome"], codigo)
+        except Exception:
+            logger.warning("Falha ao reenviar código de verificação de e-mail", exc_info=True)
+
+    flash("Se esse e-mail existir e ainda não tiver sido confirmado, reenviamos o código.")
     return render_template("verifique_email.html", email=email)
 
 
@@ -186,7 +269,7 @@ def login():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id_usuario, senha_hash, email_confirmado FROM login_usuario "
+                "SELECT id_usuario, senha_hash, email_confirmado, email_verificado FROM login_usuario "
                 "WHERE email = %s",
                 (email,),
             )
@@ -195,6 +278,13 @@ def login():
     if not usuario or not usuario["senha_hash"] or not check_password_hash(usuario["senha_hash"], senha):
         flash("E-mail ou senha inválidos.")
         return render_template("login.html"), 401
+
+    if not usuario["email_verificado"]:
+        # Confirmar o e-mail vem ANTES da aprovação do admin -- sem essa
+        # checagem aqui, alguém que nunca confirmou o código cairia direto
+        # na tela de "aguardando aprovação" (mensagem errada, e o admin nem
+        # deveria estar vendo esse cadastro na fila ainda).
+        return render_template("verifique_email.html", email=email), 401
 
     if not usuario["email_confirmado"]:
         # Antes só reexibia o form de login com um aviso em cima -- usuário
@@ -312,9 +402,14 @@ def auth_google_callback():
             if usuario:
                 id_usuario = usuario["id_usuario"]
                 email_confirmado = usuario["email_confirmado"]
+                # email_verificado = TRUE aqui também -- se a conta já existia
+                # (cadastro por e-mail/senha ainda não confirmado) e a pessoa
+                # loga com Google usando o mesmo e-mail, o Google acabou de
+                # provar que ela é dona dele; não faz sentido continuar
+                # exigindo o código por e-mail depois disso.
                 cur.execute(
-                    "UPDATE login_usuario SET google_id = %s, data_atualizacao = now() "
-                    "WHERE id_usuario = %s",
+                    "UPDATE login_usuario SET google_id = %s, email_verificado = TRUE, "
+                    "data_atualizacao = now() WHERE id_usuario = %s",
                     (google_id, id_usuario),
                 )
             else:
@@ -322,10 +417,13 @@ def auth_google_callback():
                 # pedido explícito do usuário (achado real: cadastro via
                 # Google entrava direto, sem passar pela fila de "Cadastros
                 # pendentes"). Mesma regra do cadastro por e-mail/senha.
+                # email_verificado já entra TRUE -- o Google já confirmou que
+                # esse e-mail é do dono da conta como parte do próprio login
+                # OAuth, não faz sentido mandar mais um código por e-mail.
                 cur.execute(
                     """
-                    INSERT INTO login_usuario (nome, email, senha_hash, google_id, email_confirmado)
-                    VALUES (%s, %s, NULL, %s, FALSE)
+                    INSERT INTO login_usuario (nome, email, senha_hash, google_id, email_confirmado, email_verificado)
+                    VALUES (%s, %s, NULL, %s, FALSE, TRUE)
                     RETURNING id_usuario
                     """,
                     (nome, email, google_id),
