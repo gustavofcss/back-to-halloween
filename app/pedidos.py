@@ -685,6 +685,26 @@ def meus_pedidos():
             )
             pedidos = cur.fetchall()
 
+            # Reconcilia AQUI também, não só na tela de pagamento -- achado
+            # real do usuário: clicou "Já paguei" antes de pagar de
+            # verdade (não confirmou na hora), foi parar em "Meus
+            # pedidos", pagou o Pix real uns segundos depois -- mas essa
+            # tela só fazia SELECT cru no banco, sem checar nada, então o
+            # pedido continuava "pendente" pra sempre, não importa quantas
+            # vezes recarregasse ESSA página específica (só /pagamento/
+            # <id> reconciliava, e nada te mandava de volta pra lá
+            # sozinho). Qualquer pedido pendente do usuário é reconferido
+            # antes de renderizar a lista.
+            for i, p in enumerate(pedidos):
+                if p["status_pedido"] != "pendente":
+                    continue
+                titular = _titular_do_pedido(p, usuario["nome"], usuario["email"])
+                status_atual = _verificar_com_expiracao(cur, p, titular)
+                if status_atual != p["status_pedido"]:
+                    p = dict(p)
+                    p["status_pedido"] = status_atual
+                    pedidos[i] = p
+
             # Mesma regra de "até 2 pedidos por conta" do /comprar: só mostra
             # o link de comprar mais enquanto ainda não bateu esse limite.
             # Com 1 pedido ativo, o próximo é sempre pra OUTRA pessoa (slot
