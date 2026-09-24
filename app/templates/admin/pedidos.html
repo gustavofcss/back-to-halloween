@@ -44,9 +44,9 @@
 </div>
 
 <div style="display: flex; gap: 10px; flex-wrap: wrap;">
-  <button type="button" id="btn-cortesia" class="admin-btn-outline">+ Ingresso cortesia</button>
-  <a href="/admin/pedidos/email-massa" class="admin-btn-outline" style="text-decoration: none;">Enviar e-mail pros clientes</a>
-  <a href="/admin/pedidos/exportar" class="admin-btn-outline" style="text-decoration: none;">Exportar planilha (portaria)</a>
+  <button type="button" id="btn-cortesia" class="admin-btn-primary">+ Ingresso cortesia</button>
+  <a href="/admin/pedidos/email-massa" class="admin-btn-primary" style="text-decoration: none;">Enviar e-mail pros clientes</a>
+  <a href="/admin/pedidos/exportar" class="admin-btn-primary" style="text-decoration: none;">Exportar planilha (portaria)</a>
 </div>
 
 <section class="a-card a-card--form" id="form-cortesia" style="display: none;">
@@ -87,6 +87,24 @@
       secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   })();
+
+  (function () {
+    // Mesma formatação ao vivo do WhatsApp já usada em comprar.html
+    // (DDD) NNNNN-NNNN -- achado real, usuário reportou o campo de
+    // cortesia mostrando só dígitos crus enquanto o admin digitava.
+    var campo = document.getElementById('cortesia_whatsapp');
+    if (!campo) { return; }
+    function formatarWhatsapp(digitos) {
+      if (digitos.length <= 2) { return digitos.replace(/^(\d*)/, '($1'); }
+      if (digitos.length <= 6) { return digitos.replace(/^(\d{2})(\d*)/, '($1) $2'); }
+      if (digitos.length <= 10) { return digitos.replace(/^(\d{2})(\d{4})(\d*)/, '($1) $2-$3'); }
+      return digitos.replace(/^(\d{2})(\d{5})(\d*)/, '($1) $2-$3');
+    }
+    campo.addEventListener('input', function () {
+      var digitos = campo.value.replace(/\D/g, '').slice(0, 11);
+      campo.value = formatarWhatsapp(digitos);
+    });
+  })();
 </script>
 
 {% if pedidos %}
@@ -112,6 +130,7 @@
         <td class="a-order__id" data-label="Pedido">#{{ p.id_pedido }}</td>
         <td class="a-order__client" data-label="Cliente">
           <span class="a-order__name">{{ p.nome }}</span>
+          {% if p.cortesia %}<span class="admin-pill admin-pill--accent">Cortesia</span>{% endif %}
           {% if p.acompanhante_nome %}<span class="a-order__extra">+ {{ p.acompanhante_nome }}</span>{% endif %}
           {% if p.slot == 2 %}<span class="a-order__extra">Comprado por {{ p.comprador_nome }}</span>{% endif %}
           <span class="a-order__email">{{ p.email }}</span>
@@ -231,6 +250,7 @@
       var esc = window.escaparHtmlAdmin;
       var extra = item.acompanhante_nome ? '<span class="a-order__extra">+ ' + esc(item.acompanhante_nome) + '</span>' : '';
       var compradoPor = item.slot === 2 ? '<span class="a-order__extra">Comprado por ' + esc(item.comprador_nome) + '</span>' : '';
+      var cortesiaTag = item.cortesia ? '<span class="admin-pill admin-pill--accent">Cortesia</span>' : '';
       var acoes = '';
       if (item.status === 'pendente') {
         acoes =
@@ -247,7 +267,7 @@
       tr.innerHTML =
         '<td class="admin-table__check-col"><input type="checkbox" name="ids" value="' + item.id + '" class="pedidos-check-item" aria-label="Selecionar pedido #' + item.id + '"></td>' +
         '<td class="a-order__id" data-label="Pedido">#' + item.id + '</td>' +
-        '<td class="a-order__client" data-label="Cliente"><span class="a-order__name">' + esc(item.nome) + '</span>' + extra + compradoPor +
+        '<td class="a-order__client" data-label="Cliente"><span class="a-order__name">' + esc(item.nome) + '</span>' + cortesiaTag + extra + compradoPor +
         '<span class="a-order__email">' + esc(item.email) + '</span><span class="a-order__extra">' + esc(item.data) + '</span></td>' +
         '<td data-label="Qtd.">' + item.quantidade + '×</td>' +
         '<td class="a-order__value" data-label="Valor">R$ ' + item.valor + '</td>' +
