@@ -78,9 +78,9 @@
         </div>
         {% endif %}
 
-        <div style="display:flex;gap:10px;margin-top:4px">
+        <div class="buy-actions">
           <a href="/" class="btn btn-ghost">Voltar</a>
-          <button type="submit" class="btn btn-primary" style="flex:1">Continuar &middot; R$ <span id="total-display">{{ evento.valor_entrada }}</span></button>
+          <button type="submit" class="btn btn-primary buy-actions__submit">Continuar &middot; R$&nbsp;<span id="total-display">{{ evento.valor_entrada }}</span></button>
         </div>
       </form>
 

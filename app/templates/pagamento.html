@@ -4,12 +4,12 @@
 <div class="screen screen--top">
   <img class="deco sil" src="{{ url_for('static', filename='assets/witch-flying.png') }}" alt="" aria-hidden="true" style="right:-30px;top:70px;width:170px;opacity:.9">
 
-  <nav class="invite__nav" style="position:absolute;top:16px;right:16px">
-    <a href="/meus-pedidos" class="btn btn-ghost btn-sm">Meus pedidos</a>
-    <form method="post" action="/logout"><button type="submit" class="btn btn-ghost btn-sm">Sair</button></form>
-  </nav>
-
   <div class="content">
+    <nav class="invite__nav invite__nav--inline">
+      <a href="/meus-pedidos" class="btn btn-ghost btn-sm">Meus pedidos</a>
+      <form method="post" action="/logout"><button type="submit" class="btn btn-ghost btn-sm">Sair</button></form>
+    </nav>
+
     <div class="steps">
       <div class="step done"><b>1</b>Convite</div><div class="step-line done"></div>
       <div class="step done"><b>2</b>Seus dados</div><div class="step-line done"></div>
