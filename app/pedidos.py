@@ -3,18 +3,32 @@ from __future__ import annotations
 
 import logging
 import re
+from datetime import datetime, timedelta, timezone
+from decimal import Decimal
 
 import mercadopago
 import psycopg2
+import requests
 from flask import Blueprint, abort, jsonify, redirect, render_template, request, url_for
 
 import config
 import db
 from auth import EMAIL_RE, current_user, login_required
 from email_utils import enviar_confirmacao_pedido
+from pix_copia_cola import gerar_copia_cola, gerar_qr_base64
 
 pedidos_bp = Blueprint("pedidos", __name__)
 logger = logging.getLogger(__name__)
+
+# Janela pra pagar o Pix -- depois disso o pedido expira sozinho e libera a
+# vaga, em vez de ficar "pendente" pra sempre esperando alguém que talvez
+# nunca pague (pedido explícito do usuário: forçar o cliente a pagar dentro
+# de uma margem de tempo). Só vale quando o Mercado Pago está configurado
+# (o modo manual de chave Pix -- config.PIX_KEY sem token -- não expira
+# sozinho, porque não tem como confirmar automaticamente rápido o
+# suficiente pra isso ser justo com quem pagou e só não foi conferido a
+# tempo pelo admin).
+_JANELA_PAGAMENTO = timedelta(minutes=5)
 
 # RG varia de formato por estado (sem dígito verificador padrão nacional,
 # diferente do CPF) -- só números, com um X opcional no fim (dígito
@@ -60,29 +74,101 @@ def _sdk() -> "mercadopago.SDK":
     return mercadopago.SDK(config.MERCADOPAGO_ACCESS_TOKEN)
 
 
-def _criar_pagamento_pix(pedido, usuario) -> dict:
-    payment_data = {
-        "transaction_amount": float(pedido["valor"]),
-        "description": f"Ingresso Horror Night Party -- pedido #{pedido['id_pedido']}",
-        "payment_method_id": "pix",
-        "payer": {"email": usuario["email"], "first_name": usuario["nome"]},
-        # Pede pro Mercado Pago avisar esse endpoint sozinho assim que o
-        # status do pagamento mudar -- antes a confirmação só acontecia se
-        # o cliente ficasse com a tela de pagamento aberta (polling de
-        # 5 em 5s por até 5 minutos) ou reabrisse ela depois. Só funciona
-        # com BASE_URL público (Render), não em localhost -- Mercado Pago
-        # não consegue chamar de volta um endereço que só existe na rede
-        # local (achado real, pedido do usuário: quer confirmação
-        # automática de verdade pela API, não só enquanto a aba tá aberta).
-        "notification_url": f"{config.BASE_URL}/pagamento/webhook/mercadopago",
-    }
-    resultado = _sdk().payment().create(payment_data)
-    return resultado["response"]
-
-
 def _consultar_pagamento(mp_payment_id: str) -> dict:
     resultado = _sdk().payment().get(mp_payment_id)
     return resultado["response"]
+
+
+def _buscar_pagamentos_pix_aprovados(desde: datetime) -> list[dict]:
+    """Consulta a API de Pagamentos (não a de relatório de liquidação --
+    essa só cobre reserva de venda e nunca mostrou um Pix pago direto na
+    chave, mesmo horas depois, achado real testado com dinheiro de
+    verdade) por Pix aprovados desde `desde`. 30s de folga pra trás contra
+    desalinhamento de relógio entre nosso servidor e o Mercado Pago -- a
+    filtragem de verdade (achar o pedido certo) é por valor + reivindicação
+    única em `_tentar_conciliar_pix_direto`, não por essa janela sozinha."""
+    params = {
+        "begin_date": (desde - timedelta(seconds=30)).strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
+        "end_date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
+        "range": "date_approved",
+        "sort": "date_approved",
+        "criteria": "desc",
+    }
+    resp = requests.get(
+        "https://api.mercadopago.com/v1/payments/search",
+        headers={"Authorization": f"Bearer {config.MERCADOPAGO_ACCESS_TOKEN}"},
+        params=params,
+        timeout=15,
+    )
+    resp.raise_for_status()
+    return resp.json().get("results", [])
+
+
+def _tentar_conciliar_pix_direto(cur, pedido: dict, usuario: dict) -> str:
+    """Pix pago DIRETO na chave (config.PIX_KEY, sem passar pela API de
+    Checkout -- evita a taxa de ~1%) não tem um mp_payment_id conhecido de
+    antemão, porque a gente nunca chamou o Mercado Pago pra criar nada; o
+    QR mostrado ao cliente é só um payload Pix comum, gerado localmente
+    (ver pix_copia_cola.py). Então, em vez de reconsultar um pagamento
+    específico, procura na API de Pagamentos um Pix aprovado que bata em
+    VALOR (não tem nome do pagador disponível pra esse tipo de Pix --
+    achado real, testado -- valor é o que temos) e que ainda não tenha
+    sido usado por nenhum outro pedido.
+
+    Reivindica o pagamento de forma atômica: o UPDATE só confirma se
+    "status_pedido = 'pendente'" (rowcount, nunca otimismo, mesmo padrão
+    de todo o arquivo) E o índice único em mp_payment_id (schema.sql)
+    garante que o MESMO pagamento nunca é usado duas vezes -- se dois
+    pedidos pendentes do mesmo valor caírem na mesma consulta (2 pessoas
+    pagando quase juntas), o segundo estoura UniqueViolation aqui, não
+    confirma nada, e tenta de novo sozinho na próxima consulta (5s depois,
+    ver pagamento_verificar) com os candidatos que sobraram. Sem essa
+    trava, uma corrida podia confirmar dois pedidos com o MESMO pagamento
+    real (dinheiro contado duas vezes)."""
+    cur.execute("SELECT mp_payment_id FROM pedido WHERE mp_payment_id IS NOT NULL")
+    ja_usados = {r["mp_payment_id"] for r in cur.fetchall()}
+
+    try:
+        candidatos = _buscar_pagamentos_pix_aprovados(pedido["data_pedido"])
+    except Exception:
+        logger.warning("Falha ao buscar pagamentos Pix no Mercado Pago", exc_info=True)
+        return pedido["status_pedido"]
+
+    valor_pedido = Decimal(str(pedido["valor"]))
+    for pagamento in candidatos:
+        mp_payment_id = str(pagamento.get("id") or "")
+        if (
+            not mp_payment_id
+            or mp_payment_id in ja_usados
+            or pagamento.get("status") != "approved"
+            or pagamento.get("payment_method_id") != "pix"
+            or Decimal(str(pagamento.get("transaction_amount", "0"))) != valor_pedido
+        ):
+            continue
+
+        try:
+            cur.execute(
+                "UPDATE pedido SET mp_payment_id = %s, status_pedido = 'confirmado' "
+                "WHERE id_pedido = %s AND status_pedido = 'pendente'",
+                (mp_payment_id, pedido["id_pedido"]),
+            )
+        except psycopg2.errors.UniqueViolation:
+            # Outro pedido reivindicou esse MESMO pagamento entre o SELECT
+            # de ja_usados e este UPDATE (corrida real) -- precisa de
+            # rollback explícito antes de continuar usando o cursor, senão
+            # Postgres rejeita qualquer comando seguinte até um rollback
+            # (mesmo padrão de admin.py eventos_apagar/ForeignKeyViolation).
+            cur.connection.rollback()
+            continue
+
+        if cur.rowcount > 0:
+            try:
+                enviar_confirmacao_pedido(usuario["email"], usuario["nome"], pedido)
+            except Exception:
+                logger.warning("Falha ao enviar e-mail de confirmação de pedido", exc_info=True)
+            return "confirmado"
+
+    return pedido["status_pedido"]
 
 
 def _evento_ativo(cur):
@@ -130,17 +216,22 @@ def _confirmar_se_aprovado(cur, pedido: dict, usuario: dict, pagamento_mp: dict)
     """Dado um resultado JÁ CONSULTADO na API do Mercado Pago, confirma o
     pedido no banco se status == approved. Devolve o status do MP (ou o
     status atual do pedido, se o MP não devolveu nada útil). Centraliza a
-    trava "AND status_pedido != 'confirmado'" + rowcount (nunca otimismo) e
-    o try/except no envio de e-mail -- sem o try/except, uma falha
-    transitória no Brevo estourava a exceção DENTRO do `with db.get_conn()`
-    e desfazia (rollback) a própria confirmação do pagamento que já tinha
-    acabado de ser aprovada pelo Mercado Pago (achado real nesta revisão)."""
+    trava "AND status_pedido = 'pendente'" + rowcount (nunca otimismo) e o
+    try/except no envio de e-mail -- sem o try/except, uma falha transitória
+    no Brevo estourava a exceção DENTRO do `with db.get_conn()` e desfazia
+    (rollback) a própria confirmação do pagamento que já tinha acabado de
+    ser aprovada pelo Mercado Pago (achado real nesta revisão).
+
+    Guarda "= 'pendente'" (não "!= 'confirmado'"): um Pix que só aprova
+    DEPOIS do pedido já ter sido cancelado (pelo admin, ou expirado sozinho
+    depois dos 5 minutos, ver _expirar_pedido) não pode ressuscitar um
+    pedido cancelado -- a vaga já pode ter sido liberada/realocada."""
     status_mp = pagamento_mp.get("status")
     if status_mp != "approved":
         return status_mp or pedido["status_pedido"]
 
     cur.execute(
-        "UPDATE pedido SET status_pedido = 'confirmado' WHERE id_pedido = %s AND status_pedido != 'confirmado'",
+        "UPDATE pedido SET status_pedido = 'confirmado' WHERE id_pedido = %s AND status_pedido = 'pendente'",
         (pedido["id_pedido"],),
     )
     if cur.rowcount > 0:
@@ -152,13 +243,20 @@ def _confirmar_se_aprovado(cur, pedido: dict, usuario: dict, pagamento_mp: dict)
 
 
 def _verificar_e_confirmar_pagamento(cur, pedido: dict, usuario: dict) -> str:
-    """Consulta o pagamento de verdade na API do Mercado Pago (não confia
-    num clique) e confirma via _confirmar_se_aprovado. Usado tanto pelo
-    botão "Já paguei, confirmar" quanto pelo polling automático da tela de
-    pagamento -- nenhum dos dois marca como confirmado sem checar a API."""
+    """Confirma o pagamento de verdade (não confia num clique) -- usado
+    tanto pelo botão "Já paguei, confirmar" quanto pelo polling automático
+    da tela de pagamento. Dois caminhos: se o pedido JÁ tem um
+    mp_payment_id reivindicado (Pix direto já conciliado antes, ou pedido
+    antigo do fluxo de Checkout), reconsulta esse pagamento específico. Se
+    ainda não tem (Pix direto, ninguém pagou ainda ou ainda não achamos o
+    pagamento), tenta conciliar por valor -- ver
+    _tentar_conciliar_pix_direto."""
     status_atual = pedido["status_pedido"]
-    if status_atual == "confirmado" or not config.MERCADOPAGO_ACCESS_TOKEN or not pedido["mp_payment_id"]:
+    if status_atual != "pendente" or not config.MERCADOPAGO_ACCESS_TOKEN:
         return status_atual
+
+    if not pedido["mp_payment_id"]:
+        return _tentar_conciliar_pix_direto(cur, pedido, usuario)
 
     try:
         pagamento_mp = _consultar_pagamento(pedido["mp_payment_id"])
@@ -167,6 +265,40 @@ def _verificar_e_confirmar_pagamento(cur, pedido: dict, usuario: dict) -> str:
         return status_atual
 
     return _confirmar_se_aprovado(cur, pedido, usuario, pagamento_mp)
+
+
+def _pedido_expirado(pedido: dict) -> bool:
+    return datetime.now(timezone.utc) - pedido["data_pedido"] > _JANELA_PAGAMENTO
+
+
+def _segundos_restantes(pedido: dict) -> int:
+    decorrido = (datetime.now(timezone.utc) - pedido["data_pedido"]).total_seconds()
+    return max(0, int(_JANELA_PAGAMENTO.total_seconds() - decorrido))
+
+
+def _expirar_pedido(cur, pedido: dict) -> str:
+    """Só chega aqui depois de reconsultar o Mercado Pago (nunca expira um
+    pedido sem checar antes se ele não tinha acabado de ser aprovado bem
+    na hora do timeout -- mesma trava "AND status_pedido != alvo" +
+    rowcount de toda mutação de pedido neste arquivo, nunca otimismo)."""
+    cur.execute(
+        "UPDATE pedido SET status_pedido = 'cancelado', expirado = TRUE "
+        "WHERE id_pedido = %s AND status_pedido = 'pendente'",
+        (pedido["id_pedido"],),
+    )
+    return "cancelado" if cur.rowcount > 0 else pedido["status_pedido"]
+
+
+def _verificar_com_expiracao(cur, pedido: dict, titular: dict) -> str:
+    """Reconsulta o pagamento e, se ainda não foi aprovado E já passou da
+    janela de 5 minutos, expira o pedido (libera a vaga). Usado nas 3 rotas
+    que podem encerrar o ciclo de vida do pedido pendente (GET da tela de
+    pagamento, "Já paguei" e o polling automático) -- nenhuma marca como
+    expirado sem reconsultar a API primeiro."""
+    status_atual = _verificar_e_confirmar_pagamento(cur, pedido, titular)
+    if status_atual != "confirmado" and config.MERCADOPAGO_ACCESS_TOKEN and _pedido_expirado(pedido):
+        status_atual = _expirar_pedido(cur, pedido)
+    return status_atual
 
 
 @pedidos_bp.route("/comprar", methods=["GET", "POST"])
@@ -345,42 +477,50 @@ def pagamento(id_pedido: int):
                 )
 
             qr_code_base64 = qr_code = mp_erro = None
+            segundos_restantes = 0
 
             if pedido["status_pedido"] == "pendente":
-                try:
-                    # Titular deste pedido -- pode ser outra pessoa (slot 2),
-                    # não necessariamente a conta logada (ver _titular_do_pedido).
-                    titular = _titular_do_pedido(pedido, usuario["nome"], usuario["email"])
-                    if pedido["mp_payment_id"]:
-                        pagamento_mp = _consultar_pagamento(pedido["mp_payment_id"])
-                    else:
-                        pagamento_mp = _criar_pagamento_pix(pedido, titular)
-                        cur.execute(
-                            "UPDATE pedido SET mp_payment_id = %s WHERE id_pedido = %s",
-                            (str(pagamento_mp["id"]), id_pedido),
-                        )
+                # Titular deste pedido -- pode ser outra pessoa (slot 2),
+                # não necessariamente a conta logada (ver _titular_do_pedido).
+                titular = _titular_do_pedido(pedido, usuario["nome"], usuario["email"])
 
-                    # Reconsulta e confirma aqui também (não só no botão/
+                if _pedido_expirado(pedido):
+                    # Já passou da janela de pagamento -- nem tenta criar/
+                    # reconsultar um Pix novo pra algo que vai expirar de
+                    # qualquer forma; só reconsulta uma última vez (nunca
+                    # expira sem checar se não tinha acabado de aprovar) e
+                    # resolve o pedido.
+                    status_atual = _verificar_com_expiracao(cur, pedido, titular)
+                    pedido = dict(pedido)
+                    pedido["status_pedido"] = status_atual
+                elif not config.PIX_KEY:
+                    logger.warning("PIX_KEY não configurado -- não dá pra gerar o Pix direto")
+                    mp_erro = "Não foi possível gerar o Pix agora. Tente novamente em instantes."
+                    segundos_restantes = _segundos_restantes(pedido)
+                else:
+                    # QR/Copia-e-Cola gerado LOCALMENTE (pix_copia_cola.py),
+                    # sem chamar a API pra criar nada -- é assim que evita a
+                    # taxa do Checkout, ver Horror_Night_Party_Pix_Mercado_
+                    # Pago(1).md. Quem confirma o pagamento de verdade é o
+                    # Pix da própria chave; a gente só concilia depois (ver
+                    # _tentar_conciliar_pix_direto).
+                    qr_code = gerar_copia_cola(
+                        config.PIX_KEY, pedido["valor"], txid=f"HNP{id_pedido}"
+                    )
+                    qr_code_base64 = gerar_qr_base64(qr_code)
+
+                    # Reconsulta/concilia aqui também (não só no botão/
                     # polling) -- sem isso, quem saísse da tela de pagamento
                     # e voltasse depois de 5+ minutos (o polling em JS já
                     # tinha parado) continuava vendo o QR Code de um pedido
-                    # que na verdade já tinha sido aprovado pelo Mercado
-                    # Pago (achado real nesta revisão).
-                    status_atual = _confirmar_se_aprovado(cur, pedido, titular, pagamento_mp)
+                    # que na verdade já tinha sido pago (achado real nesta
+                    # revisão, do fluxo antigo -- mesmo risco existe aqui).
+                    status_atual = _verificar_e_confirmar_pagamento(cur, pedido, titular)
                     if status_atual == "confirmado":
                         pedido = dict(pedido)
                         pedido["status_pedido"] = "confirmado"
                     else:
-                        transacao = (pagamento_mp.get("point_of_interaction") or {}).get(
-                            "transaction_data"
-                        ) or {}
-                        qr_code_base64 = transacao.get("qr_code_base64")
-                        qr_code = transacao.get("qr_code")
-                except Exception:
-                    logger.warning(
-                        "Falha ao criar/consultar pagamento Pix no Mercado Pago", exc_info=True
-                    )
-                    mp_erro = "Não foi possível gerar o Pix agora. Tente novamente em instantes."
+                        segundos_restantes = _segundos_restantes(pedido)
 
     return render_template(
         "pagamento.html",
@@ -390,6 +530,7 @@ def pagamento(id_pedido: int):
         qr_code_base64=qr_code_base64,
         qr_code=qr_code,
         mp_erro=mp_erro,
+        segundos_restantes=segundos_restantes,
     )
 
 
@@ -407,22 +548,24 @@ def pagamento_confirmar(id_pedido: int):
             if not pedido:
                 abort(404)
             titular = _titular_do_pedido(pedido, usuario["nome"], usuario["email"])
-            status_atual = _verificar_e_confirmar_pagamento(cur, pedido, titular)
-            # Só troca o dict quando o MP realmente aprovou -- mesmo padrão do
-            # GET /pagamento/<id>. status_atual pode vir no vocabulário do
-            # Mercado Pago (ex. "rejected", "in_process", "pending"), que não
-            # é o enum da coluna status_pedido ('pendente'/'confirmado'/
-            # 'cancelado'); gravar esse valor bruto em pedido["status_pedido"]
-            # contaminaria a condição do template (achado real nesta revisão).
-            if status_atual == "confirmado":
+            status_atual = _verificar_com_expiracao(cur, pedido, titular)
+            # Só troca o dict pro que o MP/expiração realmente resolveram --
+            # mesmo padrão do GET /pagamento/<id>. status_atual pode vir no
+            # vocabulário do Mercado Pago (ex. "rejected", "in_process",
+            # "pending"), que não é o enum da coluna status_pedido
+            # ('pendente'/'confirmado'/'cancelado'); gravar esse valor bruto
+            # em pedido["status_pedido"] contaminaria a condição do template
+            # (achado real nesta revisão) -- só troca nos dois casos que SÃO
+            # esse enum (confirmado ou cancelado por expiração).
+            if status_atual in ("confirmado", "cancelado"):
                 pedido = dict(pedido)
-                pedido["status_pedido"] = "confirmado"
+                pedido["status_pedido"] = status_atual
 
     return render_template(
         "pagamento.html",
         pedido=pedido,
         pix_key=config.PIX_KEY,
-        aguardando=(status_atual != "confirmado"),
+        aguardando=(status_atual not in ("confirmado", "cancelado")),
     )
 
 
@@ -436,16 +579,21 @@ def pagamento_verificar(id_pedido: int):
             if not pedido:
                 abort(404)
             titular = _titular_do_pedido(pedido, usuario["nome"], usuario["email"])
-            status_atual = _verificar_e_confirmar_pagamento(cur, pedido, titular)
+            status_atual = _verificar_com_expiracao(cur, pedido, titular)
 
     return jsonify({"status": status_atual})
 
 
 @pedidos_bp.route("/pagamento/webhook/mercadopago", methods=["POST"])
 def webhook_mercadopago():
-    # Mercado Pago chama essa rota sozinho assim que o status de um
-    # pagamento muda de verdade (registrada via `notification_url` na
-    # criação do Pix, ver _criar_pagamento_pix) -- sem login, então NUNCA
+    # Nenhum fluxo do app registra notification_url pra esta rota hoje (o
+    # link de cartão é um link estático criado manualmente no Mercado Pago,
+    # LINKS_PAGAMENTO_CARTAO; o Pix direto na chave não chama a API pra
+    # criar nada, ver pix_copia_cola.py/_tentar_conciliar_pix_direto) -- só
+    # dispara se a conta tiver um webhook configurado no painel do Mercado
+    # Pago pra TODOS os pagamentos (não confirmado se existe). Deixada
+    # funcionando como bônus, sem depender dela: o polling já cobre os dois
+    # fluxos sozinho. Sem login, então NUNCA
     # confia em nada que vem no corpo além do id do pagamento; o status
     # real sempre é reconsultado na API deles com nosso próprio access
     # token (_verificar_e_confirmar_pagamento), nunca lido do payload do
