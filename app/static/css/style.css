@@ -193,6 +193,12 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .pay-key{margin:0;font-size:13px;color:var(--paper-ink);word-break:break-all}
 .pay-actions{display:flex;gap:10px;padding:0 20px 22px}
 .pay-actions__confirm{flex:1;margin:0}
+/* .btn-ghost usa --ink (quase branco), certo no fundo escuro do resto da
+   página -- mas .pay-actions mora dentro de .ticket, que é um cartão CLARO
+   (--paper, quase branco também). Texto quase-branco em fundo quase-branco
+   ficava invisível (achado real, usuário reportou "botão vazio, sem nada
+   escrito"). Sobrescreve só dentro do ticket. */
+.ticket .btn-ghost{color:var(--paper-ink);border-color:var(--paper-mute)}
 .qr,.pay-qr{width:190px;height:190px;border-radius:12px;background:#fffdf8;border:8px solid #fffdf8;box-shadow:0 0 0 1px #dccdae;image-rendering:pixelated}
 .copy-box,.pay-copy-row{width:100%;display:flex;gap:8px;align-items:center;padding:10px 12px;border-radius:10px;background:var(--paper-2)}
 .copy-box p,.pay-copy-value{flex:1;min-width:0;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;margin:0}
