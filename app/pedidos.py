@@ -548,10 +548,18 @@ def pagamento(id_pedido: int):
 @pedidos_bp.route("/pagamento/<int:id_pedido>/confirmar", methods=["POST"])
 @login_required
 def pagamento_confirmar(id_pedido: int):
-    # "Já paguei, confirmar" consulta a API do Mercado Pago na hora -- não é
-    # só um botão que mostra "aguardando" e espera o polling em background
-    # pegar depois (achado real, usuário pediu confirmação de verdade pela
-    # API aqui, não só client-side).
+    # "Já paguei, confirmar" consulta a API do Mercado Pago/concilia o Pix
+    # direto na hora (não espera o polling em background) -- mas SEMPRE
+    # redireciona pro GET /pagamento/<id> depois, nunca renderiza a página
+    # direto daqui. Sem isso (achado real, usuário testou: clicou em
+    # "confirmar" ANTES de pagar de verdade, pagou 30s depois, e o pedido
+    # nunca confirmou sozinho) -- renderizar aqui mostrava uma página
+    # "Em análise" SEM QR Code e SEM o script de verificação automática (só
+    # o GET tem isso), virando um beco sem saída: se o clique não confirmou
+    # na hora, nada mais verificava esse pedido de novo sozinho depois,
+    # nem quando a pessoa pagasse de verdade em seguida. O GET sempre
+    # recalcula tudo do zero (QR, polling, ou a tela final certa) a partir
+    # do status ATUAL do pedido no banco.
     usuario = current_user()
     with db.get_conn() as conn:
         with conn.cursor() as cur:
@@ -559,25 +567,9 @@ def pagamento_confirmar(id_pedido: int):
             if not pedido:
                 abort(404)
             titular = _titular_do_pedido(pedido, usuario["nome"], usuario["email"])
-            status_atual = _verificar_com_expiracao(cur, pedido, titular)
-            # Só troca o dict pro que o MP/expiração realmente resolveram --
-            # mesmo padrão do GET /pagamento/<id>. status_atual pode vir no
-            # vocabulário do Mercado Pago (ex. "rejected", "in_process",
-            # "pending"), que não é o enum da coluna status_pedido
-            # ('pendente'/'confirmado'/'cancelado'); gravar esse valor bruto
-            # em pedido["status_pedido"] contaminaria a condição do template
-            # (achado real nesta revisão) -- só troca nos dois casos que SÃO
-            # esse enum (confirmado ou cancelado por expiração).
-            if status_atual in ("confirmado", "cancelado"):
-                pedido = dict(pedido)
-                pedido["status_pedido"] = status_atual
+            _verificar_com_expiracao(cur, pedido, titular)
 
-    return render_template(
-        "pagamento.html",
-        pedido=pedido,
-        pix_key=_chave_pix_do_pedido(pedido) or "",
-        aguardando=(status_atual not in ("confirmado", "cancelado")),
-    )
+    return redirect(url_for("pedidos.pagamento", id_pedido=id_pedido))
 
 
 @pedidos_bp.route("/pagamento/<int:id_pedido>/verificar", methods=["POST"])
