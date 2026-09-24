@@ -171,6 +171,18 @@ def enviar_confirmacao_pedido(destinatario: str, nome: str, pedido) -> None:
     )
 
 
+def enviar_email_avulso(destinatario: str, nome: str, assunto: str, mensagem: str) -> None:
+    # E-mail em massa do admin (app/admin.py, pedidos_email_massa) -- assunto
+    # e mensagem digitados na hora pelo admin, um por cliente com pedido
+    # ativo. `mensagem` é texto puro (sem HTML) -- o admin não escreve
+    # marcação, só o texto mesmo; quebras de linha viram parágrafos no HTML
+    # pra não sair tudo grudado num bloco só.
+    corpo = f"Oi, {nome}! \U0001f383\n\n{mensagem}"
+    paragrafos_html = "".join(f"<p>{linha}</p>" for linha in mensagem.split("\n") if linha.strip())
+    corpo_html = _email_shell(f"<p>Oi, {nome}! \U0001f383</p>{paragrafos_html}")
+    _enviar(destinatario, assunto, corpo, corpo_html)
+
+
 def enviar_codigo_verificacao_email(destinatario: str, nome: str, codigo: str) -> None:
     corpo = (
         f"Oi, {nome}! \U0001f383\n\n"

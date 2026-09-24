@@ -88,6 +88,16 @@ CREATE TABLE IF NOT EXISTS pedido (
     acompanhante_email     VARCHAR(160),
     acompanhante_rg        VARCHAR(20),
     acompanhante_whatsapp  VARCHAR(20),
+    -- Ingresso de cortesia criado pelo admin (app/admin.py,
+    -- pedidos_cortesia) -- valor=0, status_pedido já nasce 'confirmado'
+    -- (nunca passa pelo fluxo de pagamento). id_usuario fica sendo o
+    -- ADMIN que criou (não o convidado, que não precisa ter conta) --
+    -- titular_nome/titular_email/rg/whatsapp são os dados do convidado de
+    -- verdade, mesmo padrão já usado no pedido de slot 2 (pra outra
+    -- pessoa). Por isso o índice único de slot (abaixo) precisa ignorar
+    -- cortesia: um admin criando vários cortesia com a PRÓPRIA conta não
+    -- pode esbarrar no limite de "até 2 pedidos por conta".
+    cortesia       BOOLEAN NOT NULL DEFAULT FALSE,
     data_pedido    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
@@ -100,7 +110,7 @@ CREATE TABLE IF NOT EXISTS pedido (
 -- pedidos ativos por conta+evento (um por slot), mas nunca dois no mesmo
 -- slot ao mesmo tempo. Postgres rejeita o INSERT concorrente com uma
 -- UniqueViolation, que a rota captura.
-CREATE UNIQUE INDEX IF NOT EXISTS ux_pedido_usuario_evento_slot_ativo ON pedido (id_usuario, id_evento, slot) WHERE status_pedido != 'cancelado';
+CREATE UNIQUE INDEX IF NOT EXISTS ux_pedido_usuario_evento_slot_ativo ON pedido (id_usuario, id_evento, slot) WHERE status_pedido != 'cancelado' AND NOT cortesia;
 
 -- Pix direto na chave (app/pedidos.py, _tentar_conciliar_pix_direto): o
 -- mesmo pagamento real do Mercado Pago nunca pode ser reivindicado por

@@ -10,17 +10,20 @@ CSRF (um <form> cross-site não consegue mandar esse header). As rotas GET
 que renderizam página continuam HTML normal, sem exigir o header."""
 from __future__ import annotations
 
+import csv
+import io
 import logging
 from functools import wraps
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 import psycopg2
-from flask import Blueprint, abort, jsonify, redirect, render_template, request, session, url_for
+from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
 
 import db
-from auth import admin_required, current_user
-from email_utils import enviar_cadastro_aprovado, enviar_confirmacao_pedido
+from auth import EMAIL_RE, admin_required, current_user
+from email_utils import enviar_cadastro_aprovado, enviar_confirmacao_pedido, enviar_email_avulso
+from pedidos import _evento_ativo, _validar_rg, _validar_whatsapp
 
 logger = logging.getLogger(__name__)
 
@@ -296,6 +299,139 @@ def pedidos():
         pedidos=lista,
         capacidade_maxima=totais["capacidade_maxima"],
         ingressos_vendidos_total=totais["ingressos_vendidos_total"],
+    )
+
+
+@admin_bp.route("/pedidos/cortesia", methods=["POST"])
+@admin_required
+def pedidos_cortesia():
+    # Ingresso de cortesia -- pedido explícito do usuário. valor=0,
+    # status_pedido já nasce 'confirmado' (não passa pelo fluxo de
+    # pagamento nenhum). id_usuario fica sendo o ADMIN que criou (o
+    # convidado não precisa ter conta própria no sistema) --
+    # titular_nome/titular_email/rg/whatsapp são os dados de quem vai usar
+    # o ingresso de verdade, mesmo padrão já usado no pedido de slot 2
+    # (comprado pra outra pessoa). O índice único de slot ignora cortesia
+    # (schema.sql), então o admin pode criar quantos cortesia quiser sem
+    # esbarrar no limite de "até 2 pedidos por conta".
+    admin = current_user()
+    nome = (request.form.get("nome") or "").strip()
+    email = (request.form.get("email") or "").strip().lower()
+    rg = _validar_rg(request.form.get("rg"))
+    whatsapp = _validar_whatsapp(request.form.get("whatsapp"))
+
+    if not nome or not EMAIL_RE.match(email) or not rg or not whatsapp:
+        flash("Preencha nome, e-mail válido, RG e WhatsApp (só números) do convidado.")
+        return redirect(url_for("admin.pedidos"))
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            evento = _evento_ativo(cur)
+            if not evento:
+                flash("Nenhum evento ativo -- cadastre um lote primeiro.")
+                return redirect(url_for("admin.pedidos"))
+
+            cur.execute(
+                """
+                INSERT INTO pedido (
+                    id_usuario, id_evento, slot, titular_nome, titular_email,
+                    rg, whatsapp, valor, quantidade, status_pedido, cortesia
+                )
+                VALUES (%s, %s, 1, %s, %s, %s, %s, 0, 1, 'confirmado', TRUE)
+                RETURNING id_pedido
+                """,
+                (admin["id_usuario"], evento["id_evento"], nome, email, rg, whatsapp),
+            )
+            id_pedido = cur.fetchone()["id_pedido"]
+
+    try:
+        enviar_confirmacao_pedido(email, nome, {"id_pedido": id_pedido, "valor": "0.00", "quantidade": 1})
+    except Exception:
+        logger.warning("Falha ao enviar e-mail de ingresso cortesia", exc_info=True)
+
+    flash(f"Ingresso cortesia #{id_pedido} criado pra {nome}.")
+    return redirect(url_for("admin.pedidos"))
+
+
+@admin_bp.route("/pedidos/email-massa", methods=["GET", "POST"])
+@admin_required
+def pedidos_email_massa():
+    # E-mail em massa pra todo cliente com pedido ATIVO (não cancelado) --
+    # pedido explícito do usuário. Manda pro titular de cada pedido (quem
+    # vai usar o ingresso -- titular_email se for pra outra pessoa, senão
+    # o e-mail da própria conta), um por endereço ÚNICO (uma pessoa com 2
+    # pedidos ativos não recebe 2 e-mails iguais).
+    if request.method == "GET":
+        return render_template("admin/email_massa.html")
+
+    assunto = (request.form.get("assunto") or "").strip()
+    mensagem = (request.form.get("mensagem") or "").strip()
+    if not assunto or not mensagem:
+        flash("Preencha assunto e mensagem.")
+        return render_template("admin/email_massa.html", assunto=assunto, mensagem=mensagem), 400
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT DISTINCT ON (COALESCE(p.titular_email, u.email))
+                       COALESCE(p.titular_email, u.email) AS email,
+                       COALESCE(p.titular_nome, u.nome) AS nome
+                FROM pedido p
+                JOIN login_usuario u ON u.id_usuario = p.id_usuario
+                WHERE p.status_pedido != 'cancelado'
+                """
+            )
+            destinatarios = cur.fetchall()
+
+    enviados = 0
+    falhas = 0
+    for d in destinatarios:
+        try:
+            enviar_email_avulso(d["email"], d["nome"], assunto, mensagem)
+            enviados += 1
+        except Exception:
+            logger.warning("Falha ao enviar e-mail em massa pra %s", d["email"], exc_info=True)
+            falhas += 1
+
+    flash(f"E-mail mandado pra {enviados} cliente(s)." + (f" {falhas} falharam." if falhas else ""))
+    return redirect(url_for("admin.pedidos"))
+
+
+@admin_bp.route("/pedidos/exportar")
+@admin_required
+def pedidos_exportar():
+    # Planilha pra portaria -- pedido explícito do usuário. Só pedidos
+    # CONFIRMADOS (quem não pagou não deveria entrar). Uma linha por
+    # PESSOA, não por pedido -- um pedido de 2 ingressos (titular +
+    # acompanhante) vira 2 linhas, senão a portaria só teria o nome de um
+    # dos dois pra conferir.
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT p.id_pedido, p.rg, p.acompanhante_nome, p.acompanhante_rg,
+                       COALESCE(p.titular_nome, u.nome) AS nome
+                FROM pedido p
+                JOIN login_usuario u ON u.id_usuario = p.id_usuario
+                WHERE p.status_pedido = 'confirmado'
+                ORDER BY p.id_pedido
+                """
+            )
+            lista = cur.fetchall()
+
+    buf = io.StringIO()
+    escritor = csv.writer(buf, delimiter=";")
+    escritor.writerow(["Pedido", "Ingresso", "Nome", "RG"])
+    for p in lista:
+        escritor.writerow([p["id_pedido"], 1, p["nome"], p["rg"] or ""])
+        if p["acompanhante_nome"]:
+            escritor.writerow([p["id_pedido"], 2, p["acompanhante_nome"], p["acompanhante_rg"] or ""])
+
+    return Response(
+        "﻿" + buf.getvalue(),  # BOM -- Excel abre acentuado certo com UTF-8 sem confundir com outra codificação
+        mimetype="text/csv",
+        headers={"Content-Disposition": "attachment; filename=pedidos_portaria.csv"},
     )
 
 
