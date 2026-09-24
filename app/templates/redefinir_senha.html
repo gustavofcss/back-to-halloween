@@ -28,8 +28,16 @@
             <label class="field" for="email">E-mail
               <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email" value="{{ request.args.get('email', '') }}">
             </label>
-            <label class="field" for="codigo">Código de 6 dígitos
-              <input class="input" id="codigo" name="codigo" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" placeholder="000000" required autocomplete="one-time-code">
+            <label class="field">Código de 6 dígitos
+              <div class="otp-boxes">
+                <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 1">
+                <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2">
+                <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3">
+                <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 4">
+                <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 5">
+                <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 6">
+              </div>
+              <input type="hidden" id="codigo" name="codigo" pattern="[0-9]{6}" required>
             </label>
           </div>
           <button type="button" id="btn-continuar" class="btn btn-primary btn-block" style="margin-top:14px">Continuar</button>
@@ -65,11 +73,42 @@
     var confirmar = document.getElementById('confirmar_senha');
     var aviso = document.getElementById('senha-erro');
 
+    // Caixinhas do código (uma por dígito) -- #codigo (hidden) é quem o
+    // form realmente manda, sincronizado a cada digitação.
+    var otpBoxes = Array.prototype.slice.call(document.querySelectorAll('.otp-box'));
+    function sincronizarOtp() {
+      codigo.value = otpBoxes.map(function (b) { return b.value; }).join('');
+    }
+    otpBoxes.forEach(function (box, i) {
+      box.addEventListener('input', function () {
+        box.value = box.value.replace(/\D/g, '').slice(-1);
+        sincronizarOtp();
+        if (box.value && otpBoxes[i + 1]) { otpBoxes[i + 1].focus(); }
+      });
+      box.addEventListener('keydown', function (evt) {
+        if (evt.key === 'Backspace' && !box.value && otpBoxes[i - 1]) { otpBoxes[i - 1].focus(); }
+      });
+      box.addEventListener('paste', function (evt) {
+        var texto = (evt.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+        if (!texto) { return; }
+        evt.preventDefault();
+        texto.split('').slice(0, otpBoxes.length - i).forEach(function (d, j) { otpBoxes[i + j].value = d; });
+        sincronizarOtp();
+        otpBoxes[Math.min(i + texto.length, otpBoxes.length - 1)].focus();
+      });
+    });
+
     document.getElementById('btn-continuar').addEventListener('click', function () {
-      // required/pattern dos campos da etapa 1 ainda valem (reportValidity
-      // mostra o balão nativo do navegador se algo estiver errado) -- só
-      // avança se email/código já estiverem preenchidos direito.
-      if (!email.reportValidity() || !codigo.reportValidity()) { return; }
+      // required/pattern do e-mail ainda vale (reportValidity mostra o
+      // balão nativo se algo estiver errado); #codigo é hidden agora
+      // (as caixinhas visíveis são só pra digitação), então checa o
+      // tamanho na mão em vez de reportValidity (navegador não valida
+      // campo escondido direito).
+      if (!email.reportValidity()) { return; }
+      if (codigo.value.length !== 6) {
+        otpBoxes[0].focus();
+        return;
+      }
       etapaCodigo.style.display = 'none';
       etapaSenha.style.display = 'flex';
       senha.setAttribute('required', 'required');

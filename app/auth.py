@@ -258,6 +258,57 @@ def confirmar_email_reenviar():
     return render_template("verifique_email.html", email=email)
 
 
+@auth_bp.route("/confirmar-email/mudar-email", methods=["POST"])
+def confirmar_email_mudar():
+    # "Errei o e-mail no cadastro" -- pedido explícito do usuário (a tela de
+    # confirmação não tinha como corrigir isso, só dava pra voltar pro login
+    # e recomeçar do zero). Só deixa mudar enquanto a conta ainda não foi
+    # confirmada (email_verificado = FALSE) -- depois de confirmada, mudar
+    # o e-mail é outra operação (edição de perfil, fora de escopo aqui) e
+    # nunca sequestra uma conta já ativa.
+    email_atual = (request.form.get("email_atual") or "").strip().lower()
+    novo_email = (request.form.get("novo_email") or "").strip().lower()
+
+    if not EMAIL_RE.match(novo_email):
+        flash("Digite um e-mail válido.")
+        return render_template("verifique_email.html", email=email_atual), 400
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT id_usuario, nome FROM login_usuario WHERE email = %s AND email_verificado = FALSE",
+                (email_atual,),
+            )
+            usuario = cur.fetchone()
+
+            if not usuario:
+                flash("Não achamos esse cadastro pendente -- tente de novo pelo login.")
+                return redirect(url_for("auth.login"))
+
+            cur.execute("SELECT 1 FROM login_usuario WHERE email = %s", (novo_email,))
+            if cur.fetchone():
+                flash("Já existe uma conta com esse e-mail novo.")
+                return render_template("verifique_email.html", email=email_atual), 400
+
+            codigo = f"{secrets.randbelow(1000000):06d}"
+            codigo_hash = generate_password_hash(codigo)
+            cur.execute(
+                "UPDATE login_usuario SET email = %s, email_verificacao_codigo_hash = %s, "
+                "email_verificacao_codigo_expira = now() + interval '15 minutes', "
+                "data_atualizacao = now() WHERE id_usuario = %s",
+                (novo_email, codigo_hash, usuario["id_usuario"]),
+            )
+            nome = usuario["nome"]
+
+    try:
+        enviar_codigo_verificacao_email(novo_email, nome, codigo)
+    except Exception:
+        logger.warning("Falha ao enviar código de verificação pro e-mail novo", exc_info=True)
+
+    flash("E-mail atualizado. Mandamos um código novo pra ele.")
+    return redirect(url_for("auth.confirmar_email", email=novo_email))
+
+
 @auth_bp.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
