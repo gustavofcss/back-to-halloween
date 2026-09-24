@@ -523,7 +523,13 @@ def meus_pedidos():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT * FROM pedido WHERE id_usuario = %s ORDER BY data_pedido DESC",
+                """
+                SELECT p.*, e.numero_lote, e.nome_evento
+                FROM pedido p
+                JOIN evento e ON e.id_evento = p.id_evento
+                WHERE p.id_usuario = %s
+                ORDER BY p.data_pedido DESC
+                """,
                 (usuario["id_usuario"],),
             )
             pedidos = cur.fetchall()

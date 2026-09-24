@@ -28,6 +28,16 @@
           </div>
           <p class="ticket__price">R$ {{ p.valor }}</p>
         </div>
+        <div class="ticket__holders">
+          <div>
+            <p class="ticket__holder-name">{{ p.titular_nome or usuario.nome }}</p>
+            {% if p.rg %}<p class="ticket__holder-rg">RG {{ p.rg }}</p>{% endif %}
+          </div>
+          <div>
+            <p class="ticket__holder-name">Lote {{ p.numero_lote }}</p>
+            <p class="ticket__holder-rg">{{ p.nome_evento }}</p>
+          </div>
+        </div>
       </div>
       {% endfor %}
 
