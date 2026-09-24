@@ -101,6 +101,14 @@ p{margin:0}
 .input:disabled{opacity:.6;cursor:not-allowed}
 .input--pill{border-radius:999px;padding:12px 16px;background:var(--card);width:260px;max-width:100%;font-size:14px}
 .row-2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px}
+/* Código de verificação em caixinhas (uma por dígito) -- pedido do
+   usuário, em vez de um campo de texto só. #codigo (hidden) continua
+   sendo o valor de verdade que o form manda (ver otp.js inline nos
+   templates que usam isso) -- as caixinhas só existem pra digitação. */
+.otp-boxes{display:flex;gap:8px;justify-content:center}
+.otp-box{width:44px;height:52px;text-align:center;font-size:22px;font-weight:700;
+  border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+.otp-box:focus{outline:none;border-color:var(--orange)}
 .divider{display:flex;align-items:center;gap:12px;font-size:12px;color:var(--ink-4)}
 .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line)}
 .dashed-top{padding-top:14px;border-top:1px dashed var(--line);display:flex;flex-direction:column;gap:14px}
