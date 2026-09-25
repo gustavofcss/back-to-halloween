@@ -113,6 +113,7 @@
     actionPendente = form.getAttribute('action');
     textEl.textContent = mensagem;
     overlay.style.display = 'flex';
+    btnCancel.focus();
     return false;
   };
 
@@ -124,6 +125,7 @@
     actionPendente = action;
     textEl.textContent = mensagem;
     overlay.style.display = 'flex';
+    btnCancel.focus();
     return false;
   };
 

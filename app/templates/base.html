@@ -13,7 +13,7 @@
 <body>
   {% with mensagens = get_flashed_messages() %}
     {% if mensagens %}
-      <div class="flash-wrap">
+      <div class="flash-wrap" role="status" aria-live="polite">
         {% for mensagem in mensagens %}<div class="flash">{{ mensagem }}</div>{% endfor %}
       </div>
     {% endif %}
