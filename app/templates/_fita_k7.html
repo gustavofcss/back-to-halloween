@@ -1,0 +1,21 @@
+{# Ingresso em forma de fita K7. Campos reais do modelo (pedido):
+   status_pedido (pendente/confirmado/cancelado), expirado (bool,
+   só junto com cancelado), quantidade, valor, titular_nome, id_pedido,
+   numero_lote. `usuario` é o dono da conta -- cai pro nome dele quando
+   titular_nome é vazio (pedido "normal", não pra outra pessoa). #}
+{% macro fita(pedido, usuario=None, href=None, tilt=0) %}
+  {% set cls = 'expirado' if (pedido.status_pedido == 'cancelado' and pedido.expirado) else pedido.status_pedido %}
+  {% set carimbo = {'confirmado': 'CONFIRMADO', 'pendente': 'AGUARDANDO PIX', 'cancelado': 'CANCELADO', 'expirado': 'EXPIRADO'}.get(cls, cls|upper) %}
+  <{{ 'a' if href else 'div' }} class="k7 k7--{{ cls }}{% if cls == 'pendente' %} k7--spin{% endif %}"{% if href %} href="{{ href }}"{% endif %} style="--tilt:{{ tilt }}deg">
+    <div class="k7__label">
+      <div class="k7__row">
+        <span class="k7__title">{{ pedido.quantidade }} × Entrada</span>
+        <span class="k7__price">R$ {{ pedido.valor }}</span>
+      </div>
+      <span class="k7__holder">{{ pedido.titular_nome or (usuario.nome if usuario else '') }}</span>
+      <span class="k7__meta">FITA #{{ pedido.id_pedido }} · LOTE {{ pedido.numero_lote }}</span>
+    </div>
+    <div class="k7__window"><i class="k7__reel"></i><i class="k7__reel"></i></div>
+    <span class="k7__stamp">{{ carimbo }}</span>
+  </{{ 'a' if href else 'div' }}>
+{% endmacro %}

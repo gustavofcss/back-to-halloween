@@ -1,24 +1,16 @@
 {% extends "base.html" %}
-{% from "_decor.html" import decor %}
-{% block title %}Entrar — Horror Night Party{% endblock %}
+{% block title %}Entrar — Back to Halloween{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vhs.css') }}">{% endblock %}
 {% block content %}
-<div class="screen">
-  {{ decor('tree-l', 'spider', 'hand') }}
-
-  <div class="content">
-    <div class="brand-head">
-      <p class="eyebrow">Horror Night Party</p>
-      <h1 class="display">ENTRAR</h1>
-    </div>
+<div class="vhs">
+  <div class="vhs__osd"><span><span class="rec">●</span> REC</span><span>SP 00:23:59</span></div>
+  <div class="vhs__wrap">
+    <div><div class="kicker">BACK TO HALLOWEEN</div><h1 class="neon">Entrar</h1></div>
     <div class="card">
+      <div class="card__play"><canvas data-static></canvas><span>▶ PLAY</span></div>
       <p class="lead">Acesse sua conta pra garantir seu ingresso.</p>
-      {% if erro %}
-      <div class="alert alert--icon">
-        <img src="{{ url_for('static', filename='assets/deco-scream.png') }}" alt="" aria-hidden="true">
-        {{ erro }}
-      </div>
-      {% endif %}
-      <form method="post" action="/login" class="stack-16">
+      {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
+      <form method="post" action="/login" style="display:flex;flex-direction:column;gap:14px">
         <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
         <label class="field" for="email">E-mail
           <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email">
@@ -26,12 +18,12 @@
         <label class="field" for="senha">Senha
           <input class="input" id="senha" name="senha" type="password" placeholder="Sua senha" required autocomplete="current-password">
         </label>
-        <p class="muted" style="margin:-4px 0 0;text-align:right"><a href="/esqueci-senha">Esqueci minha senha</a></p>
-        <button type="submit" class="btn btn-primary btn-block">Entrar</button>
+        <a href="/esqueci-senha" class="link-right">Esqueci minha senha</a>
+        <button type="submit" class="btn btn-primary btn-block btn-lg">▶ ENTRAR</button>
       </form>
-      <div class="divider">ou</div>
-      <a href="/auth/google{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}" class="btn btn-ghost btn-block">Entrar com Google</a>
-      <p class="muted center">Não tem conta? <a href="/signup{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}">Criar conta</a></p>
+      <div class="divider">OU</div>
+      <a href="/auth/google{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}" class="btn btn-google btn-block">Entrar com Google</a>
+      <p class="foot">Não tem conta? <a href="/signup{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}">Criar conta</a></p>
     </div>
   </div>
 </div>

@@ -1,17 +1,14 @@
 {% extends "base.html" %}
-{% from "_decor.html" import decor %}
-{% block title %}Redefinir senha — Horror Night Party{% endblock %}
+{% block title %}Redefinir senha — Back to Halloween{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vhs.css') }}">{% endblock %}
 {% block content %}
-<div class="screen">
-  {{ decor('tree-l', 'hand') }}
-
-  <div class="content">
-    <div class="brand-head">
-      <p class="eyebrow">Horror Night Party</p>
-      <h1 class="display display--sm">REDEFINIR SENHA</h1>
-    </div>
+<div class="vhs">
+  <div class="vhs__osd"><span>● REC</span><span id="etapa-label">ETAPA 1/2</span></div>
+  <div class="vhs__wrap">
+    <div><div class="kicker">BACK TO HALLOWEEN</div><h1 class="neon" style="font-size:44px">Redefinir senha</h1></div>
     <div class="card">
-      <form method="post" action="/redefinir-senha" id="redefinir-form" class="stack-14">
+      <div class="steps-2"><div id="st-1" class="is-on">1 · CÓDIGO</div><div id="st-2">2 · NOVA SENHA</div></div>
+      <form method="post" action="/redefinir-senha" id="redefinir-form" style="display:flex;flex-direction:column;gap:14px">
         {#
           Duas etapas visuais (pedido explícito do usuário: "devia ter uma
           tela pra código, outra pra senha") -- continua sendo UM form só,
@@ -24,12 +21,12 @@
         #}
         <div id="etapa-codigo">
           <p class="lead">Digite o código de 6 dígitos que enviamos por e-mail.</p>
-          <div class="stack-14">
+          <div style="display:flex;flex-direction:column;gap:14px">
             <label class="field" for="email">E-mail
               <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email" value="{{ request.args.get('email', '') }}">
             </label>
             <label class="field">Código de 6 dígitos
-              <div class="otp-boxes">
+              <div class="otp">
                 <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 1">
                 <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2">
                 <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3">
@@ -40,9 +37,8 @@
               <input type="hidden" id="codigo" name="codigo" pattern="[0-9]{6}" required>
             </label>
           </div>
-          <button type="button" id="btn-continuar" class="btn btn-primary btn-block mt-14">Continuar</button>
+          <button type="button" id="btn-continuar" class="btn btn-primary btn-block" style="margin-top:14px">▶▶ CONTINUAR</button>
         </div>
-
         <div id="etapa-senha" style="display:none;flex-direction:column;gap:14px">
           <p class="lead">Escolha uma senha nova.</p>
           <label class="field" for="senha">Nova senha
@@ -52,15 +48,33 @@
             <input class="input" id="confirmar_senha" name="confirmar_senha" type="password" placeholder="Repita" minlength="6" autocomplete="new-password">
           </label>
           <p class="alert" id="senha-erro" style="display:none;">As senhas não coincidem.</p>
-          <div class="row">
-            <button type="button" id="btn-voltar" class="btn btn-ghost">Voltar</button>
-            <button type="submit" class="btn btn-primary btn-block">Redefinir senha</button>
+          <div class="btn-row">
+            <button type="button" class="btn btn-ghost" id="btn-voltar">◀◀ VOLTAR</button>
+            <button type="submit" class="btn btn-primary grow">REDEFINIR SENHA</button>
           </div>
         </div>
       </form>
-      <p class="muted center mt-14">Não recebeu o código? <a href="/esqueci-senha">Pedir de novo</a></p>
+      <p class="foot">Não recebeu o código? <a href="/esqueci-senha">Pedir de novo</a></p>
     </div>
   </div>
 </div>
 {% endblock %}
-{% block scripts %}<script src="{{ url_for('static', filename='js/otp.js') }}" defer></script>{% endblock %}
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/otp.js') }}" defer></script>
+<script>
+(function(){
+  var e1=document.getElementById('etapa-codigo'), e2=document.getElementById('etapa-senha');
+  // Observa o style.display que o otp.js (script original) já alterna --
+  // só espelha isso no rótulo/steps visuais novos, sem duplicar a lógica
+  // de troca de etapa que já existe.
+  var obs = new MutationObserver(function(){
+    var n = (e2.style.display === 'none') ? 1 : 2;
+    document.getElementById('st-1').classList.toggle('is-on', n===1);
+    document.getElementById('st-2').classList.toggle('is-on', n===2);
+    document.getElementById('etapa-label').textContent = 'ETAPA '+n+'/2';
+  });
+  obs.observe(e1, {attributes:true, attributeFilter:['style']});
+  obs.observe(e2, {attributes:true, attributeFilter:['style']});
+})();
+</script>
+{% endblock %}

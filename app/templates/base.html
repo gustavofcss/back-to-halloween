@@ -8,6 +8,9 @@
   <title>{% block title %}Horror Night Party{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='assets/pumpkin.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&family=Special+Elite&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
   {% block head %}{% endblock %}
 </head>
 <body>
@@ -20,6 +23,7 @@
   {% endwith %}
   {% block content %}{% endblock %}
   <script src="{{ url_for('static', filename='js/comum.js') }}" defer></script>
+  <script src="{{ url_for('static', filename='js/vhs.js') }}" defer></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>
