@@ -49,7 +49,7 @@
           <input class="input" id="rg" name="rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)" required>
         </label>
         <label class="field" for="whatsapp">WhatsApp (de quem vai usar o ingresso)
-          <input class="input" id="whatsapp" name="whatsapp" placeholder="(DDD) número" inputmode="numeric" pattern="\(\d{2}\)\s\d{4,5}-\d{4}" maxlength="15" title="DDD + número (10 ou 11 dígitos)" required>
+          <input class="input" id="whatsapp" name="whatsapp" placeholder="(DDD) número" inputmode="numeric" pattern="\(\d{2}\)\s\d{4,5}-\d{4}" maxlength="15" title="DDD + número (10 ou 11 dígitos)" required data-mask="whatsapp">
         </label>
 
         <div class="buy-actions">
@@ -69,7 +69,8 @@
       </div>
       {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
 
-      <form method="post" action="/comprar" id="comprar-form" class="stack-14">
+      <form method="post" action="/comprar" id="comprar-form" class="stack-14"
+            data-max="{{ max_permitido }}" data-preco="{{ evento.valor_entrada }}">
         <div class="row-2">
           <label class="field">Nome<input class="input" value="{{ usuario.nome }}" disabled></label>
           <label class="field">E-mail<input class="input" value="{{ usuario.email }}" disabled></label>
@@ -78,7 +79,7 @@
           <input class="input" id="rg" name="rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)" required>
         </label>
         <label class="field" for="whatsapp">WhatsApp
-          <input class="input" id="whatsapp" name="whatsapp" placeholder="(DDD) número" inputmode="numeric" pattern="\(\d{2}\)\s\d{4,5}-\d{4}" maxlength="15" title="DDD + número (10 ou 11 dígitos)" required>
+          <input class="input" id="whatsapp" name="whatsapp" placeholder="(DDD) número" inputmode="numeric" pattern="\(\d{2}\)\s\d{4,5}-\d{4}" maxlength="15" title="DDD + número (10 ou 11 dígitos)" required data-mask="whatsapp">
         </label>
 
         <input type="hidden" id="quantidade" name="quantidade" value="1">
@@ -108,7 +109,7 @@
             <input class="input" id="acompanhante_rg" name="acompanhante_rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)">
           </label>
           <label class="field" for="acompanhante_whatsapp">WhatsApp do acompanhante
-            <input class="input" id="acompanhante_whatsapp" name="acompanhante_whatsapp" placeholder="(DDD) número" inputmode="numeric" pattern="\(\d{2}\)\s\d{4,5}-\d{4}" maxlength="15" title="DDD + número (10 ou 11 dígitos)">
+            <input class="input" id="acompanhante_whatsapp" name="acompanhante_whatsapp" placeholder="(DDD) número" inputmode="numeric" pattern="\(\d{2}\)\s\d{4,5}-\d{4}" maxlength="15" title="DDD + número (10 ou 11 dígitos)" data-mask="whatsapp">
           </label>
         </div>
         {% endif %}
@@ -122,50 +123,6 @@
       <form method="post" action="/logout" class="row-center no-margin">
         <button type="submit" class="btn-link">Sair</button>
       </form>
-
-      <script>
-        (function () {
-          var max = {{ max_permitido }};
-          var price = parseFloat("{{ evento.valor_entrada }}");
-          var input = document.getElementById('quantidade');
-          var display = document.getElementById('qty-display');
-          var totalDisplay = document.getElementById('total-display');
-          var dec = document.getElementById('qty-dec');
-          var inc = document.getElementById('qty-inc');
-          var acompanhanteBox = document.getElementById('acompanhante-fields');
-          var acompanhanteInputs = acompanhanteBox ? acompanhanteBox.querySelectorAll('input') : [];
-
-          function render() {
-            display.textContent = input.value;
-            totalDisplay.textContent = (price * parseInt(input.value, 10)).toFixed(2);
-            if (acompanhanteBox) {
-              var precisa = parseInt(input.value, 10) === 2;
-              // 'flex', não 'block' -- .dashed-top é display:flex;gap:12px
-              // no CSS, mas style inline sempre vence a classe. Com
-              // 'block' o gap não tinha efeito nenhum (só funciona em
-              // flex/grid) e os campos do acompanhante ficavam colados,
-              // sem espaço nenhum entre um e outro (achado real, usuário
-              // reportou em print comparando com os campos do titular,
-              // que são filhos diretos do form -- esses sim recebiam o
-              // gap:14px do form, por isso só o acompanhante parecia
-              // "apertado").
-              acompanhanteBox.style.display = precisa ? 'flex' : 'none';
-              acompanhanteInputs.forEach(function (campo) {
-                if (precisa) { campo.setAttribute('required', 'required'); }
-                else { campo.removeAttribute('required'); }
-              });
-            }
-          }
-          dec.addEventListener('click', function () {
-            input.value = Math.max(1, parseInt(input.value, 10) - 1);
-            render();
-          });
-          inc.addEventListener('click', function () {
-            input.value = Math.min(max, parseInt(input.value, 10) + 1);
-            render();
-          });
-        })();
-      </script>
     {% endif %}
     </div>
 
@@ -174,28 +131,5 @@
     {% endif %}
   </div>
 </div>
-<script>
-  (function () {
-    // Formata WhatsApp ao vivo -- (DD) DDDDD-DDDD (celular, 9 dígitos) ou
-    // (DD) DDDD-DDDD (fixo, 8 dígitos) -- pedido do usuário, via print
-    // mostrando o campo só com números crus enquanto digitava. O backend
-    // já tolera essa formatação (tira tudo que não é dígito antes de
-    // validar, ver _validar_whatsapp em pedidos.py) -- só isso aqui muda.
-    // Fora dos blocos condicionais do template de propósito: roda pros
-    // dois formulários possíveis (titular ou acompanhante) sem duplicar
-    // o script.
-    function formatarWhatsapp(digitos) {
-      if (digitos.length <= 2) { return digitos.replace(/^(\d*)/, '($1'); }
-      if (digitos.length <= 6) { return digitos.replace(/^(\d{2})(\d*)/, '($1) $2'); }
-      if (digitos.length <= 10) { return digitos.replace(/^(\d{2})(\d{4})(\d*)/, '($1) $2-$3'); }
-      return digitos.replace(/^(\d{2})(\d{5})(\d*)/, '($1) $2-$3');
-    }
-    document.querySelectorAll('input[name="whatsapp"], input[name="acompanhante_whatsapp"]').forEach(function (campo) {
-      campo.addEventListener('input', function () {
-        var digitos = campo.value.replace(/\D/g, '').slice(0, 11);
-        campo.value = formatarWhatsapp(digitos);
-      });
-    });
-  })();
-</script>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/comprar.js') }}" defer></script>{% endblock %}

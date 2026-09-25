@@ -19,7 +19,7 @@
   </div>
 </div>
 
-<section class="a-card a-card--form" id="form-material" style="display: none;">
+<section class="a-card a-card--form is-hidden" id="form-material">
   <h2 class="a-card__title">Cadastrar material</h2>
   <form method="post" action="/admin/material" class="stack-14">
     <div class="a-grid">
@@ -38,11 +38,11 @@
     </div>
     <div class="row">
       <button type="submit" class="admin-btn-primary">Cadastrar material</button>
-      <button type="button" class="admin-btn-outline" onclick="document.getElementById('form-material').style.display='none';">Cancelar</button>
+      <button type="button" class="admin-btn-outline" data-fechar-form="form-material">Cancelar</button>
     </div>
   </form>
 </section>
-<button type="button" id="btn-novo-material" class="admin-btn-dashed">+ Novo material</button>
+<button type="button" id="btn-novo-material" class="admin-btn-dashed" data-toggle-form="form-material">+ Novo material</button>
 
 {% if materiais %}
 <div class="a-material-grid">
@@ -62,16 +62,6 @@
 <p class="help-text">Nenhum material cadastrado ainda.</p>
 {% endif %}
 <script>
-  (function () {
-    var btn = document.getElementById('btn-novo-material');
-    var secao = document.getElementById('form-material');
-    if (!btn || !secao) { return; }
-    btn.addEventListener('click', function () {
-      secao.style.display = 'block';
-      secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  })();
-
   document.addEventListener('admin:sucesso', function (evt) {
     evt.detail.dados.aplicados.forEach(function (item) {
       var card = document.querySelector('[data-material-id="' + item.id + '"]');

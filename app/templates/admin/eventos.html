@@ -32,7 +32,7 @@
   </form>
 </section>
 
-<section class="a-card a-card--form" id="form-lote" style="display: none;">
+<section class="a-card a-card--form is-hidden" id="form-lote">
   <h2 class="a-card__title">Cadastrar novo lote</h2>
   <p class="help-text no-margin">
     É sempre o MESMO evento{% if ultimo %} ({{ ultimo.nome_evento }}, {{ ultimo.data_evento.strftime('%d/%m/%Y') if ultimo.data_evento else 'data a definir' }}{% if ultimo.hora_evento %} às {{ ultimo.hora_evento.strftime('%H:%M') }}{% endif %}){% endif %} — aqui
@@ -58,7 +58,7 @@
     </div>
     <div class="row">
       <button type="submit" class="admin-btn-primary">Cadastrar lote {{ proximo_lote }}</button>
-      <button type="button" class="admin-btn-outline" onclick="document.getElementById('form-lote').style.display='none';">Cancelar</button>
+      <button type="button" class="admin-btn-outline" data-fechar-form="form-lote">Cancelar</button>
     </div>
   </form>
 </section>
@@ -120,18 +120,8 @@
 <p class="help-text">Nenhum lote cadastrado ainda.</p>
 {% endif %}
 
-<button type="button" id="btn-novo-lote" class="admin-btn-dashed">+ Novo lote</button>
+<button type="button" id="btn-novo-lote" class="admin-btn-dashed" data-toggle-form="form-lote">+ Novo lote</button>
 <script>
-  (function () {
-    var btn = document.getElementById('btn-novo-lote');
-    var secao = document.getElementById('form-lote');
-    if (!btn || !secao) { return; }
-    btn.addEventListener('click', function () {
-      secao.style.display = 'block';
-      secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  })();
-
   // Apagar o lote ativo faz o anterior (próximo da lista) virar o novo
   // ativo sozinho -- mas isso só reflete na tela com uma releitura do
   // servidor (quem é "ativo" é calculado no Jinja a partir da ordem da
