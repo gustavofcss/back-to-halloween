@@ -1,10 +1,9 @@
 {% extends "base.html" %}
+{% from "_decor.html" import decor %}
 {% block title %}Criar conta — Horror Night Party{% endblock %}
 {% block content %}
 <div class="screen">
-  <img class="deco sil" src="{{ url_for('static', filename='assets/rTree.svg') }}" alt="" aria-hidden="true" style="right:-60px;top:-20px;height:360px;opacity:.9">
-  <img class="deco inv" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true" style="left:0;top:0;width:130px;opacity:.18;transform:scaleX(-1)">
-  <img class="deco" src="{{ url_for('static', filename='assets/deco-evil-cat.png') }}" alt="" aria-hidden="true" style="right:24px;bottom:0;height:120px;filter:brightness(0) drop-shadow(0 0 1px rgba(255,138,43,.5))">
+  {{ decor('tree-r', 'web-l', 'cat') }}
 
   <div class="content">
     <div class="brand-head">

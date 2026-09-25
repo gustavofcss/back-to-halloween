@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from "_decor.html" import decor %}
 {% block title %}Pagamento — Horror Night Party{% endblock %}
 {% block content %}
 <div class="screen screen--top">
-  <img class="deco sil" src="{{ url_for('static', filename='assets/witch-flying.png') }}" alt="" aria-hidden="true" style="right:-30px;top:70px;width:170px;opacity:.9">
+  {{ decor('witch') }}
 
   <div class="content">
     <div class="steps">

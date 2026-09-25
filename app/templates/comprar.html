@@ -1,10 +1,9 @@
 {% extends "base.html" %}
+{% from "_decor.html" import decor %}
 {% block title %}Comprar ingresso — Horror Night Party{% endblock %}
 {% block content %}
 <div class="screen screen--top">
-  <img class="deco inv" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true" style="right:0;top:0;width:140px;opacity:.18">
-  <img class="deco sil" src="{{ url_for('static', filename='assets/deco-evil-cat.png') }}" alt="" aria-hidden="true" style="right:20px;bottom:0;height:100px">
-  <img class="deco glow-pumpkin" src="{{ url_for('static', filename='assets/deco-trick-or-treat.png') }}" alt="" aria-hidden="true" style="left:20px;bottom:18px;height:80px">
+  {{ decor('web-r', 'cat', 'treat') }}
 
   <div class="content">
     <div class="steps">

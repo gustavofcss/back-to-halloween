@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from "_decor.html" import decor %}
 {% block title %}Meus pedidos — Horror Night Party{% endblock %}
 {% block content %}
 <div class="screen screen--top mp-bg">
-  <img class="deco mp-skeleton" src="{{ url_for('static', filename='assets/deco-skeleton.webp') }}" alt="" aria-hidden="true">
+  {{ decor('skeleton') }}
 
   <div class="mp-wrap">
     <div class="mp-header">
