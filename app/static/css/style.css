@@ -261,7 +261,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
   filter:blur(10px);animation:fogMove 18s ease-in-out infinite alternate;pointer-events:none}
 .ground{position:absolute;left:0;right:0;bottom:30px;height:60px}
 .ground__hill{position:absolute;left:-5%;right:-5%;bottom:-31px;height:100px;background:var(--bg-2);border-radius:50% 50% 0 0/60px 60px 0 0}
-.g-cat-walk{bottom:0;left:0;height:64px;animation:catWalk 24s linear infinite;pointer-events:none}
+.g-cat{bottom:30px;left:58%;height:70px}
 .g-coffin{bottom:10px;left:14%;height:58px;transform:rotate(-12deg);filter:brightness(.55) saturate(.8)}
 .g-hand{transform-origin:50% 100%;animation:handRise 4s ease-in-out infinite}
 .g-hand-1{bottom:12px;left:30%;height:64px}
