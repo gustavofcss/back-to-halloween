@@ -46,8 +46,9 @@
       <a href="/comprar" class="btn btn-primary" style="align-self: center;">Comprar mais {{ pode_comprar_mais }} ingresso(s)</a>
       {% endif %}
     {% else %}
-    <div class="card">
-      <p class="muted">Você ainda não tem pedidos.</p>
+    <div class="a-empty">
+      <img src="{{ url_for('static', filename='assets/deco-tomb-ghosts.png') }}" alt="" aria-hidden="true" style="width:90px">
+      <p class="muted">Você ainda não tem ingressos.</p>
       {% if pode_comprar_mais > 0 %}
       <a href="/comprar" class="btn btn-primary btn-block">Comprar ingresso</a>
       {% endif %}

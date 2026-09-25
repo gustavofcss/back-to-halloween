@@ -78,6 +78,8 @@ p{margin:0}
 .flash{padding:12px 16px;border-radius:12px;background:var(--card-a);border:1px solid var(--border-o);color:var(--ink);font-size:14px;box-shadow:0 12px 30px rgba(0,0,0,.5)}
 .flash-messages{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;width:min(92vw,440px)}
 .alert,.alert-error{padding:12px 14px;border-radius:10px;background:var(--bad-bg);border:1px solid rgba(255,143,143,.35);color:var(--bad);font-size:14px}
+.alert--icon{display:flex;align-items:center;gap:10px}
+.alert--icon img{width:28px;flex-shrink:0;filter:invert(1)}
 .alert-success{padding:12px 14px;border-radius:10px;background:var(--ok-bg);border:1px solid rgba(155,224,112,.35);color:var(--ok);font-size:14px}
 
 /* ============ TELA CLIENTE ============ */
@@ -210,6 +212,9 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .ticket__banner--bad{background:var(--bad-bg);color:#8e2b2b}
 .status-box{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 20px 6px}
 .status-box strong{font-family:var(--f-title);font-weight:800;font-size:22px}
+.status-icon{width:72px;display:block;margin:16px auto 0}
+.status-icon--candles{filter:drop-shadow(0 0 18px rgba(255,160,60,.45));animation:flicker 3.4s ease-in-out infinite}
+.status-icon--reaper{opacity:.9}
 .pay-pix{padding:22px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
 .pay-key{margin:0;font-size:13px;color:var(--paper-ink);word-break:break-all}
 .pay-actions{display:flex;gap:10px;padding:0 20px 22px}
@@ -256,7 +261,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
   filter:blur(10px);animation:fogMove 18s ease-in-out infinite alternate;pointer-events:none}
 .ground{position:absolute;left:0;right:0;bottom:30px;height:60px}
 .ground__hill{position:absolute;left:-5%;right:-5%;bottom:-31px;height:100px;background:var(--bg-2);border-radius:50% 50% 0 0/60px 60px 0 0}
-.g-cat{bottom:30px;left:58%;height:70px}
+.g-cat-walk{bottom:0;left:0;height:64px;animation:catWalk 24s linear infinite;pointer-events:none}
 .g-coffin{bottom:10px;left:14%;height:58px;transform:rotate(-12deg);filter:brightness(.55) saturate(.8)}
 .g-hand{transform-origin:50% 100%;animation:handRise 4s ease-in-out infinite}
 .g-hand-1{bottom:12px;left:30%;height:64px}
@@ -421,8 +426,10 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .admin-toast--aviso{background:#8a5a16}
 .confirm-overlay{display:none;position:fixed;inset:0;z-index:200;align-items:center;justify-content:center;padding:20px;background:rgba(5,3,9,.72);backdrop-filter:blur(3px)}
 .confirm-modal{width:100%;max-width:420px;background:var(--card);border:1px solid rgba(255,138,43,.4);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:18px;box-shadow:var(--shadow-card)}
+.confirm-modal__icon{width:48px;display:block;margin:0 auto -6px;filter:invert(58%) sepia(90%) saturate(900%) hue-rotate(345deg)}
 .confirm-modal__text{margin:0;font-size:15px;color:var(--ink)}
 .confirm-modal__actions{display:flex;justify-content:flex-end;gap:10px}
+#confirm-modal-ok.is-perigoso{background:var(--bad-bg);color:var(--bad);box-shadow:none}
 
 /* ============ UTILITÁRIAS ============ */
 .stack{display:flex;flex-direction:column}

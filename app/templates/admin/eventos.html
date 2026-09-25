@@ -110,7 +110,7 @@
       tirar a classe -- só o mecanismo confirmarAcao->modal->enviarAcaoAdmin
       (usado no clique em "Confirmar") continua ativo, igual material.html.
     #}
-    <form method="post" action="/admin/eventos/{{ e.id_evento }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse lote? Só é possível se ele ainda não tiver nenhum pedido vinculado.')">
+    <form method="post" action="/admin/eventos/{{ e.id_evento }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse lote? Só é possível se ele ainda não tiver nenhum pedido vinculado.', true)">
       <button type="submit" class="admin-btn-outline">Apagar</button>
     </form>
   </div>

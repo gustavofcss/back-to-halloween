@@ -6,6 +6,7 @@
 (function () {
   var overlay = document.getElementById('confirm-overlay');
   var textEl = document.getElementById('confirm-modal-text');
+  var iconEl = document.getElementById('confirm-modal-icon');
   var btnOk = document.getElementById('confirm-modal-ok');
   var btnCancel = document.getElementById('confirm-modal-cancel');
   var toast = document.getElementById('admin-toast');
@@ -108,24 +109,32 @@
       });
   };
 
-  window.confirmarAcao = function (form, mensagem) {
+  // Ícone + botão "Confirmar" vermelho só em ações destrutivas
+  // (apagar/remover/recusar, sem volta) -- `perigoso` é passado
+  // explicitamente por cada chamador, não adivinhado pela URL/mensagem.
+  function abrirModal(perigoso) {
+    overlay.style.display = 'flex';
+    btnOk.classList.toggle('is-perigoso', !!perigoso);
+    if (iconEl) { iconEl.classList.toggle('is-hidden', !perigoso); }
+    btnCancel.focus();
+  }
+
+  window.confirmarAcao = function (form, mensagem, perigoso) {
     formPendente = form;
     actionPendente = form.getAttribute('action');
     textEl.textContent = mensagem;
-    overlay.style.display = 'flex';
-    btnCancel.focus();
+    abrirModal(perigoso);
     return false;
   };
 
   // Igual confirmarAcao, mas pra ação em lote: o form tem vários botões
   // de submit com formaction diferente (confirmar/cancelar/apagar em
   // lote), então recebe a action certa por fora em vez de ler do form.
-  window.confirmarAcaoLote = function (form, action, mensagem) {
+  window.confirmarAcaoLote = function (form, action, mensagem, perigoso) {
     formPendente = form;
     actionPendente = action;
     textEl.textContent = mensagem;
-    overlay.style.display = 'flex';
-    btnCancel.focus();
+    abrirModal(perigoso);
     return false;
   };
 
@@ -285,7 +294,7 @@ if (paginaAdmin === 'pedidos') {
           '<button type="submit" formaction="/admin/pedidos/' + item.id + '/cancelar" class="admin-btn-outline">Cancelar</button>';
       } else if (item.status === 'cancelado') {
         celulaAcoes.innerHTML =
-          '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'pedidos-lote-form\'), \'/admin/pedidos/' + item.id + '/apagar\', \'Apagar esse pedido cancelado? Não tem como desfazer.\')">Apagar</button>';
+          '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'pedidos-lote-form\'), \'/admin/pedidos/' + item.id + '/apagar\', \'Apagar esse pedido cancelado? Não tem como desfazer.\', true)">Apagar</button>';
       }
     });
   });
@@ -319,7 +328,7 @@ if (paginaAdmin === 'pedidos') {
         acoes = '<button type="submit" formaction="/admin/pedidos/' + item.id + '/cancelar" class="admin-btn-outline">Cancelar</button>';
       } else if (item.status === 'cancelado') {
         acoes =
-          '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'pedidos-lote-form\'), \'/admin/pedidos/' + item.id + '/apagar\', \'Apagar esse pedido cancelado? Não tem como desfazer.\')">Apagar</button>';
+          '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'pedidos-lote-form\'), \'/admin/pedidos/' + item.id + '/apagar\', \'Apagar esse pedido cancelado? Não tem como desfazer.\', true)">Apagar</button>';
       }
       var tr = document.createElement('tr');
       tr.className = 'a-tr a-item-novo';
@@ -402,7 +411,7 @@ if (paginaAdmin === 'cadastros') {
     function inserirNovoCadastro(item) {
       if (!tbody) { location.reload(); return; }
       var esc = window.escaparHtmlAdmin;
-      var vazio = document.querySelector('.a-card--empty');
+      var vazio = document.querySelector('.a-empty');
       if (vazio) { location.reload(); return; }
       var tr = document.createElement('tr');
       tr.className = 'a-tr a-tr--cadastros a-item-novo';
@@ -413,7 +422,7 @@ if (paginaAdmin === 'cadastros') {
         '<td class="a-order__extra" data-label="Cadastrado em">' + esc(item.data) + '</td>' +
         '<td data-label="Ações">' +
         '<button type="submit" formaction="/admin/cadastros/' + item.id + '/confirmar" class="admin-btn-primary">Confirmar cadastro</button> ' +
-        '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'cadastros-lote-form\'), \'/admin/cadastros/' + item.id + '/recusar\', \'Recusar e apagar esse cadastro?\')">Recusar</button>' +
+        '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'cadastros-lote-form\'), \'/admin/cadastros/' + item.id + '/recusar\', \'Recusar e apagar esse cadastro?\', true)">Recusar</button>' +
         '</td>';
       tbody.insertBefore(tr, tbody.firstChild);
       if (window.religarSelecaoCadastro) { window.religarSelecaoCadastro(tr.querySelector('.cadastros-check-item')); }
@@ -511,7 +520,7 @@ if (paginaAdmin === 'hierarquia') {
         '<span class="admin-group__info"><span class="admin-group__name">' + esc(item.nome) + '</span><span class="admin-group__email">' + esc(item.email) + '</span></span>' +
         '<span class="admin-group__action admin-group__action--duplo">' +
         '<button type="submit" formaction="/admin/hierarquia/' + item.id + '/promover" class="admin-btn-primary">Promover a admin</button>' +
-        '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'clientes-lote-form\'), \'/admin/hierarquia/' + item.id + '/remover\', \'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.\')">Apagar</button>' +
+        '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'clientes-lote-form\'), \'/admin/hierarquia/' + item.id + '/remover\', \'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.\', true)">Apagar</button>' +
         '</span>' +
         '</div>';
       lista.insertBefore(div, lista.firstChild);
@@ -556,7 +565,7 @@ if (paginaAdmin === 'material') {
         '<span class="a-material__desc">' + esc(item.descricao) + '</span>' +
         '<span class="a-material__value">R$ ' + esc(item.valor) + '</span>' +
         '<span class="a-material__meta">' + esc(item.data) + ' &middot; ' + esc(item.cadastrado_por) + '</span>' +
-        '<form method="post" action="/admin/material/' + item.id + '/apagar" onsubmit="return confirmarAcao(this, \'Apagar esse material?\')">' +
+        '<form method="post" action="/admin/material/' + item.id + '/apagar" onsubmit="return confirmarAcao(this, \'Apagar esse material?\', true)">' +
         '<button type="submit" class="admin-btn-outline">Apagar</button>' +
         '</form>';
       grid.insertBefore(div, grid.firstChild);
