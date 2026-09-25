@@ -48,6 +48,15 @@
     </nav>
 
     <div class="a-sidebar__footer">
+      {% if sidebar_capacidade is defined and sidebar_capacidade %}
+      {% set sb_pct = (sidebar_vendidos / sidebar_capacidade * 100) %}
+      <div class="a-event">
+        <span class="a-event__name">Horror Night Party</span>
+        <span class="a-event__sold"><span data-admin-total="ingressos_vendidos_total">{{ sidebar_vendidos }}</span> de <span data-admin-total="capacidade_maxima">{{ sidebar_capacidade }}</span> ingressos vendidos</span>
+        <div class="a-bar" data-admin-bar><div style="width:{{ [[sb_pct, 2]|max, 100]|min|round|int }}%"></div></div>
+      </div>
+      {% endif %}
+
       {% if usuario %}
       {% set partes = usuario.nome.split(' ') %}
       <div class="a-user">
@@ -56,8 +65,10 @@
           <span class="a-user__name">{{ usuario.nome }}</span>
           <span class="a-user__role">Guardião(ã) da Cripta</span>
         </div>
+        <form method="post" action="/logout" class="a-user__logout">
+          <button type="submit" class="a-logout">Sair</button>
+        </form>
       </div>
-      <form method="post" action="/logout"><button type="submit" class="btn btn-ghost a-logout">Sair</button></form>
       {% endif %}
     </div>
   </aside>

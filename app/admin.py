@@ -175,6 +175,10 @@ def _injetar_contadores_nav():
             total_material = cur.fetchone()["n"]
             cur.execute("SELECT COUNT(*) AS n FROM evento")
             total_eventos = cur.fetchone()["n"]
+            # Card do evento na sidebar (ver HANDOFF-ADMIN-HEADER-VAGAS.md)
+            # aparece em toda página do admin, não só em pedidos -- reaproveita
+            # a mesma _totais_pedidos que a rota pedidos já usa, sem query nova.
+            totais_pedidos = _totais_pedidos(cur)
     return {
         "nav_counts": {
             "pedidos": total_pedidos,
@@ -182,7 +186,9 @@ def _injetar_contadores_nav():
             "hierarquia": total_hierarquia,
             "material": total_material,
             "eventos": total_eventos,
-        }
+        },
+        "sidebar_vendidos": totais_pedidos["ingressos_vendidos_total"],
+        "sidebar_capacidade": totais_pedidos["capacidade_maxima"],
     }
 
 
