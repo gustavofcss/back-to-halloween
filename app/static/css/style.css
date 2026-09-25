@@ -228,7 +228,6 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .mp-bg{background:var(--bg-screen-page)!important}
 .mp-wrap{width:100%;max-width:720px;display:flex;flex-direction:column;gap:20px}
 .mp-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.mp-skeleton{right:10px;bottom:10px;height:130px;opacity:.8;transform:rotate(6deg)}
 
 /* ============ CONVITE ============ */
 .invite{position:relative;min-height:100vh;overflow:hidden;

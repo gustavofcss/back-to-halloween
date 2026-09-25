@@ -1,9 +1,9 @@
 {% extends "base.html" %}
+{% from "_decor.html" import decor %}
 {% block title %}Esqueci minha senha — Horror Night Party{% endblock %}
 {% block content %}
 <div class="screen">
-  <img class="deco sil" src="{{ url_for('static', filename='assets/rTree.svg') }}" alt="" aria-hidden="true" style="right:-60px;top:-20px;height:360px;opacity:.9">
-  <img class="deco inv" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true" style="left:0;top:0;width:130px;opacity:.18;transform:scaleX(-1)">
+  {{ decor('tree-r', 'web-l') }}
 
   <div class="content">
     <div class="brand-head">
