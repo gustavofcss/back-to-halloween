@@ -121,15 +121,4 @@
 {% endif %}
 
 <button type="button" id="btn-novo-lote" class="admin-btn-dashed" data-toggle-form="form-lote">+ Novo lote</button>
-<script>
-  // Apagar o lote ativo faz o anterior (próximo da lista) virar o novo
-  // ativo sozinho -- mas isso só reflete na tela com uma releitura do
-  // servidor (quem é "ativo" é calculado no Jinja a partir da ordem da
-  // lista), por isso recarrega em vez de só tirar o card na hora.
-  document.addEventListener('admin:sucesso', function (evt) {
-    if (/\/eventos\/\d+\/apagar$/.test(evt.detail.actionUrl)) {
-      location.reload();
-    }
-  });
-</script>
 {% endblock %}
