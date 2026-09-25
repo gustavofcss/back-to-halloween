@@ -17,7 +17,7 @@
   <div class="admin-bulk-bar" id="cadastros-bulk-bar">
     <span class="admin-bulk-bar__count" id="cadastros-bulk-count">0 selecionado(s)</span>
     <button type="submit" formaction="/admin/cadastros/confirmar-lote" class="admin-btn-primary">Confirmar selecionados</button>
-    <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('cadastros-lote-form'), '/admin/cadastros/recusar-lote', 'Recusar e apagar os cadastros selecionados?')">Recusar selecionados</button>
+    <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('cadastros-lote-form'), '/admin/cadastros/recusar-lote', 'Recusar e apagar os cadastros selecionados?', true)">Recusar selecionados</button>
   </div>
   <div class="a-table-wrap">
   <table class="a-table" id="admin-cadastros-table">
@@ -39,7 +39,7 @@
         <td class="a-order__extra" data-label="Cadastrado em">{{ p.data_cadastro|data_hora_br }}</td>
         <td data-label="Ações">
           <button type="submit" formaction="/admin/cadastros/{{ p.id_usuario }}/confirmar" class="admin-btn-primary">Confirmar cadastro</button>
-          <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('cadastros-lote-form'), '/admin/cadastros/{{ p.id_usuario }}/recusar', 'Recusar e apagar esse cadastro?')">Recusar</button>
+          <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('cadastros-lote-form'), '/admin/cadastros/{{ p.id_usuario }}/recusar', 'Recusar e apagar esse cadastro?', true)">Recusar</button>
         </td>
       </tr>
     {% endfor %}
@@ -48,9 +48,9 @@
   </div>
 </form>
 {% else %}
-  <div class="a-card a-card--empty">
-    <img class="a-empty-icon" src="{{ url_for('static', filename='assets/deco-eye.png') }}" alt="">
-    <span class="help-text no-margin">Nenhum cadastro esperando aprovação.</span>
+  <div class="a-empty">
+    <img src="{{ url_for('static', filename='assets/deco-spiderweb-full.png') }}" alt="" aria-hidden="true" style="filter:invert(1);opacity:.35">
+    <span class="help-text no-margin">Nenhum cadastro esperando aprovação... só teia.</span>
   </div>
 {% endif %}
 {% endblock %}

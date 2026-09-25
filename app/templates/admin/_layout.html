@@ -83,6 +83,7 @@
 
   <div class="confirm-overlay" id="confirm-overlay">
     <div class="confirm-modal" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-text">
+      <img class="confirm-modal__icon is-hidden" id="confirm-modal-icon" src="{{ url_for('static', filename='assets/deco-evil-face.png') }}" alt="" aria-hidden="true">
       <p class="confirm-modal__text" id="confirm-modal-text"></p>
       <div class="confirm-modal__actions">
         <button type="button" class="btn btn-ghost btn-sm" id="confirm-modal-cancel">Cancelar</button>

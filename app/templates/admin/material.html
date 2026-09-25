@@ -52,13 +52,16 @@
     <span class="a-material__desc">{{ m.descricao or '—' }}</span>
     <span class="a-material__value">R$ {{ m.valor }}</span>
     <span class="a-material__meta">{{ m.data_compra.strftime('%d/%m/%Y') }} &middot; {{ m.cadastrado_por or '--' }}</span>
-    <form method="post" action="/admin/material/{{ m.id }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse material?')">
+    <form method="post" action="/admin/material/{{ m.id }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse material?', true)">
       <button type="submit" class="admin-btn-outline">Apagar</button>
     </form>
   </div>
   {% endfor %}
 </div>
 {% else %}
-<p class="help-text">Nenhum material cadastrado ainda.</p>
+<div class="a-empty">
+  <img src="{{ url_for('static', filename='assets/deco-skull-bones.png') }}" alt="" aria-hidden="true">
+  <p class="help-text no-margin">Nenhum material cadastrado ainda.</p>
+</div>
 {% endif %}
 {% endblock %}
