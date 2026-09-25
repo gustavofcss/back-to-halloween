@@ -7,7 +7,7 @@
   <div class="content center">
     {% set aviso_extra %}
     <div class="card" style="margin-top:24px;width:100%;max-width:320px">
-      <form method="post" action="/confirmar-email" style="display:flex;flex-direction:column;gap:14px">
+      <form method="post" action="/confirmar-email" class="stack-14">
         <input type="hidden" name="email" value="{{ email }}">
         <label class="field">Código de 6 dígitos
           <div class="otp-boxes">
@@ -30,7 +30,7 @@
       {# "Errei o e-mail" -- pedido explícito do usuário. Some por trás de
          um link (não fica sempre aberto) porque é o caminho menos comum;
          só revela o campo de novo e-mail quando clicado. #}
-      <button type="button" id="btn-mudar-email" class="btn-link" style="margin-top:14px">Errou o e-mail? Mudar aqui</button>
+      <button type="button" id="btn-mudar-email" class="btn-link mt-14">Errou o e-mail? Mudar aqui</button>
       <form method="post" action="/confirmar-email/mudar-email" id="form-mudar-email" style="display:none;flex-direction:column;gap:10px;margin-top:10px">
         <input type="hidden" name="email_atual" value="{{ email }}">
         <label class="field" for="novo_email">Novo e-mail

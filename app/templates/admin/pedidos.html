@@ -38,21 +38,21 @@
   </div>
 </div>
 
-<div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
-  <h2 class="a-card__title" style="font-size: 18px;">Pedidos</h2>
+<div class="row" style="align-items:baseline">
+  <h2 class="a-card__title fs-18">Pedidos</h2>
   <span class="a-kpi__note"><span data-admin-total="total_pedidos">{{ pedidos|length }}</span> resultado(s)</span>
 </div>
 
-<div style="display: flex; gap: 10px; flex-wrap: wrap;">
+<div class="row">
   <button type="button" id="btn-cortesia" class="admin-btn-primary">+ Ingresso cortesia</button>
-  <a href="/admin/pedidos/email-massa" class="admin-btn-primary" style="text-decoration: none;">Enviar e-mail pros clientes</a>
-  <a href="/admin/pedidos/exportar" class="admin-btn-primary" style="text-decoration: none;">Exportar planilha (portaria)</a>
+  <a href="/admin/pedidos/email-massa" class="admin-btn-primary no-underline">Enviar e-mail pros clientes</a>
+  <a href="/admin/pedidos/exportar" class="admin-btn-primary no-underline">Exportar planilha (portaria)</a>
 </div>
 
 <section class="a-card a-card--form" id="form-cortesia" style="display: none;">
   <h2 class="a-card__title">Ingresso cortesia</h2>
-  <p class="help-text" style="margin: 0;">Cria um pedido já confirmado, valor R$ 0,00, pros dados do convidado abaixo.</p>
-  <form method="post" action="/admin/pedidos/cortesia" style="display: flex; flex-direction: column; gap: 14px;">
+  <p class="help-text no-margin">Cria um pedido já confirmado, valor R$ 0,00, pros dados do convidado abaixo.</p>
+  <form method="post" action="/admin/pedidos/cortesia" class="stack-14">
     <div class="a-grid">
       <div class="field">
         <label for="cortesia_nome">Nome do convidado</label>
@@ -71,7 +71,7 @@
         <input id="cortesia_whatsapp" name="whatsapp" class="input" type="text" placeholder="DDD + número, só números" required>
       </div>
     </div>
-    <div style="display: flex; gap: 10px;">
+    <div class="row">
       <button type="submit" class="admin-btn-primary">Criar ingresso cortesia</button>
       <button type="button" class="admin-btn-outline" onclick="document.getElementById('form-cortesia').style.display='none';">Cancelar</button>
     </div>

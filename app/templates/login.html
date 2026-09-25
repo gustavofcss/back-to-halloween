@@ -13,7 +13,7 @@
     <div class="card">
       <p class="lead">Acesse sua conta pra garantir seu ingresso.</p>
       {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
-      <form method="post" action="/login" style="display:flex;flex-direction:column;gap:16px">
+      <form method="post" action="/login" class="stack-16">
         <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
         <label class="field" for="email">E-mail
           <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email">

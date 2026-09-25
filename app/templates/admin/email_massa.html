@@ -5,7 +5,7 @@
 {% block admin_subtitle %}Manda pra todo mundo com pedido ativo (não cancelado){% endblock %}
 {% block admin_body %}
 <section class="a-card a-card--form">
-  <form method="post" action="/admin/pedidos/email-massa" style="display: flex; flex-direction: column; gap: 14px;">
+  <form method="post" action="/admin/pedidos/email-massa" class="stack-14">
     <div class="field">
       <label for="assunto">Assunto</label>
       <input id="assunto" name="assunto" class="input" type="text" placeholder="Ex.: Últimos detalhes da festa" value="{{ assunto or '' }}" required>
@@ -14,9 +14,9 @@
       <label for="mensagem">Mensagem</label>
       <textarea id="mensagem" name="mensagem" class="input" rows="10" placeholder="Escreve aqui -- cada linha vira um parágrafo no e-mail." required>{{ mensagem or '' }}</textarea>
     </div>
-    <div style="display: flex; gap: 10px;">
+    <div class="row">
       <button type="submit" class="admin-btn-primary" onclick="return confirm('Mandar esse e-mail pra todo cliente com pedido ativo? Não tem como desfazer.')">Enviar pra todos</button>
-      <a href="/admin/pedidos" class="admin-btn-outline" style="text-decoration: none;">Cancelar</a>
+      <a href="/admin/pedidos" class="admin-btn-outline no-underline">Cancelar</a>
     </div>
   </form>
 </section>

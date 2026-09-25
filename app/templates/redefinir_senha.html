@@ -8,10 +8,10 @@
   <div class="content">
     <div class="brand-head">
       <p class="eyebrow">Horror Night Party</p>
-      <h1 class="display" style="font-size:30px">REDEFINIR SENHA</h1>
+      <h1 class="display display--sm">REDEFINIR SENHA</h1>
     </div>
     <div class="card">
-      <form method="post" action="/redefinir-senha" id="redefinir-form" style="display:flex;flex-direction:column;gap:14px">
+      <form method="post" action="/redefinir-senha" id="redefinir-form" class="stack-14">
         {#
           Duas etapas visuais (pedido explícito do usuário: "devia ter uma
           tela pra código, outra pra senha") -- continua sendo UM form só,
@@ -24,7 +24,7 @@
         #}
         <div id="etapa-codigo">
           <p class="lead">Digite o código de 6 dígitos que enviamos por e-mail.</p>
-          <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="stack-14">
             <label class="field" for="email">E-mail
               <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email" value="{{ request.args.get('email', '') }}">
             </label>
@@ -40,7 +40,7 @@
               <input type="hidden" id="codigo" name="codigo" pattern="[0-9]{6}" required>
             </label>
           </div>
-          <button type="button" id="btn-continuar" class="btn btn-primary btn-block" style="margin-top:14px">Continuar</button>
+          <button type="button" id="btn-continuar" class="btn btn-primary btn-block mt-14">Continuar</button>
         </div>
 
         <div id="etapa-senha" style="display:none;flex-direction:column;gap:14px">
@@ -52,13 +52,13 @@
             <input class="input" id="confirmar_senha" name="confirmar_senha" type="password" placeholder="Repita" minlength="6" autocomplete="new-password">
           </label>
           <p class="alert" id="senha-erro" style="display:none;">As senhas não coincidem.</p>
-          <div style="display:flex;gap:10px">
+          <div class="row">
             <button type="button" id="btn-voltar" class="btn btn-ghost">Voltar</button>
             <button type="submit" class="btn btn-primary btn-block">Redefinir senha</button>
           </div>
         </div>
       </form>
-      <p class="muted center" style="margin-top:14px">Não recebeu o código? <a href="/esqueci-senha">Pedir de novo</a></p>
+      <p class="muted center mt-14">Não recebeu o código? <a href="/esqueci-senha">Pedir de novo</a></p>
     </div>
   </div>
 </div>

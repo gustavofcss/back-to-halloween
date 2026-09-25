@@ -7,8 +7,8 @@
 {% macro initials(nome) -%}
 {% set partes = nome.split(' ') %}{{- (partes[0][0] ~ (partes[1][0] if partes|length > 1 else ''))|upper -}}
 {%- endmacro %}
-<div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
-  <h2 class="a-card__title" style="font-size: 18px;">Cadastros pendentes</h2>
+<div class="row" style="align-items:baseline">
+  <h2 class="a-card__title fs-18">Cadastros pendentes</h2>
   <span class="a-kpi__note"><span data-admin-total="pendentes">{{ pendentes|length }}</span> resultado(s)</span>
 </div>
 
@@ -50,7 +50,7 @@
 {% else %}
   <div class="a-card a-card--empty">
     <img class="a-empty-icon" src="{{ url_for('static', filename='assets/deco-eye.png') }}" alt="">
-    <span class="help-text" style="margin: 0;">Nenhum cadastro esperando aprovação.</span>
+    <span class="help-text no-margin">Nenhum cadastro esperando aprovação.</span>
   </div>
 {% endif %}
 
