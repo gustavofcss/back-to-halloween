@@ -48,17 +48,17 @@
       {% if pedido.status_pedido == 'confirmado' %}
         <div class="status-box"><span class="pill pill--ok">Confirmado</span><strong>Pagamento recebido!</strong>
           <p class="ticket__note">Seu ingresso está garantido. Te esperamos na festa.</p></div>
-        <div style="padding:0 20px 22px"><a href="/meus-pedidos" class="btn-paper" style="text-decoration:none;text-align:center;display:block">Ver meus pedidos</a></div>
+        <div style="padding:0 20px 22px"><a href="/meus-pedidos" class="btn-paper no-underline" style="text-align:center;display:block">Ver meus pedidos</a></div>
 
       {% elif pedido.status_pedido == 'cancelado' and pedido.expirado %}
         <div class="status-box"><span class="pill pill--bad">Expirado</span><strong>Pagamento expirado</strong>
           <p class="ticket__note">Os 5 minutos pra pagar esse Pix acabaram e a vaga foi liberada. Pode tentar de novo.</p></div>
-        <div style="padding:0 20px 22px"><a href="/comprar" class="btn-paper" style="text-decoration:none;text-align:center;display:block">Comprar de novo</a></div>
+        <div style="padding:0 20px 22px"><a href="/comprar" class="btn-paper no-underline" style="text-align:center;display:block">Comprar de novo</a></div>
 
       {% elif pedido.status_pedido == 'cancelado' %}
         <div class="status-box"><span class="pill pill--bad">Cancelado</span><strong>Pedido cancelado</strong>
           <p class="ticket__note">Se foi engano, fale com a organização.</p></div>
-        <div style="padding:0 20px 22px"><a href="/meus-pedidos" class="btn-paper" style="text-decoration:none;text-align:center;display:block">Ver meus pedidos</a></div>
+        <div style="padding:0 20px 22px"><a href="/meus-pedidos" class="btn-paper no-underline" style="text-align:center;display:block">Ver meus pedidos</a></div>
 
       {% else %}
         {% if mp_erro %}

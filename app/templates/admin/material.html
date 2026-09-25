@@ -21,7 +21,7 @@
 
 <section class="a-card a-card--form" id="form-material" style="display: none;">
   <h2 class="a-card__title">Cadastrar material</h2>
-  <form method="post" action="/admin/material" style="display: flex; flex-direction: column; gap: 14px;">
+  <form method="post" action="/admin/material" class="stack-14">
     <div class="a-grid">
       <div class="field">
         <label for="nome_material">Nome do material</label>
@@ -36,7 +36,7 @@
         <input id="descricao" name="descricao" class="input">
       </div>
     </div>
-    <div style="display: flex; gap: 10px;">
+    <div class="row">
       <button type="submit" class="admin-btn-primary">Cadastrar material</button>
       <button type="button" class="admin-btn-outline" onclick="document.getElementById('form-material').style.display='none';">Cancelar</button>
     </div>

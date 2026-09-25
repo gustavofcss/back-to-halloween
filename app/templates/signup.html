@@ -8,12 +8,12 @@
   <div class="content">
     <div class="brand-head">
       <p class="eyebrow">Horror Night Party</p>
-      <h1 class="display" style="font-size:30px">CRIAR CONTA</h1>
+      <h1 class="display display--sm">CRIAR CONTA</h1>
     </div>
     <div class="card">
       <p class="lead">Cadastre-se pra garantir seu lugar na festa.</p>
       {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
-      <form method="post" action="/signup" id="signup-form" style="display:flex;flex-direction:column;gap:14px">
+      <form method="post" action="/signup" id="signup-form" class="stack-14">
         <label class="field" for="nome">Nome completo
           <input class="input" id="nome" name="nome" type="text" placeholder="Seu nome completo" required autocomplete="name" pattern="\s*\S+(\s+\S+)+\s*" title="Digite nome e sobrenome">
         </label>

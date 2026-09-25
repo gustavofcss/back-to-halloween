@@ -38,7 +38,7 @@
       <p class="muted">Esse é um pedido à parte, pra outra pessoa -- preenche os dados de quem vai usar o ingresso, não os seus.</p>
       {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
 
-      <form method="post" action="/comprar" style="display:flex;flex-direction:column;gap:14px">
+      <form method="post" action="/comprar" class="stack-14">
         <label class="field" for="titular_nome">Nome de quem vai usar o ingresso
           <input class="input" id="titular_nome" name="titular_nome" placeholder="Nome completo" required>
         </label>
@@ -58,7 +58,7 @@
         </div>
       </form>
 
-      <form method="post" action="/logout" style="display:flex;justify-content:center;margin:0">
+      <form method="post" action="/logout" class="row-center no-margin">
         <button type="submit" class="btn-link">Sair</button>
       </form>
     {% else %}
@@ -69,7 +69,7 @@
       </div>
       {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
 
-      <form method="post" action="/comprar" id="comprar-form" style="display:flex;flex-direction:column;gap:14px">
+      <form method="post" action="/comprar" id="comprar-form" class="stack-14">
         <div class="row-2">
           <label class="field">Nome<input class="input" value="{{ usuario.nome }}" disabled></label>
           <label class="field">E-mail<input class="input" value="{{ usuario.email }}" disabled></label>
@@ -82,7 +82,7 @@
         </label>
 
         <input type="hidden" id="quantidade" name="quantidade" value="1">
-        <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div class="row-between">
           <div style="display:flex;flex-direction:column;gap:2px">
             <span style="font-size:14px;font-weight:600">Ingressos</span>
             <span class="muted" style="font-size:12px">Máx. {{ max_permitido }} por pessoa</span>
@@ -119,7 +119,7 @@
         </div>
       </form>
 
-      <form method="post" action="/logout" style="display:flex;justify-content:center;margin:0">
+      <form method="post" action="/logout" class="row-center no-margin">
         <button type="submit" class="btn-link">Sair</button>
       </form>
 
