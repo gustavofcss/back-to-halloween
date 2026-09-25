@@ -11,19 +11,31 @@
   --bad-bg:rgba(220,70,70,.16); --bad:#ff8f8f;
   --purple-bg:rgba(160,120,230,.16); --purple:#c9b3ff;
   --f-display:'Nosifer',cursive; --f-title:'Baloo 2',sans-serif; --f-body:'Poppins',sans-serif;
+
+  /* fundos de tela (hoje escritos direto nos templates) */
+  --bg-screen: radial-gradient(circle at 50% 8%,#3d2440 0%,#1c1230 30%,#0a060e 70%);
+  --bg-screen-center: radial-gradient(circle at 50% 40%,#3d2440 0%,#1c1230 35%,#0a060e 75%);
+  --bg-screen-page: radial-gradient(circle at 50% 0%,#2c1a3a 0%,#120b1c 40%,#0a060e 75%);
+  --bg-admin: radial-gradient(ellipse 900px 500px at 70% -10%,#2c1a3a 0%,#120b1c 45%,#07050d 80%);
+  --grad-btn: linear-gradient(180deg,#ffa24a,var(--orange-3));
+  --btn-ink: #2a1503;
+  --shadow-card: 0 30px 60px rgba(0,0,0,.6);
+  --shadow-btn: 0 12px 30px rgba(225,105,15,.4);
+  --glow-pumpkin: drop-shadow(0 0 16px rgba(255,120,20,.7));
+  --radius-card: 18px; --radius-field: 10px; --radius-pill: 999px;
 }
 
 /* ============ FONTES LOCAIS ============
    Servidas de /static/fonts em vez do CDN do Google Fonts, pra não
    depender de rede externa no carregamento da página (achado real: CDN
    instável derrubou a fonte em produção uma vez). */
-@font-face{font-family:'Nosifer';font-style:normal;font-weight:400;font-display:swap;src:url("../fonts/nosifer.ttf") format('truetype');}
-@font-face{font-family:'Baloo 2';font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/baloo2-600.ttf") format('truetype');}
-@font-face{font-family:'Baloo 2';font-style:normal;font-weight:800;font-display:swap;src:url("../fonts/baloo2-800.ttf") format('truetype');}
-@font-face{font-family:'Poppins';font-style:normal;font-weight:400;font-display:swap;src:url("../fonts/poppins-400.ttf") format('truetype');}
-@font-face{font-family:'Poppins';font-style:normal;font-weight:500;font-display:swap;src:url("../fonts/poppins-500.ttf") format('truetype');}
-@font-face{font-family:'Poppins';font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/poppins-600.ttf") format('truetype');}
-@font-face{font-family:'Poppins';font-style:normal;font-weight:700;font-display:swap;src:url("../fonts/poppins-700.ttf") format('truetype');}
+@font-face{font-family:'Nosifer';font-style:normal;font-weight:400;font-display:swap;src:url("../fonts/nosifer.woff2") format('woff2');}
+@font-face{font-family:'Baloo 2';font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/baloo2-600.woff2") format('woff2');}
+@font-face{font-family:'Baloo 2';font-style:normal;font-weight:800;font-display:swap;src:url("../fonts/baloo2-800.woff2") format('woff2');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:400;font-display:swap;src:url("../fonts/poppins-400.woff2") format('woff2');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:500;font-display:swap;src:url("../fonts/poppins-500.woff2") format('woff2');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/poppins-600.woff2") format('woff2');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:700;font-display:swap;src:url("../fonts/poppins-700.woff2") format('woff2');}
 
 /* ============ RESET ============ */
 *,*::before,*::after{box-sizing:border-box}
@@ -66,13 +78,15 @@ p{margin:0}
 .flash{padding:12px 16px;border-radius:12px;background:var(--card-a);border:1px solid var(--border-o);color:var(--ink);font-size:14px;box-shadow:0 12px 30px rgba(0,0,0,.5)}
 .flash-messages{position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:100;display:flex;flex-direction:column;gap:8px;width:min(92vw,440px)}
 .alert,.alert-error{padding:12px 14px;border-radius:10px;background:var(--bad-bg);border:1px solid rgba(255,143,143,.35);color:var(--bad);font-size:14px}
+.alert--icon{display:flex;align-items:center;gap:10px}
+.alert--icon img{width:28px;flex-shrink:0;filter:invert(1)}
 .alert-success{padding:12px 14px;border-radius:10px;background:var(--ok-bg);border:1px solid rgba(155,224,112,.35);color:var(--ok);font-size:14px}
 
 /* ============ TELA CLIENTE ============ */
 .screen{position:relative;min-height:100vh;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;
-  padding:40px 20px;background:radial-gradient(circle at 50% 8%,#3d2440 0%,#1c1230 30%,#0a060e 70%)}
+  padding:40px 20px;background:var(--bg-screen)}
 .screen--top{justify-content:flex-start}
-.screen--page{justify-content:flex-start;background:radial-gradient(circle at 50% 0%,#2c1a3a 0%,#120b1c 40%,#0a060e 75%)}
+.screen--page{justify-content:flex-start;background:var(--bg-screen-page)}
 .screen > .content{position:relative;z-index:2;width:100%;max-width:420px;display:flex;flex-direction:column;align-items:center}
 .screen--page > .content{max-width:560px;align-items:stretch;gap:20px}
 .brand-head{display:flex;flex-direction:column;align-items:center;gap:6px;margin-bottom:26px}
@@ -91,7 +105,7 @@ p{margin:0}
 
 /* ============ CARD ============ */
 .card{position:relative;width:100%;max-width:420px;background:var(--card-a);border:1px solid var(--border-o);border-radius:18px;padding:24px;
-  display:flex;flex-direction:column;gap:14px;box-shadow:0 30px 60px rgba(0,0,0,.6)}
+  display:flex;flex-direction:column;gap:14px;box-shadow:var(--shadow-card)}
 
 /* ============ FORM ============ */
 .field{display:flex;flex-direction:column;gap:7px;font-size:11px;font-weight:600;letter-spacing:.18em;text-transform:uppercase;color:var(--orange)}
@@ -118,8 +132,8 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 /* ============ BOTÕES ============ */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;border-radius:999px;border:1px solid transparent;
   font:700 15px var(--f-body);padding:15px 22px;text-decoration:none;line-height:1.2;transition:filter .15s,transform .15s,background .15s,border-color .15s,color .15s}
-.btn-primary,.admin-btn-primary{border:none;background:linear-gradient(180deg,#ffa24a,var(--orange-3));color:#2a1503;box-shadow:0 12px 30px rgba(225,105,15,.4)}
-.btn-primary:hover,.admin-btn-primary:hover{filter:brightness(1.1);color:#2a1503;transform:translateY(-1px)}
+.btn-primary,.admin-btn-primary{border:none;background:var(--grad-btn);color:var(--btn-ink);box-shadow:var(--shadow-btn)}
+.btn-primary:hover,.admin-btn-primary:hover{filter:brightness(1.1);color:var(--btn-ink);transform:translateY(-1px)}
 .btn-ghost,.admin-btn-outline{background:transparent;border:1px solid var(--btn-line);color:var(--ink);font-weight:600}
 .btn-ghost:hover,.admin-btn-outline:hover{background:rgba(255,255,255,.06);color:var(--ink)}
 .btn-dashed,.admin-btn-dashed{background:transparent;border:1px dashed var(--orange);color:var(--orange-2);font-weight:600;display:inline-flex;align-items:center;gap:8px;cursor:pointer;border-radius:999px;font:700 14px var(--f-body);padding:13px 22px}
@@ -144,14 +158,14 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .pill--off,.admin-pill--neutral,.pill--encerrado{background:rgba(255,255,255,.06);color:var(--ink-4)}
 .pill--purple,.pill--agendado{background:var(--purple-bg);color:var(--purple)}
 .admin-pill--accent{background:var(--warn-bg);color:var(--warn);border:1px solid rgba(255,138,43,.5)}
-.admin-pill--super{background:linear-gradient(180deg,#ffa24a,var(--orange-3));color:#2a1503;border:1px solid rgba(225,105,15,.6)}
+.admin-pill--super{background:var(--grad-btn);color:var(--btn-ink);border:1px solid rgba(225,105,15,.6)}
 
 /* ============ STEPPER ============ */
 .steps{display:flex;align-items:center;gap:8px;margin-bottom:30px;flex-wrap:wrap;justify-content:center;position:relative;z-index:2}
 .step{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-3)}
 .step b{width:26px;height:26px;border-radius:50%;border:1px solid var(--btn-line);display:flex;align-items:center;justify-content:center;font-size:12px}
 .step.done,.step.on{color:var(--ink-2)}
-.step.done b,.step.on b{background:var(--orange);border-color:var(--orange);color:#2a1503}
+.step.done b,.step.on b{background:var(--orange);border-color:var(--orange);color:var(--btn-ink)}
 .step.on{color:#fff;font-weight:600}
 .step-line{width:22px;height:1px;background:#4a3f6b}
 .step-line.done{background:var(--orange)}
@@ -171,7 +185,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .buy-logout{display:flex;justify-content:center;margin:0}
 
 /* ============ INGRESSO ============ */
-.ticket{width:100%;border-radius:18px;overflow:hidden;background:var(--paper);color:var(--paper-ink);box-shadow:0 30px 60px rgba(0,0,0,.6),0 0 60px rgba(255,138,43,.18);position:relative;z-index:2}
+.ticket{width:100%;border-radius:18px;overflow:hidden;background:var(--paper);color:var(--paper-ink);box-shadow:var(--shadow-card),0 0 60px rgba(255,138,43,.18);position:relative;z-index:2}
 .ticket__top,.ticket__top-tag{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 20px;background:#140d18}
 .ticket__brand{display:flex;align-items:center;gap:10px;font-family:var(--f-title);font-weight:800;font-size:14px;letter-spacing:.14em;text-transform:uppercase;color:var(--glow)}
 .ticket__brand img{width:22px;height:22px}
@@ -198,6 +212,9 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .ticket__banner--bad{background:var(--bad-bg);color:#8e2b2b}
 .status-box{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px 20px 6px}
 .status-box strong{font-family:var(--f-title);font-weight:800;font-size:22px}
+.status-icon{width:72px;display:block;margin:16px auto 0}
+.status-icon--candles{filter:drop-shadow(0 0 18px rgba(255,160,60,.45));animation:flicker 3.4s ease-in-out infinite}
+.status-icon--reaper{opacity:.9}
 .pay-pix{padding:22px 20px;display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center}
 .pay-key{margin:0;font-size:13px;color:var(--paper-ink);word-break:break-all}
 .pay-actions{display:flex;gap:10px;padding:0 20px 22px}
@@ -213,14 +230,13 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .copy-box button,.pay-copy-btn{border:none;cursor:pointer;padding:8px 12px;border-radius:8px;background:var(--paper-ink);color:var(--glow);font:600 12px var(--f-body)}
 .ticket .btn-paper{border:none;cursor:pointer;padding:13px 20px;border-radius:999px;background:var(--paper-ink);color:var(--glow);font:700 14px var(--f-body);width:100%}
 .ticket .btn-paper:hover{filter:brightness(1.25)}
-.mp-bg{background:radial-gradient(circle at 50% 0%,#2c1a3a 0%,#120b1c 40%,#0a060e 75%)!important}
+.mp-bg{background:var(--bg-screen-page)!important}
 .mp-wrap{width:100%;max-width:720px;display:flex;flex-direction:column;gap:20px}
 .mp-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
-.mp-skeleton{right:10px;bottom:10px;height:130px;opacity:.8;transform:rotate(6deg)}
 
 /* ============ CONVITE ============ */
 .invite{position:relative;min-height:100vh;overflow:hidden;
-  background:linear-gradient(180deg,#1b1236 0%,#2a1840 28%,#3a1d33 50%,#1a0f1c 66%,#0a060e 72%,#07050d 100%)}
+  background:linear-gradient(180deg,#1b1236 0%,#2a1840 28%,#3a1d33 50%,#1a0f1c 66%,var(--bg-2) 72%,var(--bg) 100%)}
 .scene{position:relative;height:clamp(440px,66vh,680px);overflow:hidden}
 .stars{position:absolute;inset:0;background-repeat:repeat;background-size:620px 413px;opacity:.6;animation:twinkle 6s ease-in-out infinite}
 .moon{position:absolute;left:50%;top:clamp(40px,7vh,80px);width:clamp(220px,30vw,400px);aspect-ratio:1/1;transform:translateX(-50%);border-radius:50%;
@@ -263,20 +279,11 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .info-grid span{font-size:12px;font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:var(--orange)}
 .info-grid strong{font-family:var(--f-title);font-weight:800;font-size:26px;color:#fff;line-height:1.25}
 .info-grid small{font-size:15px;color:var(--ink-2)}
-/* Abaixo do max-width:640px do próprio .info-grid, o auto-fit encaixa
-   exatamente 2 colunas (170px x 2) pros 3 itens (Quando/Onde/Traje) --
-   sobra uma célula vazia (o 4º espaço do grid 2x2) mostrando só o fundo
-   do container, que aparece como um bloco marrom sólido sem texto nenhum
-   (achado real, usuário mandou print do celular). 1 coluna só evita
-   qualquer resto de célula; a 640px o container sempre cabe as 3 colunas
-   inteiras (170x3=510 < 640), sem sobra também. */
-@media (max-width:640px){
-  .info-grid{grid-template-columns:1fr}
-}
+
 .invite__cta{margin-top:32px;box-shadow:0 0 0 4px rgba(255,138,43,.18),0 18px 40px rgba(225,105,15,.45)}
 
 /* ============ ADMIN ============ */
-.a-shell{position:relative;display:flex;align-items:flex-start;min-height:100vh;background:radial-gradient(ellipse 900px 500px at 70% -10%,#2c1a3a 0%,#120b1c 45%,#07050d 80%)}
+.a-shell{position:relative;display:flex;align-items:flex-start;min-height:100vh;background:var(--bg-admin)}
 /* Sticky, não parada no fluxo -- a sidebar é irmã flex de .a-main, e sem
    sticky ela esticava junto quando o conteúdo principal ficava mais alto
    que a tela (ex.: Hierarquia com muita gente), empurrando nav/avatar/sair
@@ -303,9 +310,24 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .a-user__info{flex:1;min-width:0;display:flex;flex-direction:column}
 .a-user__name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .a-user__role{font-size:11px;color:var(--ink-3)}
-.a-logout{width:100%}
+
+/* Card do evento na sidebar */
+.a-event{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:14px;background:rgba(15,10,20,.9);border:1px solid rgba(255,138,43,.25)}
+.a-event__name{font-size:13px;font-weight:600;color:var(--ink)}
+.a-event__sold{font-size:12px;color:var(--ink-3)}
+.a-event .a-bar{margin-top:4px}
+
+/* Sair como link ao lado do nome */
+.a-user__logout{margin:0}
+.a-logout{background:none;border:none;padding:4px 0;cursor:pointer;color:var(--ink-3);font:500 12px var(--f-body)}
+.a-logout:hover{color:#fff}
+
+/* Botões do cabeçalho */
+.a-header__btn{white-space:nowrap}
+.a-header__actions .btn-ghost{padding:11px 16px;font-size:13px}
+.a-header__actions .btn-primary{padding:12px 18px;font-size:13px;box-shadow:0 10px 24px rgba(225,105,15,.35)}
 .avatar{flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--line-2);color:var(--orange-2);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
-.avatar--me{width:38px;height:38px;background:var(--orange);color:#2a1503}
+.avatar--me{width:38px;height:38px;background:var(--orange);color:var(--btn-ink)}
 /* min-height:100vh explícito -- .a-shell agora usa align-items:flex-start
    (pra sidebar sticky não esticar), então .a-main não ganha mais altura de
    graça esticando junto com a sidebar; sem isso, numa página com pouco
@@ -326,7 +348,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .a-header__title{margin:0;font-family:var(--f-title);font-weight:800;font-size:34px;line-height:1.1;color:#fff}
 .a-header__subtitle{display:block;font-size:14px;color:var(--ink-3)}
 .a-header__actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.a-search{width:260px;max-width:100%;padding:12px 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:400 14px var(--f-body)}
+.a-search{width:240px;max-width:100%;padding:11px 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:400 14px var(--f-body)}
 .a-search:focus{outline:none;border-color:var(--orange)}
 .a-card{position:relative;padding:18px;border-radius:16px;background:rgba(15,10,20,.9);border:1px solid var(--border-o2)}
 .a-card--empty{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:48px 20px;border:1px dashed var(--line);background:rgba(15,10,20,.9)}
@@ -418,9 +440,60 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .admin-toast--erro{background:#7a2222}
 .admin-toast--aviso{background:#8a5a16}
 .confirm-overlay{display:none;position:fixed;inset:0;z-index:200;align-items:center;justify-content:center;padding:20px;background:rgba(5,3,9,.72);backdrop-filter:blur(3px)}
-.confirm-modal{width:100%;max-width:420px;background:var(--card);border:1px solid rgba(255,138,43,.4);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:18px;box-shadow:0 30px 60px rgba(0,0,0,.6)}
+.confirm-modal{width:100%;max-width:420px;background:var(--card);border:1px solid rgba(255,138,43,.4);border-radius:18px;padding:24px;display:flex;flex-direction:column;gap:18px;box-shadow:var(--shadow-card)}
+.confirm-modal__icon{width:48px;display:block;margin:0 auto -6px;filter:invert(58%) sepia(90%) saturate(900%) hue-rotate(345deg)}
 .confirm-modal__text{margin:0;font-size:15px;color:var(--ink)}
 .confirm-modal__actions{display:flex;justify-content:flex-end;gap:10px}
+#confirm-modal-ok.is-perigoso{background:var(--bad-bg);color:var(--bad);box-shadow:none}
+
+/* ============ UTILITÁRIAS ============ */
+.stack{display:flex;flex-direction:column}
+.stack-8{display:flex;flex-direction:column;gap:8px}
+.stack-12{display:flex;flex-direction:column;gap:12px}
+.stack-14{display:flex;flex-direction:column;gap:14px}
+.stack-16{display:flex;flex-direction:column;gap:16px}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.row-between{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.row-center{display:flex;justify-content:center}
+.grow{flex:1;min-width:0}
+.no-margin{margin:0}
+.no-underline{text-decoration:none}
+.mt-4{margin-top:4px}.mt-14{margin-top:14px}.mt-28{margin-top:28px}.mt-34{margin-top:34px}
+.self-start{align-self:flex-start}
+.fs-18{font-size:18px}
+.display--sm{font-size:30px}
+.lead--narrow{max-width:320px;line-height:1.65}
+.is-hidden{display:none!important}
+
+/* ============ DECORAÇÃO (peças prontas p/ _decor.html) ============ */
+.deco--tl{top:0;left:0}
+.deco--tr{top:0;right:0}
+.deco--bl{bottom:0;left:0}
+.deco--br{bottom:0;right:0}
+
+.d-tree-l{left:-60px;top:-20px;height:380px;opacity:.9;filter:brightness(0)}
+.d-tree-r{right:-60px;top:-20px;height:360px;opacity:.9;filter:brightness(0)}
+.d-web-l{left:0;top:0;width:130px;opacity:.18;filter:invert(1);transform:scaleX(-1)}
+.d-web-r{right:0;top:0;width:140px;opacity:.18;filter:invert(1)}
+.d-hand{left:30px;bottom:0;height:110px;filter:brightness(0) drop-shadow(0 0 1px rgba(255,138,43,.5))}
+.d-cat{right:24px;bottom:0;height:110px;filter:brightness(0) drop-shadow(0 0 1px rgba(255,138,43,.5))}
+.d-treat{left:20px;bottom:18px;height:80px;filter:var(--glow-pumpkin);animation:flicker 3s ease-in-out infinite}
+.d-witch{right:-30px;top:70px;width:170px;opacity:.9;filter:brightness(0)}
+.d-skull{left:16px;bottom:16px;height:70px;opacity:.8}
+.d-skeleton{right:10px;bottom:10px;height:130px;opacity:.8;transform:rotate(6deg)}
+.d-ghost-a{left:10%;top:12%;width:70px;opacity:.2;filter:invert(1);animation:float 8s ease-in-out infinite}
+.d-ghost-b{right:12%;top:24%;width:46px;opacity:.14;filter:invert(1);animation:float 11s ease-in-out -3s infinite}
+.d-candles{left:24px;bottom:18px;height:70px;filter:drop-shadow(0 0 18px rgba(255,160,60,.45));animation:flicker 3.4s ease-in-out infinite}
+.d-cat-walk{bottom:0;left:0;height:64px;animation:catWalk 28s linear infinite}
+.spider--r64{right:64px}
+
+/* tela centralizada (cadastro_pendente, verifique_email, esqueci/redefinir) */
+.screen--center{background:var(--bg-screen-center)}
+.halo{position:relative;width:140px;height:140px;display:flex;align-items:center;justify-content:center}
+.halo::before{content:"";position:absolute;inset:-30px;border-radius:50%;background:radial-gradient(circle,rgba(255,160,60,.35),rgba(0,0,0,0) 70%)}
+.halo img{position:relative;width:120px;animation:float 6s ease-in-out infinite}
+
+@keyframes catWalk{from{transform:translateX(-120px)}to{transform:translateX(calc(100vw + 120px))}}
 
 /* ============ ANIMAÇÕES ============ */
 @keyframes twinkle{0%,100%{opacity:.2}50%{opacity:.9}}
@@ -440,7 +513,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 @keyframes itemNovo{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
 .a-item-novo{animation:itemNovo .6s ease-out}
 @keyframes fogMove{from{transform:translateX(-20%)}to{transform:translateX(20%)}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}
+
 
 /* ============ RESPONSIVO ============ */
 @media (max-width:860px){
@@ -484,6 +557,20 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
   .a-table td.a-order__client{display:flex;flex-direction:column}
   .a-table td.a-order__namecell{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
   .a-table td.a-order__namecell::before{flex-basis:100%}
+  .a-event{display:none}
+  .a-header__actions{width:100%}
+  .a-search{flex:1 1 100%;width:auto}
+}
+
+/* Abaixo do max-width:640px do próprio .info-grid, o auto-fit encaixa
+   exatamente 2 colunas (170px x 2) pros 3 itens (Quando/Onde/Traje) --
+   sobra uma célula vazia (o 4º espaço do grid 2x2) mostrando só o fundo
+   do container, que aparece como um bloco marrom sólido sem texto nenhum
+   (achado real, usuário mandou print do celular). 1 coluna só evita
+   qualquer resto de célula; a 640px o container sempre cabe as 3 colunas
+   inteiras (170x3=510 < 640), sem sobra também. */
+@media (max-width:640px){
+  .info-grid{grid-template-columns:1fr}
 }
 @media (max-width:480px){
   .g-coffin,.g-hand-2{display:none}
@@ -502,3 +589,5 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
   .admin-group__action{flex:1 1 100%;margin-top:8px}
   .admin-group__action .admin-btn-primary,.admin-group__action .admin-btn-outline{width:100%}
 }
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}

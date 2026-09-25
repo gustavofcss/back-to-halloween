@@ -1,17 +1,17 @@
 {% extends "base.html" %}
+{% from "_decor.html" import decor %}
 {% block title %}Redefinir senha — Horror Night Party{% endblock %}
 {% block content %}
 <div class="screen">
-  <img class="deco sil" src="{{ url_for('static', filename='assets/lTree.svg') }}" alt="" aria-hidden="true" style="left:-60px;top:-20px;height:380px;opacity:.9">
-  <img class="deco sil" src="{{ url_for('static', filename='assets/deco-zombie-hand.png') }}" alt="" aria-hidden="true" style="left:30px;bottom:0;height:110px;filter:brightness(0) drop-shadow(0 0 1px rgba(255,138,43,.5))">
+  {{ decor('tree-l', 'hand') }}
 
   <div class="content">
     <div class="brand-head">
       <p class="eyebrow">Horror Night Party</p>
-      <h1 class="display" style="font-size:30px">REDEFINIR SENHA</h1>
+      <h1 class="display display--sm">REDEFINIR SENHA</h1>
     </div>
     <div class="card">
-      <form method="post" action="/redefinir-senha" id="redefinir-form" style="display:flex;flex-direction:column;gap:14px">
+      <form method="post" action="/redefinir-senha" id="redefinir-form" class="stack-14">
         {#
           Duas etapas visuais (pedido explícito do usuário: "devia ter uma
           tela pra código, outra pra senha") -- continua sendo UM form só,
@@ -24,7 +24,7 @@
         #}
         <div id="etapa-codigo">
           <p class="lead">Digite o código de 6 dígitos que enviamos por e-mail.</p>
-          <div style="display:flex;flex-direction:column;gap:14px">
+          <div class="stack-14">
             <label class="field" for="email">E-mail
               <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email" value="{{ request.args.get('email', '') }}">
             </label>
@@ -40,7 +40,7 @@
               <input type="hidden" id="codigo" name="codigo" pattern="[0-9]{6}" required>
             </label>
           </div>
-          <button type="button" id="btn-continuar" class="btn btn-primary btn-block" style="margin-top:14px">Continuar</button>
+          <button type="button" id="btn-continuar" class="btn btn-primary btn-block mt-14">Continuar</button>
         </div>
 
         <div id="etapa-senha" style="display:none;flex-direction:column;gap:14px">
@@ -52,95 +52,15 @@
             <input class="input" id="confirmar_senha" name="confirmar_senha" type="password" placeholder="Repita" minlength="6" autocomplete="new-password">
           </label>
           <p class="alert" id="senha-erro" style="display:none;">As senhas não coincidem.</p>
-          <div style="display:flex;gap:10px">
+          <div class="row">
             <button type="button" id="btn-voltar" class="btn btn-ghost">Voltar</button>
             <button type="submit" class="btn btn-primary btn-block">Redefinir senha</button>
           </div>
         </div>
       </form>
-      <p class="muted center" style="margin-top:14px">Não recebeu o código? <a href="/esqueci-senha">Pedir de novo</a></p>
+      <p class="muted center mt-14">Não recebeu o código? <a href="/esqueci-senha">Pedir de novo</a></p>
     </div>
   </div>
 </div>
-<script>
-  (function () {
-    var form = document.getElementById('redefinir-form');
-    var etapaCodigo = document.getElementById('etapa-codigo');
-    var etapaSenha = document.getElementById('etapa-senha');
-    var email = document.getElementById('email');
-    var codigo = document.getElementById('codigo');
-    var senha = document.getElementById('senha');
-    var confirmar = document.getElementById('confirmar_senha');
-    var aviso = document.getElementById('senha-erro');
-
-    // Caixinhas do código (uma por dígito) -- #codigo (hidden) é quem o
-    // form realmente manda, sincronizado a cada digitação.
-    var otpBoxes = Array.prototype.slice.call(document.querySelectorAll('.otp-box'));
-    function sincronizarOtp() {
-      codigo.value = otpBoxes.map(function (b) { return b.value; }).join('');
-    }
-    otpBoxes.forEach(function (box, i) {
-      box.addEventListener('input', function () {
-        box.value = box.value.replace(/\D/g, '').slice(-1);
-        sincronizarOtp();
-        if (box.value && otpBoxes[i + 1]) { otpBoxes[i + 1].focus(); }
-      });
-      box.addEventListener('keydown', function (evt) {
-        if (evt.key === 'Backspace' && !box.value && otpBoxes[i - 1]) { otpBoxes[i - 1].focus(); }
-      });
-      box.addEventListener('paste', function (evt) {
-        var texto = (evt.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
-        if (!texto) { return; }
-        evt.preventDefault();
-        texto.split('').slice(0, otpBoxes.length - i).forEach(function (d, j) { otpBoxes[i + j].value = d; });
-        sincronizarOtp();
-        otpBoxes[Math.min(i + texto.length, otpBoxes.length - 1)].focus();
-      });
-    });
-
-    document.getElementById('btn-continuar').addEventListener('click', function () {
-      // required/pattern do e-mail ainda vale (reportValidity mostra o
-      // balão nativo se algo estiver errado); #codigo é hidden agora
-      // (as caixinhas visíveis são só pra digitação), então checa o
-      // tamanho na mão em vez de reportValidity (navegador não valida
-      // campo escondido direito).
-      if (!email.reportValidity()) { return; }
-      if (codigo.value.length !== 6) {
-        otpBoxes[0].focus();
-        return;
-      }
-      etapaCodigo.style.display = 'none';
-      etapaSenha.style.display = 'flex';
-      senha.setAttribute('required', 'required');
-      confirmar.setAttribute('required', 'required');
-      senha.focus();
-    });
-
-    document.getElementById('btn-voltar').addEventListener('click', function () {
-      etapaSenha.style.display = 'none';
-      etapaCodigo.style.display = 'block';
-      senha.removeAttribute('required');
-      confirmar.removeAttribute('required');
-    });
-
-    // Reavalia a cada letra digitada, não só no submit -- sem isso, quem
-    // via o aviso aparecer (senhas diferentes), corrigia o campo e não
-    // clicava em "Redefinir senha" de novo antes de olhar a tela, continuava
-    // vendo "não coincidem" preso na tela mesmo já estando certo (achado
-    // real, usuário reportou em print -- mesmo bug já corrigido em
-    // signup.html).
-    function revalidar() {
-      aviso.style.display = (senha.value && confirmar.value && senha.value !== confirmar.value)
-        ? 'block' : 'none';
-    }
-    senha.addEventListener('input', revalidar);
-    confirmar.addEventListener('input', revalidar);
-    form.addEventListener('submit', function (evt) {
-      if (senha.value !== confirmar.value) {
-        evt.preventDefault();
-        aviso.style.display = 'block';
-      }
-    });
-  })();
-</script>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/otp.js') }}" defer></script>{% endblock %}

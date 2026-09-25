@@ -1,20 +1,19 @@
 {% extends "base.html" %}
+{% from "_decor.html" import decor %}
 {% block title %}Criar conta — Horror Night Party{% endblock %}
 {% block content %}
 <div class="screen">
-  <img class="deco sil" src="{{ url_for('static', filename='assets/rTree.svg') }}" alt="" aria-hidden="true" style="right:-60px;top:-20px;height:360px;opacity:.9">
-  <img class="deco inv" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true" style="left:0;top:0;width:130px;opacity:.18;transform:scaleX(-1)">
-  <img class="deco" src="{{ url_for('static', filename='assets/deco-evil-cat.png') }}" alt="" aria-hidden="true" style="right:24px;bottom:0;height:120px;filter:brightness(0) drop-shadow(0 0 1px rgba(255,138,43,.5))">
+  {{ decor('tree-r', 'web-l', 'cat') }}
 
   <div class="content">
     <div class="brand-head">
       <p class="eyebrow">Horror Night Party</p>
-      <h1 class="display" style="font-size:30px">CRIAR CONTA</h1>
+      <h1 class="display display--sm">CRIAR CONTA</h1>
     </div>
     <div class="card">
       <p class="lead">Cadastre-se pra garantir seu lugar na festa.</p>
       {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
-      <form method="post" action="/signup" id="signup-form" style="display:flex;flex-direction:column;gap:14px">
+      <form method="post" action="/signup" id="signup-form" class="stack-14">
         <label class="field" for="nome">Nome completo
           <input class="input" id="nome" name="nome" type="text" placeholder="Seu nome completo" required autocomplete="name" pattern="\s*\S+(\s+\S+)+\s*" title="Digite nome e sobrenome">
         </label>

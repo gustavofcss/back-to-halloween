@@ -5,6 +5,9 @@
 {% block admin_subtitle %}Ingressos comprados na Horror Night Party{% endblock %}
 {% block admin_header_actions %}
 <input type="search" class="a-search" id="admin-pedidos-search" placeholder="Buscar pedido, nome, e-mail…">
+<a href="/admin/pedidos/exportar" class="btn btn-ghost btn-sm a-header__btn">Exportar planilha</a>
+<a href="/admin/pedidos/email-massa" class="btn btn-ghost btn-sm a-header__btn">Enviar e-mail</a>
+<button type="button" id="btn-cortesia" class="btn btn-primary btn-sm a-header__btn" data-toggle-form="form-cortesia">+ Ingresso cortesia</button>
 {% endblock %}
 {% block admin_body %}
 {% set status_pill = {'confirmado': 'admin-pill--ok', 'pendente': 'admin-pill--warn', 'cancelado': 'admin-pill--bad'} %}
@@ -31,28 +34,24 @@
     <span class="a-kpi__value"><span data-admin-total="confirmados">{{ ns.confirmados }}</span></span>
     <span class="a-kpi__note">{{ ns.confirmados }} ingresso(s)</span>
   </div>
+  {% set pct_vendido = ((ingressos_vendidos_total / capacidade_maxima * 100) if capacidade_maxima else 0) %}
   <div class="a-card">
     <span class="a-kpi__label">Vagas</span>
     <span class="a-kpi__value"><span data-admin-total="ingressos_vendidos_total">{{ ingressos_vendidos_total }}</span> / <span data-admin-total="capacidade_maxima">{{ capacidade_maxima }}</span></span>
-    <span class="a-kpi__note">vendidos / capacidade</span>
+    <span class="a-kpi__note"><span data-admin-restantes>{{ [capacidade_maxima - ingressos_vendidos_total, 0]|max }}</span> restantes</span>
+    <div class="a-bar" data-admin-bar><div style="width:{{ [[pct_vendido, 2]|max, 100]|min|round|int }}%"></div></div>
   </div>
 </div>
 
-<div style="display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;">
-  <h2 class="a-card__title" style="font-size: 18px;">Pedidos</h2>
+<div class="row" style="align-items:baseline">
+  <h2 class="a-card__title fs-18">Pedidos</h2>
   <span class="a-kpi__note"><span data-admin-total="total_pedidos">{{ pedidos|length }}</span> resultado(s)</span>
 </div>
 
-<div style="display: flex; gap: 10px; flex-wrap: wrap;">
-  <button type="button" id="btn-cortesia" class="admin-btn-primary">+ Ingresso cortesia</button>
-  <a href="/admin/pedidos/email-massa" class="admin-btn-primary" style="text-decoration: none;">Enviar e-mail pros clientes</a>
-  <a href="/admin/pedidos/exportar" class="admin-btn-primary" style="text-decoration: none;">Exportar planilha (portaria)</a>
-</div>
-
-<section class="a-card a-card--form" id="form-cortesia" style="display: none;">
+<section class="a-card a-card--form is-hidden" id="form-cortesia">
   <h2 class="a-card__title">Ingresso cortesia</h2>
-  <p class="help-text" style="margin: 0;">Cria um pedido já confirmado, valor R$ 0,00, pros dados do convidado abaixo.</p>
-  <form method="post" action="/admin/pedidos/cortesia" style="display: flex; flex-direction: column; gap: 14px;">
+  <p class="help-text no-margin">Cria um pedido já confirmado, valor R$ 0,00, pros dados do convidado abaixo.</p>
+  <form method="post" action="/admin/pedidos/cortesia" class="stack-14">
     <div class="a-grid">
       <div class="field">
         <label for="cortesia_nome">Nome do convidado</label>
@@ -68,44 +67,15 @@
       </div>
       <div class="field">
         <label for="cortesia_whatsapp">WhatsApp</label>
-        <input id="cortesia_whatsapp" name="whatsapp" class="input" type="text" placeholder="DDD + número, só números" required>
+        <input id="cortesia_whatsapp" name="whatsapp" class="input" type="text" placeholder="DDD + número, só números" required data-mask="whatsapp">
       </div>
     </div>
-    <div style="display: flex; gap: 10px;">
+    <div class="row">
       <button type="submit" class="admin-btn-primary">Criar ingresso cortesia</button>
-      <button type="button" class="admin-btn-outline" onclick="document.getElementById('form-cortesia').style.display='none';">Cancelar</button>
+      <button type="button" class="admin-btn-outline" data-fechar-form="form-cortesia">Cancelar</button>
     </div>
   </form>
 </section>
-<script>
-  (function () {
-    var btn = document.getElementById('btn-cortesia');
-    var secao = document.getElementById('form-cortesia');
-    if (!btn || !secao) { return; }
-    btn.addEventListener('click', function () {
-      secao.style.display = 'block';
-      secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  })();
-
-  (function () {
-    // Mesma formatação ao vivo do WhatsApp já usada em comprar.html
-    // (DDD) NNNNN-NNNN -- achado real, usuário reportou o campo de
-    // cortesia mostrando só dígitos crus enquanto o admin digitava.
-    var campo = document.getElementById('cortesia_whatsapp');
-    if (!campo) { return; }
-    function formatarWhatsapp(digitos) {
-      if (digitos.length <= 2) { return digitos.replace(/^(\d*)/, '($1'); }
-      if (digitos.length <= 6) { return digitos.replace(/^(\d{2})(\d*)/, '($1) $2'); }
-      if (digitos.length <= 10) { return digitos.replace(/^(\d{2})(\d{4})(\d*)/, '($1) $2-$3'); }
-      return digitos.replace(/^(\d{2})(\d{5})(\d*)/, '($1) $2-$3');
-    }
-    campo.addEventListener('input', function () {
-      var digitos = campo.value.replace(/\D/g, '').slice(0, 11);
-      campo.value = formatarWhatsapp(digitos);
-    });
-  })();
-</script>
 
 {% if pedidos %}
 <form method="post" id="pedidos-lote-form" class="admin-ajax-form">
@@ -113,7 +83,7 @@
     <span class="admin-bulk-bar__count" id="pedidos-bulk-count">0 selecionado(s)</span>
     <button type="submit" formaction="/admin/pedidos/confirmar-lote" class="admin-btn-primary">Confirmar selecionados</button>
     <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/cancelar-lote', 'Cancelar os pedidos selecionados?')">Cancelar selecionados</button>
-    <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/apagar-lote', 'Apagar os pedidos cancelados selecionados? Pedidos pendentes/confirmados na seleção são ignorados. Não tem como desfazer.')">Apagar selecionados</button>
+    <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/apagar-lote', 'Apagar os pedidos cancelados selecionados? Pedidos pendentes/confirmados na seleção são ignorados. Não tem como desfazer.', true)">Apagar selecionados</button>
   </div>
   <div class="a-table-wrap">
   <table class="a-table" id="admin-pedidos-table">
@@ -146,7 +116,7 @@
           {% elif p.status_pedido == 'confirmado' %}
           <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/cancelar" class="admin-btn-outline">Cancelar</button>
           {% elif p.status_pedido == 'cancelado' %}
-          <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/{{ p.id_pedido }}/apagar', 'Apagar esse pedido cancelado? Não tem como desfazer.')">Apagar</button>
+          <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/{{ p.id_pedido }}/apagar', 'Apagar esse pedido cancelado? Não tem como desfazer.', true)">Apagar</button>
           {% endif %}
         </td>
       </tr>
@@ -156,133 +126,9 @@
   </div>
 </form>
 {% else %}
-  <p class="help-text">Nenhum pedido ainda.</p>
+  <div class="a-empty">
+    <img src="{{ url_for('static', filename='assets/deco-tomb-ghosts.png') }}" alt="" aria-hidden="true">
+    <p class="help-text no-margin">Nenhum pedido ainda.</p>
+  </div>
 {% endif %}
-
-<script>
-  (function () {
-    var input = document.getElementById('admin-pedidos-search');
-    var table = document.getElementById('admin-pedidos-table');
-    if (!input || !table) { return; }
-    var rows = table.querySelectorAll('tbody tr');
-    input.addEventListener('input', function () {
-      var q = input.value.trim().toLowerCase();
-      rows.forEach(function (tr) {
-        tr.style.display = (!q || tr.textContent.toLowerCase().includes(q)) ? '' : 'none';
-      });
-    });
-  })();
-
-  (function () {
-    var checkAll = document.getElementById('pedidos-check-all');
-    var itens = document.querySelectorAll('.pedidos-check-item');
-    var bar = document.getElementById('pedidos-bulk-bar');
-    var contagem = document.getElementById('pedidos-bulk-count');
-    if (!checkAll || !itens.length) { return; }
-
-    function atualizar() {
-      // Recalcula o total AO VIVO (não usa itens.length, capturado uma vez
-      // no load) -- depois que "Apagar" remove uma linha do DOM (via
-      // admin:sucesso), o total de caixinhas realmente presentes cai, mas
-      // itens.length continua contando a linha já removida. Sem isso,
-      // "Selecionar todos" nunca mais fica marcado depois do primeiro apagar.
-      var total = document.querySelectorAll('.pedidos-check-item').length;
-      var marcados = document.querySelectorAll('.pedidos-check-item:checked').length;
-      bar.classList.toggle('admin-bulk-bar--visivel', marcados > 0);
-      contagem.textContent = marcados + ' selecionado(s)';
-      checkAll.checked = total > 0 && marcados === total;
-    }
-    checkAll.addEventListener('change', function () {
-      itens.forEach(function (item) { item.checked = checkAll.checked; });
-      atualizar();
-    });
-    itens.forEach(function (item) { item.addEventListener('change', atualizar); });
-    // Exposta pro polling (abaixo) conseguir religar uma linha nova no
-    // "selecionar todos" e recalcular o total sem duplicar essa lógica.
-    window.religarSelecaoPedido = function (checkbox) {
-      checkbox.addEventListener('change', atualizar);
-      atualizar();
-    };
-  })();
-
-  // Confirmar/cancelar trocam o selo de status e os botões da linha;
-  // apagar tira a linha da tabela -- sem isso a tela só refletia a mutação
-  // depois de um reload inteiro da página.
-  document.addEventListener('admin:sucesso', function (evt) {
-    var pillClasses = { confirmado: 'admin-pill--ok', pendente: 'admin-pill--warn', cancelado: 'admin-pill--bad' };
-    evt.detail.dados.aplicados.forEach(function (item) {
-      var checkbox = document.querySelector('.pedidos-check-item[value="' + item.id + '"]');
-      if (!checkbox) { return; }
-      var linha = checkbox.closest('tr');
-      if (!item.status) { linha.remove(); return; }
-
-      var pill = linha.querySelector('.admin-pill');
-      pill.className = 'admin-pill ' + (pillClasses[item.status] || 'admin-pill--neutral');
-      pill.textContent = item.status;
-
-      var celulaAcoes = linha.querySelector('td:last-child');
-      if (item.status === 'confirmado') {
-        celulaAcoes.innerHTML =
-          '<button type="submit" formaction="/admin/pedidos/' + item.id + '/cancelar" class="admin-btn-outline">Cancelar</button>';
-      } else if (item.status === 'cancelado') {
-        celulaAcoes.innerHTML =
-          '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'pedidos-lote-form\'), \'/admin/pedidos/' + item.id + '/apagar\', \'Apagar esse pedido cancelado? Não tem como desfazer.\')">Apagar</button>';
-      }
-    });
-  });
-
-  // Polling suave (10s) -- pedido novo de outro cliente aparece sozinho no
-  // topo da tabela, com uma animação, sem recarregar a página inteira nem
-  // mexer no que já estava na tela (achado real, pedido do usuário: não
-  // queria o reload cheio de antes, só que o item novo "surgisse" com uma
-  // transição em vez de aparecer do nada).
-  (function () {
-    var tbody = document.querySelector('#admin-pedidos-table tbody');
-    var idsConhecidos = new Set(
-      Array.prototype.map.call(document.querySelectorAll('.pedidos-check-item'), function (cb) {
-        return parseInt(cb.value, 10);
-      })
-    );
-    var pillClasses = { confirmado: 'admin-pill--ok', pendente: 'admin-pill--warn', cancelado: 'admin-pill--bad' };
-
-    function inserirNovoPedido(item) {
-      if (!tbody) { location.reload(); return; } // tabela vazia antes (sem nenhum pedido) -- não dá pra inserir linha sem recarregar essa vez
-      var esc = window.escaparHtmlAdmin;
-      var extra = item.acompanhante_nome ? '<span class="a-order__extra">+ ' + esc(item.acompanhante_nome) + '</span>' : '';
-      var compradoPor = item.slot === 2 ? '<span class="a-order__extra">Comprado por ' + esc(item.comprador_nome) + '</span>' : '';
-      var cortesiaTag = item.cortesia ? '<span class="admin-pill admin-pill--accent">Cortesia</span>' : '';
-      var acoes = '';
-      if (item.status === 'pendente') {
-        acoes =
-          '<button type="submit" formaction="/admin/pedidos/' + item.id + '/confirmar" class="admin-btn-primary">Confirmar Pix</button> ' +
-          '<button type="submit" formaction="/admin/pedidos/' + item.id + '/cancelar" class="admin-btn-outline">Cancelar</button>';
-      } else if (item.status === 'confirmado') {
-        acoes = '<button type="submit" formaction="/admin/pedidos/' + item.id + '/cancelar" class="admin-btn-outline">Cancelar</button>';
-      } else if (item.status === 'cancelado') {
-        acoes =
-          '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'pedidos-lote-form\'), \'/admin/pedidos/' + item.id + '/apagar\', \'Apagar esse pedido cancelado? Não tem como desfazer.\')">Apagar</button>';
-      }
-      var tr = document.createElement('tr');
-      tr.className = 'a-tr a-item-novo';
-      tr.innerHTML =
-        '<td class="admin-table__check-col"><input type="checkbox" name="ids" value="' + item.id + '" class="pedidos-check-item" aria-label="Selecionar pedido #' + item.id + '"></td>' +
-        '<td class="a-order__id" data-label="Pedido">#' + item.id + '</td>' +
-        '<td class="a-order__client" data-label="Cliente"><span class="a-order__name">' + esc(item.nome) + '</span>' + cortesiaTag + extra + compradoPor +
-        '<span class="a-order__email">' + esc(item.email) + '</span><span class="a-order__extra">' + esc(item.data) + '</span></td>' +
-        '<td data-label="Qtd.">' + item.quantidade + '×</td>' +
-        '<td class="a-order__value" data-label="Valor">R$ ' + item.valor + '</td>' +
-        '<td data-label="Status"><span class="admin-pill ' + (pillClasses[item.status] || 'admin-pill--neutral') + '">' + esc(item.status) + '</span></td>' +
-        '<td data-label="Ações">' + acoes + '</td>';
-      tbody.insertBefore(tr, tbody.firstChild);
-      if (window.religarSelecaoPedido) { window.religarSelecaoPedido(tr.querySelector('.pedidos-check-item')); }
-    }
-
-    window.iniciarPollingAdmin({
-      url: '/admin/pedidos/lista',
-      intervaloMs: 10000,
-      idsConhecidos: idsConhecidos,
-      inserirNovo: inserirNovoPedido,
-    });
-  })();
-</script>
 {% endblock %}

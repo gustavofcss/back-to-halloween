@@ -19,9 +19,9 @@
   </div>
 </div>
 
-<section class="a-card a-card--form" id="form-material" style="display: none;">
+<section class="a-card a-card--form is-hidden" id="form-material">
   <h2 class="a-card__title">Cadastrar material</h2>
-  <form method="post" action="/admin/material" style="display: flex; flex-direction: column; gap: 14px;">
+  <form method="post" action="/admin/material" class="stack-14">
     <div class="a-grid">
       <div class="field">
         <label for="nome_material">Nome do material</label>
@@ -36,13 +36,13 @@
         <input id="descricao" name="descricao" class="input">
       </div>
     </div>
-    <div style="display: flex; gap: 10px;">
+    <div class="row">
       <button type="submit" class="admin-btn-primary">Cadastrar material</button>
-      <button type="button" class="admin-btn-outline" onclick="document.getElementById('form-material').style.display='none';">Cancelar</button>
+      <button type="button" class="admin-btn-outline" data-fechar-form="form-material">Cancelar</button>
     </div>
   </form>
 </section>
-<button type="button" id="btn-novo-material" class="admin-btn-dashed">+ Novo material</button>
+<button type="button" id="btn-novo-material" class="admin-btn-dashed" data-toggle-form="form-material">+ Novo material</button>
 
 {% if materiais %}
 <div class="a-material-grid">
@@ -52,64 +52,16 @@
     <span class="a-material__desc">{{ m.descricao or '—' }}</span>
     <span class="a-material__value">R$ {{ m.valor }}</span>
     <span class="a-material__meta">{{ m.data_compra.strftime('%d/%m/%Y') }} &middot; {{ m.cadastrado_por or '--' }}</span>
-    <form method="post" action="/admin/material/{{ m.id }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse material?')">
+    <form method="post" action="/admin/material/{{ m.id }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse material?', true)">
       <button type="submit" class="admin-btn-outline">Apagar</button>
     </form>
   </div>
   {% endfor %}
 </div>
 {% else %}
-<p class="help-text">Nenhum material cadastrado ainda.</p>
+<div class="a-empty">
+  <img src="{{ url_for('static', filename='assets/deco-skull-bones.png') }}" alt="" aria-hidden="true">
+  <p class="help-text no-margin">Nenhum material cadastrado ainda.</p>
+</div>
 {% endif %}
-<script>
-  (function () {
-    var btn = document.getElementById('btn-novo-material');
-    var secao = document.getElementById('form-material');
-    if (!btn || !secao) { return; }
-    btn.addEventListener('click', function () {
-      secao.style.display = 'block';
-      secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  })();
-
-  document.addEventListener('admin:sucesso', function (evt) {
-    evt.detail.dados.aplicados.forEach(function (item) {
-      var card = document.querySelector('[data-material-id="' + item.id + '"]');
-      if (card) { card.remove(); }
-    });
-  });
-
-  (function () {
-    var grid = document.querySelector('.a-material-grid');
-    var idsConhecidos = new Set(
-      Array.prototype.map.call(document.querySelectorAll('[data-material-id]'), function (card) {
-        return parseInt(card.getAttribute('data-material-id'), 10);
-      })
-    );
-
-    function inserirNovoMaterial(item) {
-      if (!grid) { location.reload(); return; }
-      var esc = window.escaparHtmlAdmin;
-      var div = document.createElement('div');
-      div.className = 'a-card a-item-novo';
-      div.setAttribute('data-material-id', item.id);
-      div.innerHTML =
-        '<span class="a-material__name">' + esc(item.nome) + '</span>' +
-        '<span class="a-material__desc">' + esc(item.descricao) + '</span>' +
-        '<span class="a-material__value">R$ ' + esc(item.valor) + '</span>' +
-        '<span class="a-material__meta">' + esc(item.data) + ' &middot; ' + esc(item.cadastrado_por) + '</span>' +
-        '<form method="post" action="/admin/material/' + item.id + '/apagar" onsubmit="return confirmarAcao(this, \'Apagar esse material?\')">' +
-        '<button type="submit" class="admin-btn-outline">Apagar</button>' +
-        '</form>';
-      grid.insertBefore(div, grid.firstChild);
-    }
-
-    window.iniciarPollingAdmin({
-      url: '/admin/material/lista',
-      intervaloMs: 30000,
-      idsConhecidos: idsConhecidos,
-      inserirNovo: inserirNovoMaterial,
-    });
-  })();
-</script>
 {% endblock %}

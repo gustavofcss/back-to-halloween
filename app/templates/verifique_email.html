@@ -1,19 +1,13 @@
 {% extends "base.html" %}
+{% from "_decor.html" import decor %}
 {% block title %}Confirme seu e-mail — Horror Night Party{% endblock %}
 {% block content %}
-<div class="screen" style="background:radial-gradient(circle at 50% 40%,#3d2440 0%,#1c1230 35%,#0a060e 75%)">
-  <img class="deco inv" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="" aria-hidden="true" style="left:10%;top:12%;width:70px;opacity:.2;animation:float 8s ease-in-out infinite">
-  <img class="deco inv" src="{{ url_for('static', filename='assets/ghost.svg') }}" alt="" aria-hidden="true" style="right:12%;top:24%;width:46px;opacity:.14;animation:float 11s ease-in-out -3s infinite">
+<div class="screen screen--center">
+  {{ decor('ghost-a', 'ghost-b') }}
   <div class="content center">
-    <div style="position:relative;width:140px;height:140px;display:flex;align-items:center;justify-content:center">
-      <div style="position:absolute;inset:-30px;border-radius:50%;background:radial-gradient(circle,rgba(255,160,60,.35),rgba(0,0,0,0) 70%)"></div>
-      <img src="{{ url_for('static', filename='assets/deco-eye.png') }}" alt="" aria-hidden="true" style="position:relative;width:120px;animation:float 6s ease-in-out infinite">
-    </div>
-    <h1 class="h2" style="margin-top:34px">Confirme seu e-mail</h1>
-    <p class="lead" style="margin-top:12px;max-width:320px;line-height:1.65">Mandamos um código de 6 dígitos pra <strong>{{ email }}</strong>. Digite ele abaixo pra confirmar que a conta é sua -- depois disso é só esperar o administrador aprovar.</p>
-
+    {% set aviso_extra %}
     <div class="card" style="margin-top:24px;width:100%;max-width:320px">
-      <form method="post" action="/confirmar-email" style="display:flex;flex-direction:column;gap:14px">
+      <form method="post" action="/confirmar-email" class="stack-14">
         <input type="hidden" name="email" value="{{ email }}">
         <label class="field">Código de 6 dígitos
           <div class="otp-boxes">
@@ -36,7 +30,7 @@
       {# "Errei o e-mail" -- pedido explícito do usuário. Some por trás de
          um link (não fica sempre aberto) porque é o caminho menos comum;
          só revela o campo de novo e-mail quando clicado. #}
-      <button type="button" id="btn-mudar-email" class="btn-link" style="margin-top:14px">Errou o e-mail? Mudar aqui</button>
+      <button type="button" id="btn-mudar-email" class="btn-link mt-14">Errou o e-mail? Mudar aqui</button>
       <form method="post" action="/confirmar-email/mudar-email" id="form-mudar-email" style="display:none;flex-direction:column;gap:10px;margin-top:10px">
         <input type="hidden" name="email_atual" value="{{ email }}">
         <label class="field" for="novo_email">Novo e-mail
@@ -47,44 +41,15 @@
     </div>
 
     <a href="/login" class="btn btn-ghost" style="margin-top:20px">Voltar pro login</a>
+    {% endset %}
+    {% set aviso = {
+      'img': 'deco-eye.png',
+      'titulo': 'Confirme seu e-mail',
+      'texto': 'Mandamos um código de 6 dígitos pra <strong>%s</strong>. Digite ele abaixo pra confirmar que a conta é sua -- depois disso é só esperar o administrador aprovar.' % (email|e),
+      'link': None
+    } %}
+    {% include "_aviso.html" %}
   </div>
 </div>
-<script>
-  (function () {
-    var boxes = Array.prototype.slice.call(document.querySelectorAll('.otp-box'));
-    var hidden = document.getElementById('codigo');
-    if (!boxes.length || !hidden) { return; }
-
-    function sincronizar() {
-      hidden.value = boxes.map(function (b) { return b.value; }).join('');
-    }
-
-    boxes.forEach(function (box, i) {
-      box.addEventListener('input', function () {
-        box.value = box.value.replace(/\D/g, '').slice(-1);
-        sincronizar();
-        if (box.value && boxes[i + 1]) { boxes[i + 1].focus(); }
-      });
-      box.addEventListener('keydown', function (evt) {
-        if (evt.key === 'Backspace' && !box.value && boxes[i - 1]) { boxes[i - 1].focus(); }
-      });
-      box.addEventListener('paste', function (evt) {
-        var texto = (evt.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
-        if (!texto) { return; }
-        evt.preventDefault();
-        texto.split('').slice(0, boxes.length - i).forEach(function (d, j) { boxes[i + j].value = d; });
-        sincronizar();
-        boxes[Math.min(i + texto.length, boxes.length - 1)].focus();
-      });
-    });
-    if (boxes[0]) { boxes[0].focus(); }
-  })();
-
-  document.getElementById('btn-mudar-email').addEventListener('click', function () {
-    var form = document.getElementById('form-mudar-email');
-    form.style.display = 'flex';
-    this.style.display = 'none';
-    document.getElementById('novo_email').focus();
-  });
-</script>
 {% endblock %}
+{% block scripts %}<script src="{{ url_for('static', filename='js/otp.js') }}" defer></script>{% endblock %}

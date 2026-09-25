@@ -1,24 +1,24 @@
 {% extends "base.html" %}
+{% from "_decor.html" import decor %}
 {% block title %}Esqueci minha senha — Horror Night Party{% endblock %}
 {% block content %}
 <div class="screen">
-  <img class="deco sil" src="{{ url_for('static', filename='assets/rTree.svg') }}" alt="" aria-hidden="true" style="right:-60px;top:-20px;height:360px;opacity:.9">
-  <img class="deco inv" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true" style="left:0;top:0;width:130px;opacity:.18;transform:scaleX(-1)">
+  {{ decor('tree-r', 'web-l') }}
 
   <div class="content">
     <div class="brand-head">
       <p class="eyebrow">Horror Night Party</p>
-      <h1 class="display" style="font-size:30px">ESQUECI A SENHA</h1>
+      <h1 class="display display--sm">ESQUECI A SENHA</h1>
     </div>
     <div class="card">
       <p class="lead">Digite seu e-mail e mandamos um código de 6 dígitos pra redefinir sua senha.</p>
-      <form method="post" action="/esqueci-senha" style="display:flex;flex-direction:column;gap:14px">
+      <form method="post" action="/esqueci-senha" class="stack-14">
         <label class="field" for="email">E-mail
           <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email">
         </label>
         <button type="submit" class="btn btn-primary btn-block">Enviar código</button>
       </form>
-      <p class="muted center" style="margin-top:14px">Já tem um código? <a href="/redefinir-senha">Redefinir senha</a></p>
+      <p class="muted center mt-14">Já tem um código? <a href="/redefinir-senha">Redefinir senha</a></p>
       <p class="muted center">Lembrou a senha? <a href="/login">Entrar</a></p>
     </div>
   </div>

@@ -1,8 +1,9 @@
 {% extends "base.html" %}
+{% from "_decor.html" import decor %}
 {% block title %}Meus pedidos — Horror Night Party{% endblock %}
 {% block content %}
 <div class="screen screen--top mp-bg">
-  <img class="deco mp-skeleton" src="{{ url_for('static', filename='assets/deco-skeleton.webp') }}" alt="" aria-hidden="true">
+  {{ decor('skeleton') }}
 
   <div class="mp-wrap">
     <div class="mp-header">
@@ -10,7 +11,7 @@
         <h2 class="h2">Meus pedidos</h2>
         <p class="muted">Seus ingressos pra Horror Night Party</p>
       </div>
-      <form method="post" action="/logout" style="margin: 0;">
+      <form method="post" action="/logout" class="no-margin">
         <button type="submit" class="btn btn-ghost btn-sm">Sair</button>
       </form>
     </div>
@@ -45,8 +46,9 @@
       <a href="/comprar" class="btn btn-primary" style="align-self: center;">Comprar mais {{ pode_comprar_mais }} ingresso(s)</a>
       {% endif %}
     {% else %}
-    <div class="card">
-      <p class="muted">Você ainda não tem pedidos.</p>
+    <div class="a-empty">
+      <img src="{{ url_for('static', filename='assets/deco-tomb-ghosts.png') }}" alt="" aria-hidden="true" style="width:90px">
+      <p class="muted">Você ainda não tem ingressos.</p>
       {% if pode_comprar_mais > 0 %}
       <a href="/comprar" class="btn btn-primary btn-block">Comprar ingresso</a>
       {% endif %}

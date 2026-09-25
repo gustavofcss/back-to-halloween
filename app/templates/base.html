@@ -3,6 +3,8 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#07050d">
+  <meta name="color-scheme" content="dark">
   <title>{% block title %}Horror Night Party{% endblock %}</title>
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='assets/pumpkin.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
@@ -11,26 +13,13 @@
 <body>
   {% with mensagens = get_flashed_messages() %}
     {% if mensagens %}
-      <div class="flash-wrap">
+      <div class="flash-wrap" role="status" aria-live="polite">
         {% for mensagem in mensagens %}<div class="flash">{{ mensagem }}</div>{% endfor %}
       </div>
     {% endif %}
   {% endwith %}
   {% block content %}{% endblock %}
-  <script>
-    // Trava o botão de submit assim que o form é enviado, pra clique duplo
-    // (ou duplo toque no celular) não mandar a mesma requisição 2x -- achado
-    // real: cadastrar material 2x seguidas criou 2 linhas iguais.
-    document.addEventListener('submit', function (evt) {
-      var btn = evt.target.querySelector('button[type="submit"]');
-      if (btn && !btn.disabled) {
-        setTimeout(function () {
-          btn.disabled = true;
-          btn.style.opacity = '.6';
-          btn.style.cursor = 'not-allowed';
-        }, 0);
-      }
-    }, true);
-  </script>
+  <script src="{{ url_for('static', filename='js/comum.js') }}" defer></script>
+  {% block scripts %}{% endblock %}
 </body>
 </html>

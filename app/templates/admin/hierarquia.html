@@ -30,7 +30,7 @@
           <span class="admin-group__email">{{ u.email }}</span>
         </span>
         <span class="admin-group__action">
-          <span class="help-text" style="margin: 0;">protegido, não pode ser rebaixado</span>
+          <span class="help-text no-margin">protegido, não pode ser rebaixado</span>
         </span>
       </div>
     </div>
@@ -59,7 +59,7 @@
             <button type="submit" class="admin-btn-outline">Rebaixar pra cliente</button>
           </form>
           {% else %}
-          <span class="help-text" style="margin: 0;">você</span>
+          <span class="help-text no-margin">você</span>
           {% endif %}
         </span>
       </div>
@@ -86,7 +86,7 @@
     <div class="admin-bulk-bar" id="clientes-bulk-bar">
       <span class="admin-bulk-bar__count" id="clientes-bulk-count">0 selecionado(s)</span>
       <button type="submit" formaction="/admin/hierarquia/promover-lote" class="admin-btn-primary">Promover selecionados</button>
-      <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/remover-lote', 'Apagar os clientes selecionados? Isso também apaga os pedidos deles. Não tem como desfazer.')">Apagar selecionados</button>
+      <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/remover-lote', 'Apagar os clientes selecionados? Isso também apaga os pedidos deles. Não tem como desfazer.', true)">Apagar selecionados</button>
     </div>
     <div class="admin-group__list">
       {% for u in clientes %}
@@ -100,7 +100,7 @@
           </span>
           <span class="admin-group__action admin-group__action--duplo">
             <button type="submit" formaction="/admin/hierarquia/{{ u.id_usuario }}/promover" class="admin-btn-primary">Promover a admin</button>
-            <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/{{ u.id_usuario }}/remover', 'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.')">Apagar</button>
+            <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/{{ u.id_usuario }}/remover', 'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.', true)">Apagar</button>
           </span>
         </div>
       </div>
@@ -108,104 +108,10 @@
     </div>
   </form>
   {% else %}
-  <p class="help-text" style="margin: 14px 4px 4px;">Nenhum cliente cadastrado.</p>
+  <div class="a-empty">
+    <img src="{{ url_for('static', filename='assets/deco-scream.png') }}" alt="" aria-hidden="true" style="filter:invert(1);opacity:.6">
+    <p class="help-text no-margin">Nenhum cliente cadastrado.</p>
+  </div>
   {% endif %}
 </div>
-
-<script>
-  (function () {
-    var input = document.getElementById('admin-hierarquia-search');
-    var rows = document.querySelectorAll('.admin-group__row');
-    if (!input || !rows.length) { return; }
-    input.addEventListener('input', function () {
-      var q = input.value.trim().toLowerCase();
-      rows.forEach(function (row) {
-        row.style.display = (!q || row.textContent.toLowerCase().includes(q)) ? '' : 'none';
-      });
-    });
-  })();
-
-  (function () {
-    var checkAll = document.getElementById('clientes-check-all');
-    var itens = document.querySelectorAll('.clientes-check-item');
-    var bar = document.getElementById('clientes-bulk-bar');
-    var contagem = document.getElementById('clientes-bulk-count');
-    if (!checkAll || !itens.length) { return; }
-
-    function atualizar() {
-      // Total ao vivo, não itens.length (capturado uma vez no load) -- depois
-      // que promover/remover tira uma linha via admin:sucesso, o total real
-      // de caixinhas cai, mas itens.length continua com a antiga.
-      var total = document.querySelectorAll('.clientes-check-item').length;
-      var marcados = document.querySelectorAll('.clientes-check-item:checked').length;
-      bar.classList.toggle('admin-bulk-bar--visivel', marcados > 0);
-      contagem.textContent = marcados + ' selecionado(s)';
-      checkAll.checked = total > 0 && marcados === total;
-    }
-    checkAll.addEventListener('change', function () {
-      itens.forEach(function (item) { item.checked = checkAll.checked; });
-      atualizar();
-    });
-    itens.forEach(function (item) { item.addEventListener('change', atualizar); });
-
-    window.religarSelecaoCliente = function (checkbox) {
-      checkbox.addEventListener('change', atualizar);
-      atualizar();
-    };
-  })();
-
-  // Promover/rebaixar/remover sempre tiram a pessoa do grupo em que ela
-  // estava (cliente promovido some da lista de Clientes, admin rebaixado
-  // some da lista de Administradores) -- por isso um único handler genérico
-  // (tirar a linha da tela) cobre as 5 rotas de mutação da Hierarquia, single
-  // e em lote. A pessoa aparece no grupo novo no próximo refresh da página.
-  document.addEventListener('admin:sucesso', function (evt) {
-    evt.detail.dados.aplicados.forEach(function (item) {
-      var linha = document.querySelector('.admin-group__row[data-row-id="' + item.id + '"]');
-      if (linha) { linha.remove(); }
-    });
-  });
-
-  (function () {
-    var lista = document.querySelector('#clientes-lote-form .admin-group__list');
-    var idsConhecidos = new Set(
-      Array.prototype.map.call(document.querySelectorAll('.clientes-check-item'), function (cb) {
-        return parseInt(cb.value, 10);
-      })
-    );
-
-    function iniciais(nome) {
-      var partes = String(nome || '').split(' ');
-      var s = (partes[0] ? partes[0][0] : '') + (partes.length > 1 && partes[1] ? partes[1][0] : '');
-      return s.toUpperCase();
-    }
-
-    function inserirNovoCliente(item) {
-      if (!lista) { location.reload(); return; }
-      var esc = window.escaparHtmlAdmin;
-      var div = document.createElement('div');
-      div.className = 'admin-group__row a-item-novo';
-      div.setAttribute('data-row-id', item.id);
-      div.innerHTML =
-        '<div class="admin-group__row-inner">' +
-        '<input type="checkbox" name="ids" value="' + item.id + '" class="clientes-check-item" aria-label="Selecionar ' + esc(item.nome) + '">' +
-        '<span class="avatar">' + esc(iniciais(item.nome)) + '</span>' +
-        '<span class="admin-group__info"><span class="admin-group__name">' + esc(item.nome) + '</span><span class="admin-group__email">' + esc(item.email) + '</span></span>' +
-        '<span class="admin-group__action admin-group__action--duplo">' +
-        '<button type="submit" formaction="/admin/hierarquia/' + item.id + '/promover" class="admin-btn-primary">Promover a admin</button>' +
-        '<button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById(\'clientes-lote-form\'), \'/admin/hierarquia/' + item.id + '/remover\', \'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.\')">Apagar</button>' +
-        '</span>' +
-        '</div>';
-      lista.insertBefore(div, lista.firstChild);
-      if (window.religarSelecaoCliente) { window.religarSelecaoCliente(div.querySelector('.clientes-check-item')); }
-    }
-
-    window.iniciarPollingAdmin({
-      url: '/admin/hierarquia/lista',
-      intervaloMs: 10000,
-      idsConhecidos: idsConhecidos,
-      inserirNovo: inserirNovoCliente,
-    });
-  })();
-</script>
 {% endblock %}

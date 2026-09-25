@@ -1,12 +1,32 @@
 {% extends "admin/_layout.html" %}
 {% set active_nav = "eventos" %}
-{% block title %}Admin — Lotes do evento{% endblock %}
-{% block admin_title %}Lotes do evento{% endblock %}
-{% block admin_subtitle %}É sempre o mesmo evento (Halloween) — só o lote (preço/data) muda{% endblock %}
+{% block title %}Admin — Evento{% endblock %}
+{% block admin_title %}Evento{% endblock %}
+{% block admin_subtitle %}Nome, data e lotes da festa{% endblock %}
 {% block admin_body %}
 <section class="a-card">
-  <h2 class="a-card__title" style="font-size: 18px;">Capacidade do evento</h2>
-  <p class="help-text" style="margin: 0;">{{ ingressos_vendidos_total }} de {{ capacidade_maxima }} ingressos vendidos</p>
+  <h2 class="a-card__title fs-18">Nome e data do evento</h2>
+  <p class="help-text no-margin">Aparece nos ingressos e na tela de convite</p>
+  <form method="post" action="/admin/eventos/nome-data" style="display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;">
+    <div class="field" style="margin-bottom: 0; flex: 1 1 200px;">
+      <label for="nome_evento">Nome do evento</label>
+      <input id="nome_evento" name="nome_evento" class="input" type="text" maxlength="160" placeholder="Halloween" value="{{ ultimo.nome_evento if ultimo else '' }}" required>
+    </div>
+    <div class="field" style="margin-bottom: 0; flex: 0 0 auto;">
+      <label for="data_evento">Data</label>
+      <input id="data_evento" name="data_evento" class="input" type="date" value="{{ ultimo.data_evento.strftime('%Y-%m-%d') if ultimo and ultimo.data_evento else '' }}">
+    </div>
+    <div class="field" style="margin-bottom: 0; flex: 0 0 auto;">
+      <label for="hora_evento">Hora</label>
+      <input id="hora_evento" name="hora_evento" class="input" type="time" value="{{ ultimo.hora_evento.strftime('%H:%M') if ultimo and ultimo.hora_evento else '' }}">
+    </div>
+    <button type="submit" class="admin-btn-outline">Atualizar nome e data</button>
+  </form>
+</section>
+
+<section class="a-card">
+  <h2 class="a-card__title fs-18">Capacidade do evento</h2>
+  <p class="help-text no-margin">{{ ingressos_vendidos_total }} de {{ capacidade_maxima }} ingressos vendidos</p>
   <form method="post" action="/admin/eventos/capacidade" style="display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;">
     <div class="field" style="margin-bottom: 0; flex: 0 0 auto;">
       <label for="capacidade_maxima">Capacidade máxima</label>
@@ -17,8 +37,8 @@
 </section>
 
 <section class="a-card">
-  <h2 class="a-card__title" style="font-size: 18px;">Endereço do evento</h2>
-  <p class="help-text" style="margin: 0;">Aparece na tela de convite (Onde)</p>
+  <h2 class="a-card__title fs-18">Endereço do evento</h2>
+  <p class="help-text no-margin">Aparece na tela de convite (Onde)</p>
   <form method="post" action="/admin/eventos/endereco" style="display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;">
     <div class="field" style="margin-bottom: 0; flex: 1 1 240px;">
       <label for="endereco">Rua e número</label>
@@ -32,16 +52,16 @@
   </form>
 </section>
 
-<section class="a-card a-card--form" id="form-lote" style="display: none;">
+<section class="a-card a-card--form is-hidden" id="form-lote">
   <h2 class="a-card__title">Cadastrar novo lote</h2>
-  <p class="help-text" style="margin: 0;">
+  <p class="help-text no-margin">
     É sempre o MESMO evento{% if ultimo %} ({{ ultimo.nome_evento }}, {{ ultimo.data_evento.strftime('%d/%m/%Y') if ultimo.data_evento else 'data a definir' }}{% if ultimo.hora_evento %} às {{ ultimo.hora_evento.strftime('%H:%M') }}{% endif %}){% endif %} — aqui
     você só cadastra o lote {{ proximo_lote }}, com um novo preço (ex.: 1º
     lote R$ 30, depois 2º lote R$ 40). O lote mais recente cadastrado é o
     que fica valendo pra quem for comprar ingresso agora.
   </p>
 
-  <form method="post" action="/admin/eventos" style="display: flex; flex-direction: column; gap: 14px;">
+  <form method="post" action="/admin/eventos" class="stack-14">
     <div class="a-grid">
       <div class="field">
         <label>Próximo lote</label>
@@ -56,9 +76,9 @@
         <input id="quantidade_max_ingressos" name="quantidade_max_ingressos" class="input" type="number" min="1" value="{{ ultimo.quantidade_max_ingressos if ultimo else 2 }}">
       </div>
     </div>
-    <div style="display: flex; gap: 10px;">
+    <div class="row">
       <button type="submit" class="admin-btn-primary">Cadastrar lote {{ proximo_lote }}</button>
-      <button type="button" class="admin-btn-outline" onclick="document.getElementById('form-lote').style.display='none';">Cancelar</button>
+      <button type="button" class="admin-btn-outline" data-fechar-form="form-lote">Cancelar</button>
     </div>
   </form>
 </section>
@@ -78,7 +98,7 @@
   sem precisar de nenhuma coluna nova.
 #}
 {% if eventos %}
-<div style="display: flex; flex-direction: column; gap: 12px;">
+<div class="stack-12">
   {% for e in eventos %}
   {% set ativo = loop.index0 == 0 %}
   {% set periodo = ('desde ' ~ e.data_cadastro.strftime('%d/%m')) if ativo else (e.data_cadastro.strftime('%d/%m') ~ ' a ' ~ eventos[loop.index0 - 1].data_cadastro.strftime('%d/%m')) %}
@@ -110,7 +130,7 @@
       tirar a classe -- só o mecanismo confirmarAcao->modal->enviarAcaoAdmin
       (usado no clique em "Confirmar") continua ativo, igual material.html.
     #}
-    <form method="post" action="/admin/eventos/{{ e.id_evento }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse lote? Só é possível se ele ainda não tiver nenhum pedido vinculado.')">
+    <form method="post" action="/admin/eventos/{{ e.id_evento }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse lote? Só é possível se ele ainda não tiver nenhum pedido vinculado.', true)">
       <button type="submit" class="admin-btn-outline">Apagar</button>
     </form>
   </div>
@@ -120,26 +140,5 @@
 <p class="help-text">Nenhum lote cadastrado ainda.</p>
 {% endif %}
 
-<button type="button" id="btn-novo-lote" class="admin-btn-dashed">+ Novo lote</button>
-<script>
-  (function () {
-    var btn = document.getElementById('btn-novo-lote');
-    var secao = document.getElementById('form-lote');
-    if (!btn || !secao) { return; }
-    btn.addEventListener('click', function () {
-      secao.style.display = 'block';
-      secao.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  })();
-
-  // Apagar o lote ativo faz o anterior (próximo da lista) virar o novo
-  // ativo sozinho -- mas isso só reflete na tela com uma releitura do
-  // servidor (quem é "ativo" é calculado no Jinja a partir da ordem da
-  // lista), por isso recarrega em vez de só tirar o card na hora.
-  document.addEventListener('admin:sucesso', function (evt) {
-    if (/\/eventos\/\d+\/apagar$/.test(evt.detail.actionUrl)) {
-      location.reload();
-    }
-  });
-</script>
+<button type="button" id="btn-novo-lote" class="admin-btn-dashed" data-toggle-form="form-lote">+ Novo lote</button>
 {% endblock %}

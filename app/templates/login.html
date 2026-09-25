@@ -1,10 +1,9 @@
 {% extends "base.html" %}
+{% from "_decor.html" import decor %}
 {% block title %}Entrar — Horror Night Party{% endblock %}
 {% block content %}
 <div class="screen">
-  <img class="deco sil" src="{{ url_for('static', filename='assets/lTree.svg') }}" alt="" aria-hidden="true" style="left:-60px;top:-20px;height:380px;opacity:.9">
-  <div class="spider" style="right:64px" aria-hidden="true"><i></i><img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt=""></div>
-  <img class="deco sil" src="{{ url_for('static', filename='assets/deco-zombie-hand.png') }}" alt="" aria-hidden="true" style="left:30px;bottom:0;height:110px;filter:brightness(0) drop-shadow(0 0 1px rgba(255,138,43,.5))">
+  {{ decor('tree-l', 'spider', 'hand') }}
 
   <div class="content">
     <div class="brand-head">
@@ -13,8 +12,13 @@
     </div>
     <div class="card">
       <p class="lead">Acesse sua conta pra garantir seu ingresso.</p>
-      {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
-      <form method="post" action="/login" style="display:flex;flex-direction:column;gap:16px">
+      {% if erro %}
+      <div class="alert alert--icon">
+        <img src="{{ url_for('static', filename='assets/deco-scream.png') }}" alt="" aria-hidden="true">
+        {{ erro }}
+      </div>
+      {% endif %}
+      <form method="post" action="/login" class="stack-16">
         <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
         <label class="field" for="email">E-mail
           <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email">

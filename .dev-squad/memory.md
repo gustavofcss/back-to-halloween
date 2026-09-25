@@ -571,3 +571,18 @@ mas o pacote Python + browser sim). Ainda sem Postgres/Mercado Pago reais.
   coisas juntas, os outros usos de `confirmarAcao`/`confirmarAcaoLote` são
   ou via `onclick` em `<button type="button">` -- que nunca dispara
   `submit` -- ou (material.html) já sem a classe).
+
+## Refatoração de front, seção 5.5: convenção AJAX mudou de arquivo (2026-09-25)
+
+A convenção AJAX do admin (`confirmarAcao`/`confirmarAcaoLote`/
+`enviarAcaoAdmin`/`escaparHtmlAdmin`/`iniciarPollingAdmin`, envelope JSON
+`{ok, aplicados, ignorados, totais, aviso}`) **não muda de comportamento**,
+só de local: saiu do `<script>` inline em `admin/_layout.html` e virou
+`app/static/js/admin.js` (carregado via `{% block scripts %}`, `defer`).
+Os scripts por página (busca, seleção em lote, `admin:sucesso`, polling)
+de `pedidos.html`/`cadastros.html`/`hierarquia.html`/`material.html`/
+`eventos.html` também migraram pro mesmo arquivo, cada bloco protegido por
+`if (paginaAdmin === '...')`, onde `paginaAdmin` lê `data-page` de
+`<main class="a-main" data-page="{{ active_nav }}">` (novo atributo em
+`admin/_layout.html`) -- sem esse guard, toda página do admin dispararia
+os 4 pollings (pedidos/cadastros/hierarquia/material) ao mesmo tempo.
