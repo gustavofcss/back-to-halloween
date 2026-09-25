@@ -420,13 +420,19 @@ def pedidos_exportar():
             )
             lista = cur.fetchall()
 
+    # Numeração sequencial (1, 2, 3...) pra portaria conferir/marcar --
+    # não é o id_pedido (achado real, usuário corrigiu: "a numeração que
+    # digo era um sequencial do lado", não o número interno do pedido).
     buf = io.StringIO()
     escritor = csv.writer(buf, delimiter=";")
-    escritor.writerow(["Pedido", "Ingresso", "Nome", "RG"])
+    escritor.writerow(["Numeração", "Nome", "RG"])
+    numero = 0
     for p in lista:
-        escritor.writerow([p["id_pedido"], 1, p["nome"], p["rg"] or ""])
+        numero += 1
+        escritor.writerow([numero, p["nome"], p["rg"] or ""])
         if p["acompanhante_nome"]:
-            escritor.writerow([p["id_pedido"], 2, p["acompanhante_nome"], p["acompanhante_rg"] or ""])
+            numero += 1
+            escritor.writerow([numero, p["acompanhante_nome"], p["acompanhante_rg"] or ""])
 
     return Response(
         "﻿" + buf.getvalue(),  # BOM -- Excel abre acentuado certo com UTF-8 sem confundir com outra codificação
