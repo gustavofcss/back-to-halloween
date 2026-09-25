@@ -29,13 +29,13 @@
    Servidas de /static/fonts em vez do CDN do Google Fonts, pra não
    depender de rede externa no carregamento da página (achado real: CDN
    instável derrubou a fonte em produção uma vez). */
-@font-face{font-family:'Nosifer';font-style:normal;font-weight:400;font-display:swap;src:url("../fonts/nosifer.ttf") format('truetype');}
-@font-face{font-family:'Baloo 2';font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/baloo2-600.ttf") format('truetype');}
-@font-face{font-family:'Baloo 2';font-style:normal;font-weight:800;font-display:swap;src:url("../fonts/baloo2-800.ttf") format('truetype');}
-@font-face{font-family:'Poppins';font-style:normal;font-weight:400;font-display:swap;src:url("../fonts/poppins-400.ttf") format('truetype');}
-@font-face{font-family:'Poppins';font-style:normal;font-weight:500;font-display:swap;src:url("../fonts/poppins-500.ttf") format('truetype');}
-@font-face{font-family:'Poppins';font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/poppins-600.ttf") format('truetype');}
-@font-face{font-family:'Poppins';font-style:normal;font-weight:700;font-display:swap;src:url("../fonts/poppins-700.ttf") format('truetype');}
+@font-face{font-family:'Nosifer';font-style:normal;font-weight:400;font-display:swap;src:url("../fonts/nosifer.woff2") format('woff2');}
+@font-face{font-family:'Baloo 2';font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/baloo2-600.woff2") format('woff2');}
+@font-face{font-family:'Baloo 2';font-style:normal;font-weight:800;font-display:swap;src:url("../fonts/baloo2-800.woff2") format('woff2');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:400;font-display:swap;src:url("../fonts/poppins-400.woff2") format('woff2');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:500;font-display:swap;src:url("../fonts/poppins-500.woff2") format('woff2');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:600;font-display:swap;src:url("../fonts/poppins-600.woff2") format('woff2');}
+@font-face{font-family:'Poppins';font-style:normal;font-weight:700;font-display:swap;src:url("../fonts/poppins-700.woff2") format('woff2');}
 
 /* ============ RESET ============ */
 *,*::before,*::after{box-sizing:border-box}
