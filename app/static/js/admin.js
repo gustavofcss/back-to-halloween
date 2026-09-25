@@ -31,6 +31,21 @@
         el.textContent = totais[chave];
       });
     });
+    atualizarBarras();
+  }
+
+  // O número muda sozinho (data-admin-total, acima), mas a largura da
+  // barra e o "restantes" (card Vagas + card do evento na sidebar) não --
+  // recalcula os dois a partir do número que acabou de ser escrito no DOM.
+  function atualizarBarras() {
+    var v = document.querySelector('[data-admin-total="ingressos_vendidos_total"]');
+    var c = document.querySelector('[data-admin-total="capacidade_maxima"]');
+    if (!v || !c) { return; }
+    var vendidos = parseInt(v.textContent, 10) || 0;
+    var capacidade = parseInt(c.textContent, 10) || 0;
+    var pct = capacidade ? Math.min(100, Math.max(2, Math.round(vendidos / capacidade * 100))) : 0;
+    document.querySelectorAll('[data-admin-bar] > div').forEach(function (el) { el.style.width = pct + '%'; });
+    document.querySelectorAll('[data-admin-restantes]').forEach(function (el) { el.textContent = Math.max(0, capacidade - vendidos); });
   }
   // Exposta pra window.iniciarPollingAdmin (definido mais abaixo) também
   // poder atualizar os KPIs/pílulas quando o polling encontra item novo,

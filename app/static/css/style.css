@@ -310,7 +310,22 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .a-user__info{flex:1;min-width:0;display:flex;flex-direction:column}
 .a-user__name{font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .a-user__role{font-size:11px;color:var(--ink-3)}
-.a-logout{width:100%}
+
+/* Card do evento na sidebar */
+.a-event{display:flex;flex-direction:column;gap:6px;padding:14px;border-radius:14px;background:rgba(15,10,20,.9);border:1px solid rgba(255,138,43,.25)}
+.a-event__name{font-size:13px;font-weight:600;color:var(--ink)}
+.a-event__sold{font-size:12px;color:var(--ink-3)}
+.a-event .a-bar{margin-top:4px}
+
+/* Sair como link ao lado do nome */
+.a-user__logout{margin:0}
+.a-logout{background:none;border:none;padding:4px 0;cursor:pointer;color:var(--ink-3);font:500 12px var(--f-body)}
+.a-logout:hover{color:#fff}
+
+/* Botões do cabeçalho */
+.a-header__btn{white-space:nowrap}
+.a-header__actions .btn-ghost{padding:11px 16px;font-size:13px}
+.a-header__actions .btn-primary{padding:12px 18px;font-size:13px;box-shadow:0 10px 24px rgba(225,105,15,.35)}
 .avatar{flex:0 0 auto;width:40px;height:40px;border-radius:50%;background:var(--line-2);color:var(--orange-2);font-weight:700;font-size:14px;display:flex;align-items:center;justify-content:center}
 .avatar--me{width:38px;height:38px;background:var(--orange);color:var(--btn-ink)}
 /* min-height:100vh explícito -- .a-shell agora usa align-items:flex-start
@@ -333,7 +348,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .a-header__title{margin:0;font-family:var(--f-title);font-weight:800;font-size:34px;line-height:1.1;color:#fff}
 .a-header__subtitle{display:block;font-size:14px;color:var(--ink-3)}
 .a-header__actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.a-search{width:260px;max-width:100%;padding:12px 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:400 14px var(--f-body)}
+.a-search{width:240px;max-width:100%;padding:11px 16px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink);font:400 14px var(--f-body)}
 .a-search:focus{outline:none;border-color:var(--orange)}
 .a-card{position:relative;padding:18px;border-radius:16px;background:rgba(15,10,20,.9);border:1px solid var(--border-o2)}
 .a-card--empty{display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center;padding:48px 20px;border:1px dashed var(--line);background:rgba(15,10,20,.9)}
@@ -542,6 +557,9 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
   .a-table td.a-order__client{display:flex;flex-direction:column}
   .a-table td.a-order__namecell{display:flex;flex-wrap:wrap;align-items:center;gap:10px}
   .a-table td.a-order__namecell::before{flex-basis:100%}
+  .a-event{display:none}
+  .a-header__actions{width:100%}
+  .a-search{flex:1 1 100%;width:auto}
 }
 
 /* Abaixo do max-width:640px do próprio .info-grid, o auto-fit encaixa

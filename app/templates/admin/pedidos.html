@@ -5,6 +5,9 @@
 {% block admin_subtitle %}Ingressos comprados na Horror Night Party{% endblock %}
 {% block admin_header_actions %}
 <input type="search" class="a-search" id="admin-pedidos-search" placeholder="Buscar pedido, nome, e-mail…">
+<a href="/admin/pedidos/exportar" class="btn btn-ghost btn-sm a-header__btn">Exportar planilha</a>
+<a href="/admin/pedidos/email-massa" class="btn btn-ghost btn-sm a-header__btn">Enviar e-mail</a>
+<button type="button" id="btn-cortesia" class="btn btn-primary btn-sm a-header__btn" data-toggle-form="form-cortesia">+ Ingresso cortesia</button>
 {% endblock %}
 {% block admin_body %}
 {% set status_pill = {'confirmado': 'admin-pill--ok', 'pendente': 'admin-pill--warn', 'cancelado': 'admin-pill--bad'} %}
@@ -31,22 +34,18 @@
     <span class="a-kpi__value"><span data-admin-total="confirmados">{{ ns.confirmados }}</span></span>
     <span class="a-kpi__note">{{ ns.confirmados }} ingresso(s)</span>
   </div>
+  {% set pct_vendido = ((ingressos_vendidos_total / capacidade_maxima * 100) if capacidade_maxima else 0) %}
   <div class="a-card">
     <span class="a-kpi__label">Vagas</span>
     <span class="a-kpi__value"><span data-admin-total="ingressos_vendidos_total">{{ ingressos_vendidos_total }}</span> / <span data-admin-total="capacidade_maxima">{{ capacidade_maxima }}</span></span>
-    <span class="a-kpi__note">vendidos / capacidade</span>
+    <span class="a-kpi__note"><span data-admin-restantes>{{ [capacidade_maxima - ingressos_vendidos_total, 0]|max }}</span> restantes</span>
+    <div class="a-bar" data-admin-bar><div style="width:{{ [[pct_vendido, 2]|max, 100]|min|round|int }}%"></div></div>
   </div>
 </div>
 
 <div class="row" style="align-items:baseline">
   <h2 class="a-card__title fs-18">Pedidos</h2>
   <span class="a-kpi__note"><span data-admin-total="total_pedidos">{{ pedidos|length }}</span> resultado(s)</span>
-</div>
-
-<div class="row">
-  <button type="button" id="btn-cortesia" class="admin-btn-primary" data-toggle-form="form-cortesia">+ Ingresso cortesia</button>
-  <a href="/admin/pedidos/email-massa" class="admin-btn-primary no-underline">Enviar e-mail pros clientes</a>
-  <a href="/admin/pedidos/exportar" class="admin-btn-primary no-underline">Exportar planilha (portaria)</a>
 </div>
 
 <section class="a-card a-card--form is-hidden" id="form-cortesia">

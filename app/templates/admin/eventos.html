@@ -1,9 +1,29 @@
 {% extends "admin/_layout.html" %}
 {% set active_nav = "eventos" %}
-{% block title %}Admin — Lotes do evento{% endblock %}
-{% block admin_title %}Lotes do evento{% endblock %}
-{% block admin_subtitle %}É sempre o mesmo evento (Halloween) — só o lote (preço/data) muda{% endblock %}
+{% block title %}Admin — Evento{% endblock %}
+{% block admin_title %}Evento{% endblock %}
+{% block admin_subtitle %}Nome, data e lotes da festa{% endblock %}
 {% block admin_body %}
+<section class="a-card">
+  <h2 class="a-card__title fs-18">Nome e data do evento</h2>
+  <p class="help-text no-margin">Aparece nos ingressos e na tela de convite</p>
+  <form method="post" action="/admin/eventos/nome-data" style="display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;">
+    <div class="field" style="margin-bottom: 0; flex: 1 1 200px;">
+      <label for="nome_evento">Nome do evento</label>
+      <input id="nome_evento" name="nome_evento" class="input" type="text" maxlength="160" placeholder="Halloween" value="{{ ultimo.nome_evento if ultimo else '' }}" required>
+    </div>
+    <div class="field" style="margin-bottom: 0; flex: 0 0 auto;">
+      <label for="data_evento">Data</label>
+      <input id="data_evento" name="data_evento" class="input" type="date" value="{{ ultimo.data_evento.strftime('%Y-%m-%d') if ultimo and ultimo.data_evento else '' }}">
+    </div>
+    <div class="field" style="margin-bottom: 0; flex: 0 0 auto;">
+      <label for="hora_evento">Hora</label>
+      <input id="hora_evento" name="hora_evento" class="input" type="time" value="{{ ultimo.hora_evento.strftime('%H:%M') if ultimo and ultimo.hora_evento else '' }}">
+    </div>
+    <button type="submit" class="admin-btn-outline">Atualizar nome e data</button>
+  </form>
+</section>
+
 <section class="a-card">
   <h2 class="a-card__title fs-18">Capacidade do evento</h2>
   <p class="help-text no-margin">{{ ingressos_vendidos_total }} de {{ capacidade_maxima }} ingressos vendidos</p>

@@ -175,6 +175,10 @@ def _injetar_contadores_nav():
             total_material = cur.fetchone()["n"]
             cur.execute("SELECT COUNT(*) AS n FROM evento")
             total_eventos = cur.fetchone()["n"]
+            # Card do evento na sidebar (ver HANDOFF-ADMIN-HEADER-VAGAS.md)
+            # aparece em toda página do admin, não só em pedidos -- reaproveita
+            # a mesma _totais_pedidos que a rota pedidos já usa, sem query nova.
+            totais_pedidos = _totais_pedidos(cur)
     return {
         "nav_counts": {
             "pedidos": total_pedidos,
@@ -182,7 +186,9 @@ def _injetar_contadores_nav():
             "hierarquia": total_hierarquia,
             "material": total_material,
             "eventos": total_eventos,
-        }
+        },
+        "sidebar_vendidos": totais_pedidos["ingressos_vendidos_total"],
+        "sidebar_capacidade": totais_pedidos["capacidade_maxima"],
     }
 
 
@@ -1258,6 +1264,33 @@ def eventos_capacidade():
                 cur.execute(
                     "UPDATE evento SET capacidade_maxima = %s WHERE id_evento = %s",
                     (capacidade_maxima, ultimo["id_evento"]),
+                )
+    return redirect(url_for("admin.eventos"))
+
+
+@admin_bp.route("/eventos/nome-data", methods=["POST"])
+@admin_required
+def eventos_nome_data():
+    # Mesmo padrão de eventos_capacidade/eventos_endereco: só atualiza o
+    # lote mais recente (o "ativo") -- nome/data/hora são propriedade da
+    # FESTA, não do lote em si, e a tela pública (convite.html) só lê o
+    # evento mais recente mesmo.
+    nome_evento = (request.form.get("nome_evento") or "").strip()
+    data_evento = request.form.get("data_evento") or None
+    hora_evento = request.form.get("hora_evento") or None
+
+    if not nome_evento:
+        flash("O nome do evento não pode ficar em branco.")
+        return redirect(url_for("admin.eventos"))
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1")
+            ultimo = cur.fetchone()
+            if ultimo:
+                cur.execute(
+                    "UPDATE evento SET nome_evento = %s, data_evento = %s, hora_evento = %s WHERE id_evento = %s",
+                    (nome_evento, data_evento, hora_evento, ultimo["id_evento"]),
                 )
     return redirect(url_for("admin.eventos"))
 
