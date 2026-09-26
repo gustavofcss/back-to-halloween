@@ -10,7 +10,7 @@
   <form method="post" action="/admin/eventos/nome-data" style="display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap;">
     <div class="field" style="margin-bottom: 0; flex: 1 1 200px;">
       <label for="nome_evento">Nome do evento</label>
-      <input id="nome_evento" name="nome_evento" class="input" type="text" maxlength="160" placeholder="Halloween" value="{{ ultimo.nome_evento if ultimo else '' }}" required>
+      <input id="nome_evento" name="nome_evento" class="input" type="text" maxlength="160" placeholder="Back to Halloween" value="{{ ultimo.nome_evento if ultimo else '' }}" required>
     </div>
     <div class="field" style="margin-bottom: 0; flex: 0 0 auto;">
       <label for="data_evento">Data</label>
@@ -131,7 +131,7 @@
       (usado no clique em "Confirmar") continua ativo, igual material.html.
     #}
     <form method="post" action="/admin/eventos/{{ e.id_evento }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse lote? Só é possível se ele ainda não tiver nenhum pedido vinculado.', true)">
-      <button type="submit" class="admin-btn-outline">Apagar</button>
+      <button type="submit" class="admin-btn-outline is-danger">Apagar</button>
     </form>
   </div>
   {% endfor %}

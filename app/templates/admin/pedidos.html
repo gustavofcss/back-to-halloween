@@ -2,7 +2,7 @@
 {% set active_nav = "pedidos" %}
 {% block title %}Admin — Pedidos{% endblock %}
 {% block admin_title %}Pedidos{% endblock %}
-{% block admin_subtitle %}Ingressos comprados na Horror Night Party{% endblock %}
+{% block admin_subtitle %}Ingressos comprados na Back to Halloween{% endblock %}
 {% block admin_header_actions %}
 <input type="search" class="a-search" id="admin-pedidos-search" placeholder="Buscar pedido, nome, e-mail…">
 <a href="/admin/pedidos/exportar" class="btn btn-ghost btn-sm a-header__btn">Exportar planilha</a>
@@ -83,7 +83,7 @@
     <span class="admin-bulk-bar__count" id="pedidos-bulk-count">0 selecionado(s)</span>
     <button type="submit" formaction="/admin/pedidos/confirmar-lote" class="admin-btn-primary">Confirmar selecionados</button>
     <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/cancelar-lote', 'Cancelar os pedidos selecionados?')">Cancelar selecionados</button>
-    <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/apagar-lote', 'Apagar os pedidos cancelados selecionados? Pedidos pendentes/confirmados na seleção são ignorados. Não tem como desfazer.', true)">Apagar selecionados</button>
+    <button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/apagar-lote', 'Apagar os pedidos cancelados selecionados? Pedidos pendentes/confirmados na seleção são ignorados. Não tem como desfazer.', true)">Apagar selecionados</button>
   </div>
   <div class="a-table-wrap">
   <table class="a-table" id="admin-pedidos-table">
@@ -116,7 +116,7 @@
           {% elif p.status_pedido == 'confirmado' %}
           <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/cancelar" class="admin-btn-outline">Cancelar</button>
           {% elif p.status_pedido == 'cancelado' %}
-          <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/{{ p.id_pedido }}/apagar', 'Apagar esse pedido cancelado? Não tem como desfazer.', true)">Apagar</button>
+          <button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/{{ p.id_pedido }}/apagar', 'Apagar esse pedido cancelado? Não tem como desfazer.', true)">Apagar</button>
           {% endif %}
         </td>
       </tr>
@@ -127,7 +127,6 @@
 </form>
 {% else %}
   <div class="a-empty">
-    <img src="{{ url_for('static', filename='assets/deco-tomb-ghosts.png') }}" alt="" aria-hidden="true">
     <p class="help-text no-margin">Nenhum pedido ainda.</p>
   </div>
 {% endif %}

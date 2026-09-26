@@ -2,7 +2,7 @@
 {% set active_nav = "cadastros" %}
 {% block title %}Admin — Cadastros pendentes{% endblock %}
 {% block admin_title %}Cadastros pendentes{% endblock %}
-{% block admin_subtitle %}Aprove quem pode criar conta na Horror Night Party{% endblock %}
+{% block admin_subtitle %}Aprove quem pode criar conta na Back to Halloween{% endblock %}
 {% block admin_body %}
 {% macro initials(nome) -%}
 {% set partes = nome.split(' ') %}{{- (partes[0][0] ~ (partes[1][0] if partes|length > 1 else ''))|upper -}}
@@ -49,7 +49,6 @@
 </form>
 {% else %}
   <div class="a-empty">
-    <img src="{{ url_for('static', filename='assets/deco-spiderweb-full.png') }}" alt="" aria-hidden="true" style="filter:invert(1);opacity:.35">
     <span class="help-text no-margin">Nenhum cadastro esperando aprovação... só teia.</span>
   </div>
 {% endif %}
