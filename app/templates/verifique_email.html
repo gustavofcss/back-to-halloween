@@ -1,16 +1,22 @@
 {% extends "base.html" %}
-{% from "_decor.html" import decor %}
-{% block title %}Confirme seu e-mail — Horror Night Party{% endblock %}
+{% block title %}Confirme seu e-mail — Back to Halloween{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vhs.css') }}">{% endblock %}
 {% block content %}
-<div class="screen screen--center">
-  {{ decor('ghost-a', 'ghost-b') }}
-  <div class="content center">
-    {% set aviso_extra %}
-    <div class="card" style="margin-top:24px;width:100%;max-width:320px">
-      <form method="post" action="/confirmar-email" class="stack-14">
+<div class="vhs">
+  <div class="vhs__osd"><span>❚❚ PAUSE</span><span>CH 03</span></div>
+  <div class="vhs__wrap center">
+    <div class="tv" style="width:180px;aspect-ratio:16/9;margin:0 auto">
+      <canvas data-static></canvas><div class="tv__vig"></div>
+      <div class="tv__osd"><small>✉ 6 DÍGITOS</small></div>
+    </div>
+    <h1 class="title">Confirme seu e-mail</h1>
+    <p class="type" style="margin:0">Mandamos um código de 6 dígitos pra <strong style="color:#ff6b7c">{{ email }}</strong>. Digite ele abaixo pra confirmar que a conta é sua — depois é só esperar o administrador aprovar.</p>
+    <div class="card" style="text-align:left">
+      {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
+      <form method="post" action="/confirmar-email" style="display:flex;flex-direction:column;gap:14px">
         <input type="hidden" name="email" value="{{ email }}">
         <label class="field">Código de 6 dígitos
-          <div class="otp-boxes">
+          <div class="otp">
             <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 1">
             <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2">
             <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3">
@@ -20,35 +26,22 @@
           </div>
           <input type="hidden" id="codigo" name="codigo" pattern="[0-9]{6}" required>
         </label>
-        <button type="submit" class="btn btn-primary btn-block">Confirmar e-mail</button>
+        <button type="submit" class="btn btn-primary btn-block">▶ CONFIRMAR E-MAIL</button>
       </form>
       <form method="post" action="/confirmar-email/reenviar" style="margin-top:10px">
         <input type="hidden" name="email" value="{{ email }}">
-        <button type="submit" class="btn btn-ghost btn-block">Reenviar código</button>
+        <button type="submit" class="btn btn-ghost btn-block">◀◀ REENVIAR CÓDIGO</button>
       </form>
-
-      {# "Errei o e-mail" -- pedido explícito do usuário. Some por trás de
-         um link (não fica sempre aberto) porque é o caminho menos comum;
-         só revela o campo de novo e-mail quando clicado. #}
-      <button type="button" id="btn-mudar-email" class="btn-link mt-14">Errou o e-mail? Mudar aqui</button>
+      <button type="button" class="btn-link" id="btn-mudar-email" style="align-self:center;margin-top:14px">Errou o e-mail? Mudar aqui</button>
       <form method="post" action="/confirmar-email/mudar-email" id="form-mudar-email" style="display:none;flex-direction:column;gap:10px;margin-top:10px">
         <input type="hidden" name="email_atual" value="{{ email }}">
         <label class="field" for="novo_email">Novo e-mail
           <input class="input" id="novo_email" name="novo_email" type="email" placeholder="voce@email.com" required>
         </label>
-        <button type="submit" class="btn btn-ghost btn-block">Enviar código pro e-mail novo</button>
+        <button type="submit" class="btn btn-google btn-block">Enviar código pro e-mail novo</button>
       </form>
     </div>
-
-    <a href="/login" class="btn btn-ghost" style="margin-top:20px">Voltar pro login</a>
-    {% endset %}
-    {% set aviso = {
-      'img': 'deco-eye.png',
-      'titulo': 'Confirme seu e-mail',
-      'texto': 'Mandamos um código de 6 dígitos pra <strong>%s</strong>. Digite ele abaixo pra confirmar que a conta é sua -- depois disso é só esperar o administrador aprovar.' % (email|e),
-      'link': None
-    } %}
-    {% include "_aviso.html" %}
+    <a href="/login" style="font-size:13px">Voltar pro login</a>
   </div>
 </div>
 {% endblock %}

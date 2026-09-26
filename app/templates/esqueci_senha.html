@@ -1,25 +1,22 @@
 {% extends "base.html" %}
-{% from "_decor.html" import decor %}
-{% block title %}Esqueci minha senha — Horror Night Party{% endblock %}
+{% block title %}Esqueci a senha — Back to Halloween{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vhs.css') }}">{% endblock %}
 {% block content %}
-<div class="screen">
-  {{ decor('tree-r', 'web-l') }}
-
-  <div class="content">
-    <div class="brand-head">
-      <p class="eyebrow">Horror Night Party</p>
-      <h1 class="display display--sm">ESQUECI A SENHA</h1>
-    </div>
+<div class="vhs">
+  <div class="vhs__osd"><span>◀◀ REW</span><span>SP 00:00:00</span></div>
+  <div class="vhs__wrap">
+    <div><div class="kicker">BACK TO HALLOWEEN</div><h1 class="neon" style="font-size:44px">Esqueci a senha</h1></div>
     <div class="card">
-      <p class="lead">Digite seu e-mail e mandamos um código de 6 dígitos pra redefinir sua senha.</p>
-      <form method="post" action="/esqueci-senha" class="stack-14">
+      <p class="lead">Rebobinando… Digite seu e-mail e mandamos um código de 6 dígitos pra redefinir sua senha.</p>
+      {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
+      <form method="post" action="/esqueci-senha" style="display:flex;flex-direction:column;gap:14px">
         <label class="field" for="email">E-mail
           <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email">
         </label>
-        <button type="submit" class="btn btn-primary btn-block">Enviar código</button>
+        <button type="submit" class="btn btn-primary btn-block">ENVIAR CÓDIGO</button>
       </form>
-      <p class="muted center mt-14">Já tem um código? <a href="/redefinir-senha">Redefinir senha</a></p>
-      <p class="muted center">Lembrou a senha? <a href="/login">Entrar</a></p>
+      <p class="foot">Já tem um código? <a href="/redefinir-senha">Redefinir senha</a></p>
+      <p class="foot" style="margin-top:-6px">Lembrou a senha? <a href="/login">Entrar</a></p>
     </div>
   </div>
 </div>

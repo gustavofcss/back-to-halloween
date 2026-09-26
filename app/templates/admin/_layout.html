@@ -3,11 +3,10 @@
 {% set active_nav = active_nav|default('') %}
 <div class="a-shell">
   <aside class="a-sidebar">
-    <img class="a-sidebar__tree deco" src="{{ url_for('static', filename='assets/lTree.svg') }}" alt="" aria-hidden="true">
     <a href="/admin" class="a-brand">
-      <img class="a-brand__icon glow-pumpkin" src="{{ url_for('static', filename='assets/deco-pumpkin-new.png') }}" alt="">
+      <span class="a-brand__k7" aria-hidden="true"><i></i><i></i></span>
       <div class="a-brand__text">
-        <span class="a-brand__name">CRIPTA</span>
+        <span class="a-brand__name">BACK TO HALLOWEEN</span>
         <span class="a-brand__tag">Painel admin</span>
       </div>
     </a>
@@ -31,16 +30,16 @@
       vivo.
     #}
     {% set admin_nav_items = [
-      ('pedidos', url_for('admin.pedidos'), 'Pedidos', 'deco-pumpkin-new.png', 'total_pedidos'),
-      ('cadastros', url_for('admin.cadastros'), 'Cadastros', 'deco-eye.png', 'pendentes'),
-      ('hierarquia', url_for('admin.hierarquia'), 'Hierarquia', 'deco-witch-hat.png', 'hierarquia'),
-      ('material', url_for('admin.material'), 'Material', 'deco-coffin.png', 'material'),
-      ('eventos', url_for('admin.eventos'), 'Evento', 'deco-trick-or-treat.png', none),
+      ('pedidos', url_for('admin.pedidos'), 'Pedidos', '▶︎', 'total_pedidos'),
+      ('cadastros', url_for('admin.cadastros'), 'Cadastros', '●︎', 'pendentes'),
+      ('hierarquia', url_for('admin.hierarquia'), 'Hierarquia', '▲︎', 'hierarquia'),
+      ('material', url_for('admin.material'), 'Material', '■︎', 'material'),
+      ('eventos', url_for('admin.eventos'), 'Evento', '▶︎▶︎', none),
     ] %}
     <nav class="a-nav">
       {% for nav_id, nav_href, nav_label, nav_icon, nav_total_key in admin_nav_items %}
       <a class="a-nav__item {% if active_nav == nav_id %}a-nav__item--active{% endif %}" href="{{ nav_href }}">
-        <img class="a-nav__icon" src="{{ url_for('static', filename='assets/' ~ nav_icon) }}" alt="">
+        <span class="a-nav__glyph" aria-hidden="true">{{ nav_icon }}</span>
         <span class="a-nav__label">{{ nav_label }}</span>
         {% if nav_counts is defined %}<span class="a-nav__count"{% if nav_total_key %} data-admin-total="{{ nav_total_key }}"{% endif %}>{{ nav_counts[nav_id] }}</span>{% endif %}
       </a>
@@ -51,7 +50,7 @@
       {% if sidebar_capacidade is defined and sidebar_capacidade %}
       {% set sb_pct = (sidebar_vendidos / sidebar_capacidade * 100) %}
       <div class="a-event">
-        <span class="a-event__name">Horror Night Party</span>
+        <span class="a-event__name">Back to Halloween</span>
         <span class="a-event__sold"><span data-admin-total="ingressos_vendidos_total">{{ sidebar_vendidos }}</span> de <span data-admin-total="capacidade_maxima">{{ sidebar_capacidade }}</span> ingressos vendidos</span>
         <div class="a-bar" data-admin-bar><div style="width:{{ [[sb_pct, 2]|max, 100]|min|round|int }}%"></div></div>
       </div>
@@ -74,8 +73,7 @@
   </aside>
 
   <main class="a-main" data-page="{{ active_nav }}">
-    <img class="deco a-deco--web inv" src="{{ url_for('static', filename='assets/deco-spiderweb-corner.png') }}" alt="" aria-hidden="true">
-    <div class="spider a-deco--spider" aria-hidden="true"><i></i><img src="{{ url_for('static', filename='assets/deco-spider.png') }}" alt=""></div>
+    <div class="a-osd" aria-hidden="true"><span class="a-osd__rec">REC</span><span>ADMIN · CH 03</span></div>
 
     <header class="a-header">
       <div>
@@ -88,8 +86,6 @@
     </header>
 
     {% block admin_body %}{% endblock %}
-
-    <img class="deco a-deco--hand" src="{{ url_for('static', filename='assets/deco-zombie-hand.png') }}" alt="" aria-hidden="true">
   </main>
 
   <div class="confirm-overlay" id="confirm-overlay">

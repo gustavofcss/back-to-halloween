@@ -1,180 +1,145 @@
 {% extends "base.html" %}
-{% from "_decor.html" import decor %}
-{% block title %}Pagamento — Horror Night Party{% endblock %}
+{% from "_fita_k7.html" import fita %}
+{% block title %}Pagamento — Back to Halloween{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vhs.css') }}">{% endblock %}
 {% block content %}
-<div class="screen screen--top">
-  {{ decor('witch') }}
+<div class="vhs" style="justify-content:flex-start">
+  <div class="vhs__osd"><span>▶▶ FF</span><span>SP 00:25:31</span></div>
+  <div class="vhs__wrap vhs__wrap--wide">
+    <nav class="vcr" aria-label="Etapas">
+      <div class="vcr__step"><b>◀◀</b><span>CONVITE</span></div>
+      <div class="vcr__step"><b>▶</b><span>SEUS DADOS</span></div>
+      <div class="vcr__step is-on"><b>▶▶</b><span>PAGAMENTO</span></div>
+    </nav>
 
-  <div class="content">
-    <div class="steps">
-      <div class="step done"><b>1</b>Convite</div><div class="step-line done"></div>
-      <div class="step done"><b>2</b>Seus dados</div><div class="step-line done"></div>
-      <div class="step on"><b>3</b>Pagamento</div>
-    </div>
+    {{ fita(pedido, usuario=usuario, tilt=-1) }}
+    {% if pedido.acompanhante_nome %}
+    <p class="foot" style="margin-top:-8px">+ acompanhante: {{ pedido.acompanhante_nome }}{% if pedido.acompanhante_rg %} · RG {{ pedido.acompanhante_rg }}{% endif %}</p>
+    {% endif %}
 
-    <div class="ticket">
-      {% include "_ticket_topo.html" %}
-
-      <div class="ticket__row">
-        <div>
-          <p class="ticket__qty">{{ pedido.quantidade }} &times; Entrada</p>
-          <p class="ticket__meta">Pedido #{{ pedido.id_pedido }}</p>
-        </div>
-        <p class="ticket__price">R$ {{ pedido.valor }}</p>
+    {% if pedido.status_pedido == 'confirmado' %}
+      <div class="result">
+        <strong>PAGAMENTO RECEBIDO!</strong>
+        <p class="type" style="margin:0">Seu ingresso está garantido. Te esperamos na festa — e rebobine a fita.</p>
+        <a href="/meus-pedidos" class="btn btn-primary">VER MEUS PEDIDOS</a>
       </div>
-
-      {% if usuario %}
-      <div class="ticket__holders">
-        <div>
-          {# pedido.titular_nome só existe quando esse pedido é pra OUTRA
-             pessoa (slot 2, ver pedidos.py) -- sem isso, o ingresso de
-             alguém mostraria o nome de quem comprou (a conta), não de
-             quem vai usar. usuario.nome (a conta logada) continua sendo o
-             padrão pro pedido "normal" (slot 1). #}
-          <p class="ticket__holder-name">{{ pedido.titular_nome or usuario.nome }}</p>
-          {% if pedido.rg %}<p class="ticket__holder-rg">RG {{ pedido.rg }}</p>{% endif %}
-        </div>
-        {% if pedido.acompanhante_nome %}
-        <div>
-          <p class="ticket__holder-name">{{ pedido.acompanhante_nome }}</p>
-          {% if pedido.acompanhante_rg %}<p class="ticket__holder-rg">RG {{ pedido.acompanhante_rg }}</p>{% endif %}
-        </div>
-        {% endif %}
+    {% elif pedido.status_pedido == 'cancelado' and pedido.expirado %}
+      <div class="result result--bad">
+        <strong>PAGAMENTO EXPIRADO</strong>
+        <p class="type" style="margin:0">Os 5 minutos pra pagar esse Pix acabaram e a vaga foi liberada. Pode tentar de novo.</p>
+        <a href="/comprar" class="btn btn-primary">◀◀ COMPRAR DE NOVO</a>
       </div>
+    {% elif pedido.status_pedido == 'cancelado' %}
+      <div class="result result--bad">
+        <strong>PEDIDO CANCELADO</strong>
+        <p class="type" style="margin:0">Se foi engano, fale com a organização.</p>
+        <a href="/meus-pedidos" class="btn btn-primary">VER MEUS PEDIDOS</a>
+      </div>
+    {% else %}
+      {% if mp_erro %}
+      <div class="alert">{{ mp_erro }}</div>
       {% endif %}
 
-      <div class="ticket__cut"></div>
-
-      {% if pedido.status_pedido == 'confirmado' %}
-        <img class="status-icon status-icon--candles" src="{{ url_for('static', filename='assets/deco-candles.png') }}" alt="" aria-hidden="true">
-        <div class="status-box"><span class="pill pill--ok">Confirmado</span><strong>Pagamento recebido!</strong>
-          <p class="ticket__note">Seu ingresso está garantido. Te esperamos na festa.</p></div>
-        <div style="padding:0 20px 22px"><a href="/meus-pedidos" class="btn-paper no-underline" style="text-align:center;display:block">Ver meus pedidos</a></div>
-
-      {% elif pedido.status_pedido == 'cancelado' and pedido.expirado %}
-        <img class="status-icon status-icon--reaper" src="{{ url_for('static', filename='assets/deco-reaper.png') }}" alt="" aria-hidden="true">
-        <div class="status-box"><span class="pill pill--bad">Expirado</span><strong>Pagamento expirado</strong>
-          <p class="ticket__note">Os 5 minutos pra pagar esse Pix acabaram e a vaga foi liberada. Pode tentar de novo.</p></div>
-        <div style="padding:0 20px 22px"><a href="/comprar" class="btn-paper no-underline" style="text-align:center;display:block">Comprar de novo</a></div>
-
-      {% elif pedido.status_pedido == 'cancelado' %}
-        <img class="status-icon status-icon--reaper" src="{{ url_for('static', filename='assets/deco-reaper.png') }}" alt="" aria-hidden="true">
-        <div class="status-box"><span class="pill pill--bad">Cancelado</span><strong>Pedido cancelado</strong>
-          <p class="ticket__note">Se foi engano, fale com a organização.</p></div>
-        <div style="padding:0 20px 22px"><a href="/meus-pedidos" class="btn-paper no-underline" style="text-align:center;display:block">Ver meus pedidos</a></div>
-
-      {% else %}
-        {% if mp_erro %}
-        <p class="ticket__banner ticket__banner--bad ticket__banner--left">{{ mp_erro }}</p>
-        {% endif %}
-
-        <div class="pay-pix">
-          <p class="pay-pix-label">Pague com Pix</p>
+      <div class="pix">
+        <div class="pix__head">
+          <span>PAGUE COM PIX</span>
           {% if segundos_restantes %}
-          <p class="pay-expira" id="pay-expira">Expira em <strong id="pay-expira-tempo">5:00</strong></p>
+          <span class="pix__timer" id="pay-expira-tempo">● EXPIRA EM 5:00</span>
           {% endif %}
-
-          {% if qr_code_base64 %}
-          <img class="pay-qr" src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code para pagamento Pix">
-          {% endif %}
-
-          {% if qr_code %}
-          <div class="pay-copy-row">
-            <p class="pay-copy-value" id="pix-copia-cola">{{ qr_code }}</p>
-            <button type="button" class="pay-copy-btn" id="btn-copiar-pix">Copiar</button>
+        </div>
+        {% if qr_code_base64 %}<div class="pix__qr"><img src="data:image/png;base64,{{ qr_code_base64 }}" alt="QR Code para pagamento Pix"></div>{% endif %}
+        {% if qr_code %}
+          <div class="copy-box">
+            <p id="pix-copia-cola">{{ qr_code }}</p>
+            <button type="button" id="btn-copiar-pix">COPIAR</button>
           </div>
-          <script>
-            (function () {
-              var btn = document.getElementById('btn-copiar-pix');
-              var valor = document.getElementById('pix-copia-cola');
-              if (!btn || !valor) { return; }
-              btn.addEventListener('click', function () {
-                navigator.clipboard.writeText(valor.textContent.trim()).then(function () {
-                  var textoOriginal = btn.textContent;
-                  btn.textContent = 'Copiado!';
-                  setTimeout(function () { btn.textContent = textoOriginal; }, 2000);
-                });
-              });
-            })();
-          </script>
-          {% else %}
-          <p class="pay-key">Chave Pix: {{ pix_key }}</p>
-          {% endif %}
-
-          <p class="pay-how">A confirmação chega por e-mail assim que o pagamento cair.</p>
-        </div>
-
-        {#
-          Sem botão "Já paguei, confirmar" de propósito -- pedido do
-          usuário: só o pagamento de verdade dispara alguma coisa (o
-          polling abaixo), sem uma ação manual que deixava confuso se o
-          pedido tinha confirmado ou não sem checar de verdade.
-        #}
-        <div class="pay-actions">
-          <a href="/comprar" class="btn btn-ghost btn-block">Voltar</a>
-        </div>
-
-        {% if qr_code_base64 or qr_code or pedido.mp_payment_id %}
-        <script>
-          (function () {
-            // Contagem regressiva visual (achado do usuário: forçar pagar
-            // dentro de uma margem de tempo) -- calculada no servidor a
-            // partir de quando o PEDIDO foi criado (_segundos_restantes),
-            // não do momento em que a página carregou, senão recarregar a
-            // tela "resetava" o prazo pra mais 5 minutos de novo.
-            var restante = {{ segundos_restantes|default(0) }};
-            var elTempo = document.getElementById('pay-expira-tempo');
-            function mostrarTempo() {
-              if (!elTempo) { return; }
-              var m = Math.floor(restante / 60);
-              var s = restante % 60;
-              elTempo.textContent = m + ':' + (s < 10 ? '0' : '') + s;
-            }
-            mostrarTempo();
-            var timerVisual = setInterval(function () {
-              restante = Math.max(0, restante - 1);
-              mostrarTempo();
-              if (restante <= 0) { clearInterval(timerVisual); }
-            }, 1000);
-
-            var tentativas = 0;
-            // +4 tentativas de folga (20s) além do tempo restante -- garante
-            // pelo menos uma consulta ao servidor DEPOIS do prazo acabar,
-            // que é quem realmente decide (expira só depois de reconsultar
-            // o Mercado Pago) e devolve o status final pra essa tela recarregar.
-            var maxTentativas = Math.ceil({{ segundos_restantes|default(300) }} / 5) + 4;
-            var intervalo = setInterval(function () {
-              tentativas += 1;
-              if (tentativas > maxTentativas) {
-                clearInterval(intervalo);
-                return;
-              }
-              fetch('/pagamento/{{ pedido.id_pedido }}/verificar', { method: 'POST' })
-                .then(function (resp) { return resp.json(); })
-                .then(function (data) {
-                  if (data.status === 'confirmado') {
-                    // Pagou de verdade -- encaminha sozinho pra "Meus
-                    // pedidos" (pedido do usuário: sem botão manual, quem
-                    // paga já cai direto lá, sem precisar clicar em nada).
-                    clearInterval(intervalo);
-                    clearInterval(timerVisual);
-                    window.location.href = '/meus-pedidos';
-                  } else if (data.status === 'cancelado') {
-                    // Expirou -- recarrega ESSA tela (não meus-pedidos),
-                    // que mostra a mensagem de "Pagamento expirado" com
-                    // link pra comprar de novo.
-                    clearInterval(intervalo);
-                    clearInterval(timerVisual);
-                    window.location.reload();
-                  }
-                })
-                .catch(function () {});
-            }, 5000);
-          })();
-        </script>
+        {% else %}
+          <p class="pix__note">Chave Pix: {{ pix_key }}</p>
         {% endif %}
-      {% endif %}
-    </div>
+        <p class="pix__note">A confirmação chega por e-mail assim que o pagamento cair.</p>
+      </div>
+
+      <div class="btn-row">
+        <a href="/comprar" class="btn btn-ghost grow">◀◀ VOLTAR</a>
+      </div>
+    {% endif %}
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
+{% if qr_code %}
+<script>
+  (function () {
+    var btn = document.getElementById('btn-copiar-pix');
+    var valor = document.getElementById('pix-copia-cola');
+    if (!btn || !valor) { return; }
+    btn.addEventListener('click', function () {
+      navigator.clipboard.writeText(valor.textContent.trim()).then(function () {
+        var textoOriginal = btn.textContent;
+        btn.textContent = 'COPIADO!';
+        setTimeout(function () { btn.textContent = textoOriginal; }, 2000);
+      });
+    });
+  })();
+</script>
+{% endif %}
+{% if qr_code_base64 or qr_code or pedido.mp_payment_id %}
+<script>
+  (function () {
+    // Contagem regressiva visual (achado do usuário: forçar pagar
+    // dentro de uma margem de tempo) -- calculada no servidor a
+    // partir de quando o PEDIDO foi criado (_segundos_restantes),
+    // não do momento em que a página carregou, senão recarregar a
+    // tela "resetava" o prazo pra mais 5 minutos de novo.
+    var restante = {{ segundos_restantes|default(0) }};
+    var elTempo = document.getElementById('pay-expira-tempo');
+    function mostrarTempo() {
+      if (!elTempo) { return; }
+      var m = Math.floor(restante / 60);
+      var s = restante % 60;
+      elTempo.textContent = '● EXPIRA EM ' + m + ':' + (s < 10 ? '0' : '') + s;
+    }
+    mostrarTempo();
+    var timerVisual = setInterval(function () {
+      restante = Math.max(0, restante - 1);
+      mostrarTempo();
+      if (restante <= 0) { clearInterval(timerVisual); }
+    }, 1000);
+
+    var tentativas = 0;
+    // +4 tentativas de folga (20s) além do tempo restante -- garante
+    // pelo menos uma consulta ao servidor DEPOIS do prazo acabar,
+    // que é quem realmente decide (expira só depois de reconsultar
+    // o Mercado Pago) e devolve o status final pra essa tela recarregar.
+    var maxTentativas = Math.ceil({{ segundos_restantes|default(300) }} / 5) + 4;
+    var intervalo = setInterval(function () {
+      tentativas += 1;
+      if (tentativas > maxTentativas) {
+        clearInterval(intervalo);
+        return;
+      }
+      fetch('/pagamento/{{ pedido.id_pedido }}/verificar', { method: 'POST' })
+        .then(function (resp) { return resp.json(); })
+        .then(function (data) {
+          if (data.status === 'confirmado') {
+            // Pagou de verdade -- encaminha sozinho pra "Meus
+            // pedidos" (pedido do usuário: sem botão manual, quem
+            // paga já cai direto lá, sem precisar clicar em nada).
+            clearInterval(intervalo);
+            clearInterval(timerVisual);
+            window.location.href = '/meus-pedidos';
+          } else if (data.status === 'cancelado') {
+            // Expirou -- recarrega ESSA tela (não meus-pedidos),
+            // que mostra a mensagem de "Pagamento expirado" com
+            // link pra comprar de novo.
+            clearInterval(intervalo);
+            clearInterval(timerVisual);
+            window.location.reload();
+          }
+        })
+        .catch(function () {});
+    }, 5000);
+  })();
+</script>
+{% endif %}
 {% endblock %}

@@ -1,19 +1,15 @@
 {% extends "base.html" %}
-{% from "_decor.html" import decor %}
-{% block title %}Criar conta — Horror Night Party{% endblock %}
+{% block title %}Criar conta — Back to Halloween{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vhs.css') }}">{% endblock %}
 {% block content %}
-<div class="screen">
-  {{ decor('tree-r', 'web-l', 'cat') }}
-
-  <div class="content">
-    <div class="brand-head">
-      <p class="eyebrow">Horror Night Party</p>
-      <h1 class="display display--sm">CRIAR CONTA</h1>
-    </div>
+<div class="vhs">
+  <div class="vhs__osd"><span><span class="rec">●</span> REC</span><span>NOVA FITA</span></div>
+  <div class="vhs__wrap">
+    <div><div class="kicker">BACK TO HALLOWEEN</div><h1 class="neon">Criar conta</h1></div>
     <div class="card">
       <p class="lead">Cadastre-se pra garantir seu lugar na festa.</p>
       {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
-      <form method="post" action="/signup" id="signup-form" class="stack-14">
+      <form method="post" action="/signup" id="signup-form" style="display:flex;flex-direction:column;gap:14px">
         <label class="field" for="nome">Nome completo
           <input class="input" id="nome" name="nome" type="text" placeholder="Seu nome completo" required autocomplete="name" pattern="\s*\S+(\s+\S+)+\s*" title="Digite nome e sobrenome">
         </label>
@@ -28,15 +24,17 @@
             <input class="input" id="confirmar_senha" name="confirmar_senha" type="password" placeholder="Repita" required minlength="6" autocomplete="new-password">
           </label>
         </div>
-        <p class="alert" id="senha-erro" style="display:none;">As senhas não coincidem.</p>
-        <button type="submit" class="btn btn-primary btn-block">Criar conta</button>
+        <p class="hint-error" id="senha-erro" hidden>As senhas não coincidem.</p>
+        <button type="submit" class="btn btn-primary btn-block btn-lg">● CRIAR CONTA</button>
       </form>
-      <div class="divider">ou</div>
-      <a href="/auth/google" class="btn btn-ghost btn-block">Entrar com Google</a>
-      <p class="muted center">Já tem conta? <a href="/login">Entrar</a></p>
+      <div class="divider">OU</div>
+      <a href="/auth/google" class="btn btn-google btn-block">Entrar com Google</a>
+      <p class="foot">Já tem conta? <a href="/login">Entrar</a></p>
     </div>
   </div>
 </div>
+{% endblock %}
+{% block scripts %}
 <script>
   (function () {
     var form = document.getElementById('signup-form');
