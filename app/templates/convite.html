@@ -4,16 +4,21 @@
 {% block content %}
 {% set titulos = ['A NOITE DO CORTE','SEXTA MALDITA','A FITA','PESADELO 3','SANGUE FRIO','O CHAMADO','CRIATURA','SUSSURROS','NÃO OLHE','LADO B','A CASA 13','GRITO','REC 99','O PORÃO','MÁSCARA','VÉSPERA'] %}
 {% set cores = [('#8a0a1f','#f1e6cf'),('#2a0f3d','#e9dcff'),('#e6dcc3','#1a1216'),('#141015','#ff2d45'),('#4b1a6b','#f1e6cf'),('#1c1418','#e6dcc3')] %}
-{% macro estante(seed) %}
-  <div class="shelf" aria-hidden="true">
-    {% for r in range(4) %}
-    <div class="shelf__row">
-      {% for t in range(11) %}{% set n = (seed * 7 + r * 11 + t * 5) %}{% set c = cores[n % 6] %}
-      <div class="tape" style="width:{{ 18 + (n % 8) }}px;height:{{ 78 + (n * 3 % 22) }}px;background:{{ c[0] }};color:{{ c[1] }}">{{ titulos[n % 16] }}</div>
-      {% endfor %}
-    </div>
+{% macro estante(seed, lado) %}
+<div class="shelf shelf--{{ lado }}" aria-hidden="true">
+  {% for r in range(4) %}
+  <div class="shelf__row">
+    {% for t in range(11) %}
+      {% set n = seed * 131 + r * 37 + t * 17 %}
+      {% set c = cores[n % 6] %}
+      <div class="tape" style="width:{{ 18 + (n % 9) }}px;height:{{ 78 + (n * 7 % 23) }}px;background:{{ c[0] }};color:{{ c[1] }};{% if n % 10 == 0 %}transform:rotate(-6deg);{% endif %}">
+        <span>{{ titulos[n % 16] }}</span>
+      </div>
     {% endfor %}
   </div>
+  {% endfor %}
+  <div class="shelf__shade"></div>
+</div>
 {% endmacro %}
 
 {# CTA único leva pro destino certo em qualquer caso (login, painel
@@ -21,83 +26,92 @@
    rótulo/visual mudou pro tema VHS. #}
 {% set cta_href = "/login?next=/comprar" if not usuario else ("/admin" if usuario.hierarquia in ['adm', 'superadm'] else ("/meus-pedidos" if tem_pedido else "/comprar")) %}
 
-<div class="vhs convite">
-  <div class="vhs__osd">
-    <span><span class="rec">●</span> REC</span>
-    <span>SP <span id="vhs-counter">00:23:12</span></span>
+<div class="convite">
+  <div class="fx-scan"></div>
+  <div class="fx-noise"></div>
+  <div class="fx-vignette"></div>
+  {{ estante(1, 'left') }}
+  {{ estante(7, 'right') }}
+
+  <div class="osd-top">
+    <span class="rec"><i>●</i>REC</span>
+    <small>SP</small>
   </div>
 
-  <div class="convite__stage">
-    {{ estante(1) }}
-    <div class="convite__tv">
-      <video class="eyes" src="{{ url_for('static', filename='assets/eyes.mp4') }}" autoplay muted loop playsinline aria-hidden="true"></video>
-      <div class="tv-glow"></div>
-      <div class="tv-body">
-        <div class="tv">
-          <canvas data-static></canvas>
-          <div class="tv__bar"></div>
-          <div class="tv__off"></div>
-          <div class="tv__scan"></div>
-          <div class="tv__vig"></div>
-          <div class="tv__osd">
-            <strong>▶ PLAY</strong>
-            <small>CH 03 · 31.OUT.1999</small>
+  <main>
+    <div class="stage">
+      <div class="tv-wrap">
+        <div class="eyes-box">
+          <video class="eyes" src="{{ url_for('static', filename='assets/eyes.mp4') }}" autoplay muted loop playsinline aria-hidden="true"></video>
+        </div>
+        <div class="tv-floor-glow"></div>
+        <div class="tv-body">
+          <div class="tv-screen">
+            <canvas data-static></canvas>
+            <div class="tv-bar"></div>
+            <div class="tv-off"></div>
+            <div class="tv-lines"></div>
+            <div class="tv-vig"></div>
+            <div class="tv-osd">
+              <strong>▶ PLAY</strong>
+              <small>CH 03 · 31.OUT.1999</small>
+            </div>
+            <div class="tv-counter" id="tv-counter">00:23:12</div>
+          </div>
+          <div class="tv-panel" aria-hidden="true">
+            <div class="tv-ch">03</div>
+            <div class="tv-grille"></div>
+            <div class="tv-knobs"><i></i><i></i></div>
           </div>
         </div>
-        <div class="tv-body__panel" aria-hidden="true">
-          <div class="tv-body__knob"></div>
-          <div class="tv-body__knob"></div>
-          <div class="tv-body__grille"></div>
-        </div>
+        <div class="tv-feet" aria-hidden="true"><i></i><i></i></div>
       </div>
     </div>
-    {{ estante(7) }}
-  </div>
 
-  <h1 class="glitch" data-text="BACK TO HALLOWEEN">BACK TO HALLOWEEN</h1>
-  <p class="sub">Uma viagem de volta à época em que o terror era inesquecível.</p>
-
-  <div class="cassetes">
-    <div class="cassete">
-      <div class="cassete__label"><span>LADO A · QUANDO</span><strong>{{ data_formatada or "Data a definir" }}</strong></div>
-      <div class="cassete__reels"><i></i><em></em><i></i></div>
+    <p class="kicker">VOCÊ ESTÁ CONVIDADO PARA</p>
+    <div class="neon-wrap">
+      <h1 class="neon-title">Back to<br>Halloween</h1>
+      <div class="neon-ghost neon-ghost--a" aria-hidden="true">Back to<br>Halloween</div>
+      <div class="neon-ghost neon-ghost--b" aria-hidden="true">Back to<br>Halloween</div>
     </div>
-    <div class="cassete">
-      <div class="cassete__label"><span>LADO B · ONDE</span><strong>{{ (evento.endereco if evento else none) or "Endereço a definir" }}</strong><small>{{ evento.bairro if evento else "" }}</small></div>
-      <div class="cassete__reels"><i></i><em></em><i></i></div>
+    <p class="tagline">Uma viagem de volta à época em que o terror era inesquecível.</p>
+
+    <div class="cassetes">
+      <div class="cassete">
+        <div class="cassete__label"><span>LADO A · QUANDO</span><strong>{{ data_formatada or "Data a definir" }}</strong></div>
+        <div class="cassete__reels"><i></i><em></em><i></i></div>
+      </div>
+      <div class="cassete">
+        <div class="cassete__label"><span>LADO B · ONDE</span><strong>{{ (evento.endereco if evento else none) or "Endereço a definir" }}</strong><small>{{ evento.bairro if evento else "" }}</small></div>
+        <div class="cassete__reels"><i></i><em></em><i></i></div>
+      </div>
+      <div class="cassete">
+        <div class="cassete__label"><span>EXTRA · TRAJE</span><strong>A rigor</strong><small>venha como um clássico do terror</small></div>
+        <div class="cassete__reels"><i></i><em></em><i></i></div>
+      </div>
     </div>
-    <div class="cassete">
-      <div class="cassete__label"><span>EXTRA · TRAJE</span><strong>A rigor</strong><small>venha como um clássico do terror</small></div>
-      <div class="cassete__reels"><i></i><em></em><i></i></div>
-    </div>
-  </div>
 
-  <a href="{{ cta_href }}" class="btn btn-primary btn-hero" style="margin-top:40px">
-    {%- if not usuario -%}
-      ▶ COMPRAR INGRESSO{% if evento %} · LOTE {{ evento.numero_lote }} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
-    {%- elif usuario.hierarquia in ['adm', 'superadm'] -%}
-      ▶ IR PRO PAINEL
-    {%- elif tem_pedido -%}
-      ▶ VER MINHAS FITAS
-    {%- else -%}
-      ▶ COMPRAR INGRESSO{% if evento %} · LOTE {{ evento.numero_lote }} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
-    {%- endif -%}
-  </a>
-  <p class="cta-note">VAGAS LIMITADAS · PAGAMENTO VIA PIX</p>
+    <a href="{{ cta_href }}" class="btn btn-primary btn-hero" style="margin-top:40px">
+      {%- if not usuario -%}
+        ▶ COMPRAR INGRESSO{% if evento %} · LOTE {{ evento.numero_lote }} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
+      {%- elif usuario.hierarquia in ['adm', 'superadm'] -%}
+        ▶ IR PRO PAINEL
+      {%- elif tem_pedido -%}
+        ▶ VER MINHAS FITAS
+      {%- else -%}
+        ▶ COMPRAR INGRESSO{% if evento %} · LOTE {{ evento.numero_lote }} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
+      {%- endif -%}
+    </a>
+    <p class="cta-note">VAGAS LIMITADAS · PAGAMENTO VIA PIX</p>
 
-  <article class="jornal">
-    <div class="jornal__top"><span>Diário da Meia-Noite</span><span>31 de outubro de 1999</span></div>
-    <h2>Clássicos do terror voltam a assombrar a cidade</h2>
-    <p>Back to Halloween é uma festa inspirada nos grandes clássicos dos filmes de terror dos anos 80, 90 e 2000. Uma noite para reviver personagens icônicos, vilões assustadores, cenas que marcaram gerações e toda a estética sombria e nostálgica dessa era.</p>
-    <p>Do terror adolescente aos slashers, passando pelos filmes sobrenaturais e pelas criaturas que fizeram história, a ideia é transformar a festa em uma verdadeira viagem no tempo pelo cinema de horror.</p>
-  </article>
+    <article class="jornal">
+      <div class="jornal__top"><span>Diário da Meia-Noite</span><span>31 de outubro de 1999</span></div>
+      <h2>Clássicos do terror voltam a assombrar a cidade</h2>
+      <p>Back to Halloween é uma festa inspirada nos grandes clássicos dos filmes de terror dos anos 80, 90 e 2000. Uma noite para reviver personagens icônicos, vilões assustadores, cenas que marcaram gerações e toda a estética sombria e nostálgica dessa era.</p>
+      <p>Do terror adolescente aos slashers, passando pelos filmes sobrenaturais e pelas criaturas que fizeram história, a ideia é transformar a festa em uma verdadeira viagem no tempo pelo cinema de horror.</p>
+    </article>
+  </main>
 
-  <div class="vhs__osd vhs__osd--bottom"><span>OUT. 31 1999</span><span>TRACKING ▮▮▮▮▯</span></div>
+  <div class="osd-bottom"><span>OUT. 31 1999</span><span>TRACKING ▮▮▮▮▯</span></div>
 </div>
-{% endblock %}
-{% block scripts %}
-<script>
-  (function(){var s=23*60+12,el=document.getElementById('vhs-counter'),p=function(n){return String(n).padStart(2,'0')};
-  setInterval(function(){s++;el.textContent=p(Math.floor(s/3600)%24)+':'+p(Math.floor(s/60)%60)+':'+p(s%60)},1000)})();
-</script>
 {% endblock %}
