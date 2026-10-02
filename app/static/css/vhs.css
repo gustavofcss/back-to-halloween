@@ -27,6 +27,9 @@ button{font:inherit}
 .vhs__osd .rec{color:var(--red-hi);animation:blink 1.2s steps(1) infinite}
 .vhs__wrap{position:relative;width:100%;max-width:420px;display:flex;flex-direction:column;gap:18px}
 .vhs__wrap--wide{max-width:560px}
+/* style.css (legado) limita .card a 420px; sem isso o card fica colado à esquerda do wrap largo
+   enquanto stepper, título e links se alinham à largura inteira. */
+.vhs__wrap > .card{max-width:none}
 .kicker{font:20px var(--f-vhs);letter-spacing:.3em;color:var(--red-hi);text-align:center}
 .neon{margin:0;font:400 clamp(40px,10vw,54px)/1 var(--f-title);color:#ffe8ea;text-align:center;text-transform:uppercase;
   text-shadow:0 0 4px var(--red-hi),0 0 16px var(--red-hi),0 0 40px rgba(209,10,42,.7);animation:flick 7s infinite}

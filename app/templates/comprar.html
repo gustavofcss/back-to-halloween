@@ -62,7 +62,7 @@
           </div>
           <div class="btn-row">
             <a href="/meus-pedidos" class="btn btn-ghost">◀◀ VOLTAR</a>
-            <button type="submit" class="btn btn-primary grow">▶▶ CONTINUAR · R$&nbsp;{{ evento.valor_entrada }}</button>
+            <button type="submit" class="btn btn-primary grow"><span>▶▶ CONTINUAR · R$&nbsp;{{ evento.valor_entrada }}</span></button>
           </div>
         </form>
         <form method="post" action="/logout" style="display:flex;justify-content:center">
@@ -140,7 +140,7 @@
 
           <div class="btn-row" style="margin-top:4px">
             <a href="/" class="btn btn-ghost">◀◀ VOLTAR</a>
-            <button type="submit" class="btn btn-primary grow">▶▶ CONTINUAR · R$ <span id="total-display">{{ evento.valor_entrada }}</span></button>
+            <button type="submit" class="btn btn-primary grow"><span>▶▶ CONTINUAR · R$&nbsp;<span id="total-display">{{ evento.valor_entrada }}</span></span></button>
           </div>
         </form>
         <form method="post" action="/logout" style="display:flex;justify-content:center">
