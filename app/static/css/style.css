@@ -778,3 +778,12 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .confirm-modal .btn-ghost{background:transparent!important;border:1px solid var(--bth-btn-line)!important;color:var(--bth-text)!important}
 .confirm-modal .btn-ghost:hover{background:#1a1220!important}
 #confirm-modal-ok.is-perigoso{background:var(--bth-red-soft)!important;color:var(--bth-ink)!important}
+
+/* Gap do handoff: admin/index.html (o painel inicial com os 5 atalhos)
+   usa .a-quick-link*, uma classe que o doc nem sabia que existia --
+   ainda estava com os ícones antigos (pumpkin/witch-hat/eye/coffin em
+   PNG) e a fonte antiga no label. Mesmo padrão visual dos .a-card. */
+.a-quick-link{border-radius:6px!important;background:var(--bth-card)!important;border:none!important;box-shadow:0 0 0 1px var(--bth-line)!important;border-top:3px solid var(--bth-red)!important;transition:box-shadow .15s}
+.a-quick-link:hover{box-shadow:0 0 0 1px rgba(255,45,69,.5)!important}
+.a-quick-link__icon{font-family:var(--bth-vhs)!important;font-size:34px!important;line-height:1;letter-spacing:-2px;color:var(--bth-red-hi)!important}
+.a-quick-link__label{font-family:var(--bth-title)!important;font-weight:400!important;font-size:19px!important;text-transform:uppercase;color:#fff!important}

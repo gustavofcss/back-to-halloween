@@ -1,29 +1,29 @@
 {% extends "admin/_layout.html" %}
 {% set active_nav = "" %}
-{% block title %}Painel admin — Horror Night Party{% endblock %}
+{% block title %}Painel admin — Back to Halloween{% endblock %}
 {% block admin_title %}Painel admin{% endblock %}
-{% block admin_subtitle %}Gestão da Horror Night Party{% endblock %}
+{% block admin_subtitle %}Gestão da Back to Halloween{% endblock %}
 {% block admin_body %}
 <div class="a-quick-links">
   <a class="a-quick-link" href="/admin/pedidos">
-    <span class="a-quick-link__icon"><img src="{{ url_for('static', filename='assets/deco-pumpkin-new.png') }}" alt=""></span>
+    <span class="a-quick-link__icon" aria-hidden="true">▶︎</span>
     <span class="a-quick-link__label">Pedidos</span>
   </a>
   <a class="a-quick-link" href="/admin/hierarquia">
-    <span class="a-quick-link__icon"><img src="{{ url_for('static', filename='assets/deco-witch-hat.png') }}" alt=""></span>
+    <span class="a-quick-link__icon" aria-hidden="true">▲︎</span>
     <span class="a-quick-link__label">Hierarquia (usuários)</span>
   </a>
   <a class="a-quick-link" href="/admin/cadastros">
-    <span class="a-quick-link__icon"><img src="{{ url_for('static', filename='assets/deco-eye.png') }}" alt=""></span>
+    <span class="a-quick-link__icon" aria-hidden="true">●︎</span>
     <span class="a-quick-link__label">Cadastros pendentes</span>
   </a>
   <a class="a-quick-link" href="/admin/material">
-    <span class="a-quick-link__icon"><img src="{{ url_for('static', filename='assets/deco-coffin.png') }}" alt=""></span>
+    <span class="a-quick-link__icon" aria-hidden="true">■︎</span>
     <span class="a-quick-link__label">Material</span>
   </a>
   <a class="a-quick-link" href="/admin/eventos">
-    <span class="a-quick-link__icon"><img src="{{ url_for('static', filename='assets/deco-trick-or-treat.png') }}" alt=""></span>
-    <span class="a-quick-link__label">Lotes do evento</span>
+    <span class="a-quick-link__icon" aria-hidden="true">▶︎▶︎</span>
+    <span class="a-quick-link__label">Evento</span>
   </a>
 </div>
 {% endblock %}

@@ -1,4 +1,6 @@
 (function(){
+  if (document.querySelector('.bth-room')) return; // convite.js cuida dessa página
+
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function initStatic(){
