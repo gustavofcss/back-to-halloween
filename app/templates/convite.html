@@ -148,13 +148,13 @@
 
     <a href="{{ cta_href }}" class="bth-btn-play">
       {%- if not usuario -%}
-        ▶ COMPRAR INGRESSO{% if evento %} · LOTE {{ evento.numero_lote }} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
+        ▶ COMPRAR INGRESSO{% if evento %} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
       {%- elif usuario.hierarquia in ['adm', 'superadm'] -%}
         ▶ IR PRO PAINEL
       {%- elif tem_pedido -%}
         ▶ VER MINHAS FITAS
       {%- else -%}
-        ▶ COMPRAR INGRESSO{% if evento %} · LOTE {{ evento.numero_lote }} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
+        ▶ COMPRAR INGRESSO{% if evento %} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
       {%- endif -%}
     </a>
     <p class="bth-btn-note">VAGAS LIMITADAS · PAGAMENTO VIA PIX</p>

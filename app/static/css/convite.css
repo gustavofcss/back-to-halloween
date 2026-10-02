@@ -152,7 +152,7 @@ body{margin:0;background:#000}
 .bth-cassette__reels i{width:30px;height:30px;border-radius:50%;border:5px dotted #3a2a44;background:#000}
 .bth-cassette__reels b{flex:1;margin:12px 10px 0;height:6px;background:#1c1420;border-radius:3px}
 
-.bth-btn-play{margin-top:40px;display:inline-flex;align-items:center;gap:14px;padding:14px 36px;border-radius:4px;background:#d10a2a;color:#fff!important;text-decoration:none;font-family:'VT323',monospace;font-size:30px;letter-spacing:.12em;box-shadow:0 0 0 4px rgba(209,10,42,.2),0 0 40px rgba(209,10,42,.55);transition:background .15s,transform .15s}
+.bth-btn-play{margin-top:40px;display:inline-flex;align-items:center;gap:14px;padding:12px 28px;border-radius:4px;background:#d10a2a;color:#fff!important;text-decoration:none;font-family:'VT323',monospace;font-size:clamp(20px,5vw,24px);letter-spacing:.1em;box-shadow:0 0 0 4px rgba(209,10,42,.2),0 0 40px rgba(209,10,42,.55);transition:background .15s,transform .15s}
 .bth-btn-play:hover{background:#ff2d45;transform:translateY(-2px)}
 .bth-btn-note{margin:14px 0 0;font-family:'VT323',monospace;font-size:20px;letter-spacing:.1em;color:#b8a9bf}
 

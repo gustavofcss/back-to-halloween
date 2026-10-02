@@ -1185,7 +1185,7 @@ def eventos():
         quantidade_max_ingressos = request.form.get("quantidade_max_ingressos") or (
             str(ultimo["quantidade_max_ingressos"]) if ultimo else "2"
         )
-        nome_evento = ultimo["nome_evento"] if ultimo else "Halloween"
+        nome_evento = ultimo["nome_evento"] if ultimo else "BACK TO HALLOWEEN"
         data_evento = ultimo["data_evento"] if ultimo else None
         hora_evento = ultimo["hora_evento"] if ultimo else None
         endereco = ultimo["endereco"] if ultimo else None
