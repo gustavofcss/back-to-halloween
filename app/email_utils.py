@@ -73,16 +73,16 @@ def _esc(valor) -> str:
 
 def _email_shell(corpo_interno: str) -> str:
     # Gmail (e outros webmails) aplicam modo escuro automático no HTML do
-    # e-mail e "corrigem" cores explícitas. O layout já é escuro, então o
-    # meta pede pra respeitar as cores exatas, e cada célula leva bgcolor +
+    # e-mail e "corrigem" cores explícitas. O layout é escuro, e o meta
+    # "light only" ("dark only" não existe pro Gmail) pede pra respeitar as cores exatas, e cada célula leva bgcolor +
     # !important pra não ser invertida (achado real, print do Gmail no celular).
     return f"""<!doctype html>
 <html>
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<meta name="color-scheme" content="dark only">
-<meta name="supported-color-schemes" content="dark only">
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
 </head>
 <body bgcolor="{_FUNDO}" style="margin:0;padding:0;background-color:{_FUNDO} !important;background-image:linear-gradient({_FUNDO},{_FUNDO});">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="{_FUNDO}" style="background-color:{_FUNDO} !important;background-image:linear-gradient({_FUNDO},{_FUNDO});">
