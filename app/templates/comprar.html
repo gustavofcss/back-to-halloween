@@ -79,12 +79,12 @@
         <h2 class="title" style="font-size:32px">Seus dados</h2>
         <div class="price-tag">
           <div class="price-tag__main">
-            <span class="price-tag__side">LADO A · INGRESSO</span>
+            <span class="price-tag__side" id="tag-side">LADO A · INGRESSO</span>
             <span class="price-tag__name">{{ evento.nome_evento }}</span>
           </div>
           <div class="price-tag__price">
             <span class="price-tag__lote">LOTE {{ evento.numero_lote }}</span>
-            <span class="price-tag__value">R$ {{ evento.valor_entrada }}</span>
+            <span class="price-tag__value" id="tag-value">R$ {{ evento.valor_entrada }}</span>
           </div>
         </div>
         {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}

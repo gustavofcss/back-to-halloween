@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% from "_fita_k7.html" import fita %}
+{% from "_fita_k7.html" import fita, ingressos_info %}
 {% block title %}Pagamento — Back to Halloween{% endblock %}
 {% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vhs.css') }}">{% endblock %}
 {% block content %}
@@ -13,9 +13,7 @@
     </nav>
 
     {{ fita(pedido, usuario=usuario, tilt=-1) }}
-    {% if pedido.acompanhante_nome %}
-    <p class="foot" style="margin-top:-8px">+ acompanhante: {{ pedido.acompanhante_nome }}{% if pedido.acompanhante_rg %} · RG {{ pedido.acompanhante_rg }}{% endif %}</p>
-    {% endif %}
+    {{ ingressos_info(pedido, usuario) }}
 
     {% if pedido.status_pedido == 'confirmado' %}
       <div class="result">

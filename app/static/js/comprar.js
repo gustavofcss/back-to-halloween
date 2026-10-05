@@ -7,6 +7,8 @@
   var input = document.getElementById('quantidade');
   var display = document.getElementById('qty-display');
   var totalDisplay = document.getElementById('total-display');
+  var tagSide = document.getElementById('tag-side');
+  var tagValue = document.getElementById('tag-value');
   var dec = document.getElementById('qty-dec');
   var inc = document.getElementById('qty-inc');
   var acompanhanteBox = document.getElementById('acompanhante-fields');
@@ -17,6 +19,10 @@
     var qtd = parseInt(input.value, 10);
     var total = (promo2 && qtd === 2) ? promo2 : price * qtd;
     totalDisplay.textContent = total.toFixed(2);
+    // Etiqueta de cima acompanha a quantidade: com 2 ingressos mostra os dois
+    // lados (A + B) e o total (casadinha ou 2 × preço), não só o preço unitário.
+    if (tagSide) { tagSide.textContent = qtd === 2 ? 'LADO A + B · 2 INGRESSOS' : 'LADO A · INGRESSO'; }
+    if (tagValue) { tagValue.textContent = 'R$ ' + total.toFixed(2); }
     if (acompanhanteBox) {
       var precisa = parseInt(input.value, 10) === 2;
       // 'flex', não 'block' -- .dashed-top é display:flex;gap:12px

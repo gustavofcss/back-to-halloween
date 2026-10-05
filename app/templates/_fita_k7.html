@@ -12,10 +12,27 @@
         <span class="k7__title">{{ pedido.quantidade }} × Entrada</span>
         <span class="k7__price">R$ {{ pedido.valor }}</span>
       </div>
-      <span class="k7__holder">{{ pedido.titular_nome or (usuario.nome if usuario else '') }}</span>
+      {% set titular = pedido.titular_nome or (usuario.nome if usuario else '') %}
+      {% if pedido.acompanhante_nome %}
+      <span class="k7__holder">1 · {{ titular }}</span>
+      <span class="k7__holder">2 · {{ pedido.acompanhante_nome }}</span>
+      {% else %}
+      <span class="k7__holder">{{ titular }}</span>
+      {% endif %}
       <span class="k7__meta">FITA #{{ pedido.id_pedido }} · LOTE {{ pedido.numero_lote }}</span>
     </div>
     <div class="k7__window"><i class="k7__reel"></i><i class="k7__reel"></i></div>
     <span class="k7__stamp">{{ carimbo }}</span>
   </{{ 'a' if href else 'div' }}>
+{% endmacro %}
+
+{# Nome e RG de cada ingresso do pedido (a fita mostra só os nomes). Some se
+   o pedido é de 1 ingresso só. #}
+{% macro ingressos_info(pedido, usuario=None) %}
+  {% if pedido.acompanhante_nome %}
+  <ul class="ing-info">
+    <li><b>INGRESSO 1</b> {{ pedido.titular_nome or (usuario.nome if usuario else '') }}{% if pedido.rg %} · RG {{ pedido.rg }}{% endif %}</li>
+    <li><b>INGRESSO 2</b> {{ pedido.acompanhante_nome }}{% if pedido.acompanhante_rg %} · RG {{ pedido.acompanhante_rg }}{% endif %}</li>
+  </ul>
+  {% endif %}
 {% endmacro %}

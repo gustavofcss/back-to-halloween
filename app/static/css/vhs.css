@@ -141,7 +141,7 @@ button{font:inherit}
 .k7__row{display:flex;justify-content:space-between;align-items:baseline;gap:2cqw}
 .k7__title{font:5.4cqw/1.05 var(--f-title);text-transform:uppercase}
 .k7__price{font:6cqw/1 var(--f-title);color:var(--red-ink)}
-.k7__holder{font:3.2cqw var(--f-type);color:#3a2a30}
+.k7__holder{font:3.2cqw var(--f-type);color:#3a2a30;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .k7__meta{font:3.4cqw var(--f-vhs);letter-spacing:.12em;color:var(--red-ink)}
 .k7__window{position:absolute;left:22cqw;right:22cqw;bottom:6cqw;height:15cqw;border-radius:2cqw;background:#0a070c;box-shadow:inset 0 0 0 .6cqw #3a2a34;display:flex;align-items:center;justify-content:space-between;padding:0 6cqw}
 .k7__reel{width:10cqw;aspect-ratio:1;border-radius:50%;border:1.6cqw dotted #ece3d0;background:#1a1216}
@@ -179,3 +179,7 @@ button{font:inherit}
    admin), só o visual de cada .flash ganha o tom VHS aqui. */
 .flash-wrap{position:fixed;top:56px;left:50%;transform:translateX(-50%);z-index:50;max-width:92vw;display:flex;flex-direction:column;gap:8px}
 .flash-wrap .flash{padding:10px 12px;border-radius:3px;background:rgba(236,227,208,.08);border:1px solid #5a3f66;color:var(--text);font-size:13px}
+
+/* nome + RG de cada ingresso, logo abaixo da fita */
+.ing-info{list-style:none;margin:-4px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;font:13px var(--f-type);color:var(--muted)}
+.ing-info b{font:15px var(--f-vhs);letter-spacing:.12em;color:var(--red);margin-right:6px}
