@@ -68,7 +68,7 @@ body{margin:0;background:#000}
 .shelf--right .bth-shelf__shade{background:linear-gradient(270deg,rgba(0,0,0,.94) 0%,rgba(0,0,0,.6) 50%,rgba(40,0,10,.12) 100%)}
 
 /* ============ OLHOS ============ */
-.bth-eyes{position:absolute;left:50%;top:30%;width:clamp(110px,13vw,190px);transform:translateX(-50%);z-index:4;opacity:0;pointer-events:none;animation:eyesShow 20s linear infinite}
+.bth-eyes{position:absolute;left:50%;bottom:100%;margin-bottom:6px;width:clamp(90px,11vw,170px);transform:translateX(-50%);z-index:1;opacity:0;pointer-events:none;animation:eyesShow 20s linear infinite}
 .bth-eyes video{display:block;width:100%;aspect-ratio:16/9;object-fit:cover;mix-blend-mode:screen;filter:brightness(.85) contrast(1.6);
   -webkit-mask-image:radial-gradient(ellipse 48% 42% at 50% 50%,#000 55%,transparent 100%);
           mask-image:radial-gradient(ellipse 48% 42% at 50% 50%,#000 55%,transparent 100%)}
