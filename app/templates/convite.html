@@ -45,11 +45,12 @@
     <div class="bth-room__fade"></div>
     <div class="bth-room__dark"></div>
 
+    <div class="bth-eyes">
+      <video src="{{ url_for('static', filename='assets/eyes.mp4') }}" autoplay muted loop playsinline aria-hidden="true"></video>
+    </div>
+
     <!-- TV + móvel -->
     <div class="bth-set">
-      <div class="bth-eyes">
-        <video src="{{ url_for('static', filename='assets/eyes.mp4') }}" autoplay muted loop playsinline aria-hidden="true"></video>
-      </div>
       <div class="bth-tv">
         <div class="bth-tv__glow"></div>
         <div class="bth-tv__body">
