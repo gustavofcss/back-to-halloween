@@ -10,7 +10,6 @@ CSRF (um <form> cross-site não consegue mandar esse header). As rotas GET
 que renderizam página continuam HTML normal, sem exigir o header."""
 from __future__ import annotations
 
-import csv
 import io
 import logging
 from functools import wraps
@@ -18,6 +17,8 @@ from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
 import psycopg2
+from openpyxl import Workbook
+from openpyxl.styles import Font
 from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
 
 import config
@@ -430,21 +431,38 @@ def pedidos_exportar():
     # Numeração sequencial (1, 2, 3...) pra portaria conferir/marcar --
     # não é o id_pedido (achado real, usuário corrigiu: "a numeração que
     # digo era um sequencial do lado", não o número interno do pedido).
-    buf = io.StringIO()
-    escritor = csv.writer(buf, delimiter=";")
-    escritor.writerow(["Numeração", "Nome", "RG"])
+    # .xlsx em vez de CSV: o CSV depende do separador da configuração regional
+    # do Excel/Sheets (com "," em vez de ";" tudo caía na 1ª coluna, achado real).
+    # Nome e RG vão como TEXTO explícito -- o openpyxl trata string começando com
+    # "=" como fórmula, e RG pode ter zero à esquerda ou terminar em X.
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Portaria"
+    ws.append(["Numeração", "Nome", "RG"])
+    for c in ws[1]:
+        c.font = Font(bold=True)
+    linhas = []
     numero = 0
     for p in lista:
         numero += 1
-        escritor.writerow([numero, p["nome"], p["rg"] or ""])
+        linhas.append((numero, p["nome"], p["rg"] or ""))
         if p["acompanhante_nome"]:
             numero += 1
-            escritor.writerow([numero, p["acompanhante_nome"], p["acompanhante_rg"] or ""])
+            linhas.append((numero, p["acompanhante_nome"], p["acompanhante_rg"] or ""))
+    for n, nome, rg in linhas:
+        ws.append([n, nome, rg])
+        for c in (ws.cell(ws.max_row, 2), ws.cell(ws.max_row, 3)):
+            c.data_type = "s"
+    ws.column_dimensions["A"].width = 12
+    ws.column_dimensions["B"].width = 38
+    ws.column_dimensions["C"].width = 16
 
+    buf = io.BytesIO()
+    wb.save(buf)
     return Response(
-        "﻿" + buf.getvalue(),  # BOM -- Excel abre acentuado certo com UTF-8 sem confundir com outra codificação
-        mimetype="text/csv",
-        headers={"Content-Disposition": "attachment; filename=pedidos_portaria.csv"},
+        buf.getvalue(),
+        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=pedidos_portaria.xlsx"},
     )
 
 
