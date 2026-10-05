@@ -608,9 +608,9 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 
 /* ---- shell / fundo preto com o mesmo degradê ---- */
 .a-shell{position:relative;font-family:var(--bth-body);color:var(--bth-text);
-  background:radial-gradient(ellipse 900px 500px at 70% -10%,#1c1c1c 0%,#0b0b0b 45%,#000 80%)!important}
-.a-shell::after{content:"";position:fixed;inset:0;z-index:40;pointer-events:none;
-  background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.16) 2px 3px)}
+  /* Listras de TV antiga como CAMADA DE FUNDO (por baixo do conteúdo). Antes era
+     um ::after fixo por cima de tudo, que riscava os textos e os deixava ruins de ler. */
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.16) 2px 3px),radial-gradient(ellipse 900px 500px at 70% -10%,#1c1c1c 0%,#0b0b0b 45%,#000 80%)!important}
 .a-deco--hand,.a-deco--web,.a-deco--spider,.a-sidebar__tree{display:none!important}
 
 /* ---- scrollbar escura (some a barra cinza/branca) ---- */
@@ -627,7 +627,7 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .a-brand__k7{flex:0 0 auto;width:46px;height:30px;border-radius:4px;background:#1a1216;box-shadow:0 0 0 1px #3a2a34;display:flex;align-items:center;justify-content:space-around;padding:0 5px}
 .a-brand__k7 i{width:12px;height:12px;border-radius:50%;border:3px dotted var(--bth-paper)}
 .a-brand__name{font-family:var(--bth-title)!important;font-weight:400!important;font-size:17px!important;line-height:1.05;color:#ffe8ea!important;
-  text-shadow:0 0 4px var(--bth-red-hi),0 0 14px rgba(209,10,42,.8)!important;animation:bthFlick 7s infinite}
+  text-shadow:0 0 6px rgba(209,10,42,.5)!important}
 .a-brand__tag{font-family:var(--bth-vhs)!important;font-size:17px!important;letter-spacing:.16em;text-transform:uppercase;color:var(--bth-muted)!important}
 .a-nav-label{font-family:var(--bth-vhs)!important;font-size:18px!important;font-weight:400!important;letter-spacing:.2em!important;color:var(--bth-red-hi)!important}
 .a-nav__item{border-radius:3px!important;border:1px solid transparent!important;color:var(--bth-text-2)!important;font-family:var(--bth-body)!important;font-weight:500}

@@ -21,8 +21,9 @@ button{font:inherit}
 
 /* ---------- moldura de tela (todas as telas de cliente) ---------- */
 .vhs{position:relative;min-height:100vh;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:72px 20px 48px;
-  background:radial-gradient(ellipse 90% 50% at 50% 0%,var(--purple) 0%,var(--bg-2) 50%,var(--bg) 85%)}
-.vhs::before{content:"";position:absolute;inset:0;pointer-events:none;z-index:30;background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.22) 2px 3px)}
+  /* Listras de TV antiga como camada de FUNDO (por baixo do conteúdo): antes era um
+     ::before por cima de tudo (z-index 30) que riscava os textos. */
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.22) 2px 3px),radial-gradient(ellipse 90% 50% at 50% 0%,var(--purple) 0%,var(--bg-2) 50%,var(--bg) 85%)}
 .vhs__osd{position:absolute;top:18px;left:clamp(16px,4vw,48px);right:clamp(16px,4vw,48px);display:flex;justify-content:space-between;gap:12px;font:22px var(--f-vhs);color:var(--text);z-index:20;text-shadow:0 0 6px rgba(255,255,255,.3)}
 .vhs__osd .rec{color:var(--red-hi);animation:blink 1.2s steps(1) infinite}
 .vhs__wrap{position:relative;width:100%;max-width:420px;display:flex;flex-direction:column;gap:18px}
