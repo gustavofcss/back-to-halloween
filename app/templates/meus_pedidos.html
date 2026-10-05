@@ -14,7 +14,12 @@
       <form method="post" action="/logout"><button type="submit" class="btn btn-ghost btn-sm">SAIR</button></form>
     </div>
     {% for p in pedidos %}
-      {{ fita(p, usuario=usuario, tilt=(-1.5 if loop.index is odd else 1)) }}
+      {% if p.acompanhante_nome %}
+        {{ fita(p, usuario=usuario, tilt=(-1.5 if loop.index is odd else 1), lado='a') }}
+        {{ fita(p, usuario=usuario, tilt=(1 if loop.index is odd else -1.5), lado='b') }}
+      {% else %}
+        {{ fita(p, usuario=usuario, tilt=(-1.5 if loop.index is odd else 1)) }}
+      {% endif %}
       {{ ingressos_info(p, usuario) }}
     {% else %}
       <div class="card center">

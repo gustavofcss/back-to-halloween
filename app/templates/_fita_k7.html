@@ -3,23 +3,27 @@
    só junto com cancelado), quantidade, valor, titular_nome, id_pedido,
    numero_lote. `usuario` é o dono da conta -- cai pro nome dele quando
    titular_nome é vazio (pedido "normal", não pra outra pessoa). #}
-{% macro fita(pedido, usuario=None, href=None, tilt=0) %}
+{% macro fita(pedido, usuario=None, href=None, tilt=0, lado=None) %}
   {% set cls = 'expirado' if (pedido.status_pedido == 'cancelado' and pedido.expirado) else pedido.status_pedido %}
   {% set carimbo = {'confirmado': 'CONFIRMADO', 'pendente': 'AGUARDANDO PIX', 'cancelado': 'CANCELADO', 'expirado': 'EXPIRADO'}.get(cls, cls|upper) %}
   <{{ 'a' if href else 'div' }} class="k7 k7--{{ cls }}{% if cls == 'pendente' %} k7--spin{% endif %}"{% if href %} href="{{ href }}"{% endif %} style="--tilt:{{ tilt }}deg">
     <div class="k7__label">
       <div class="k7__row">
-        <span class="k7__title">{{ pedido.quantidade }} × Entrada</span>
-        <span class="k7__price">R$ {{ pedido.valor }}</span>
+        <span class="k7__title">{% if lado %}Lado {{ lado|upper }} · Entrada{% else %}{{ pedido.quantidade }} × Entrada{% endif %}</span>
+        <span class="k7__price">{% if lado == 'b' %}INCLUSO{% else %}R$ {{ pedido.valor }}{% endif %}</span>
       </div>
       {% set titular = pedido.titular_nome or (usuario.nome if usuario else '') %}
-      {% if pedido.acompanhante_nome %}
+      {% if lado == 'a' %}
+      <span class="k7__holder">{{ titular }}</span>
+      {% elif lado == 'b' %}
+      <span class="k7__holder">{{ pedido.acompanhante_nome }}</span>
+      {% elif pedido.acompanhante_nome %}
       <span class="k7__holder">1 · {{ titular }}</span>
       <span class="k7__holder">2 · {{ pedido.acompanhante_nome }}</span>
       {% else %}
       <span class="k7__holder">{{ titular }}</span>
       {% endif %}
-      <span class="k7__meta">FITA #{{ pedido.id_pedido }} · LOTE {{ pedido.numero_lote }}</span>
+      <span class="k7__meta">FITA #{{ pedido.id_pedido }}{% if lado %}-{{ lado|upper }}{% endif %} · LOTE {{ pedido.numero_lote }}</span>
     </div>
     <div class="k7__window"><i class="k7__reel"></i><i class="k7__reel"></i></div>
     <span class="k7__stamp">{{ carimbo }}</span>

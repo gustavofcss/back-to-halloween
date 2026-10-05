@@ -200,6 +200,11 @@ def _pedido_do_usuario(cur, id_pedido: int, id_usuario: int):
     return cur.fetchone()
 
 
+def _ingressos_na_conta(pedidos_ativos: list) -> int:
+    """Total de ingressos (soma de `quantidade`) dos pedidos ativos da conta."""
+    return sum(int(p["quantidade"]) for p in pedidos_ativos)
+
+
 def _pedidos_ativos(cur, id_usuario: int, id_evento: int) -> list:
     cur.execute(
         "SELECT * FROM pedido WHERE id_usuario = %s AND id_evento = %s "
@@ -356,7 +361,11 @@ def _comprar_impl(usuario: dict):
             # alguém diferente (nome/e-mail/RG/WhatsApp não podem ser os
             # mesmos já usados pela conta).
             existentes = _pedidos_ativos(cur, usuario["id_usuario"], evento["id_evento"])
-            if len(existentes) >= 2:
+            # Além do teto de 2 pedidos, a conta tem um teto de INGRESSOS no
+            # total (quantidade_max_ingressos): quem já tem 2 ingressos num
+            # pedido só (você + acompanhante, casadinha ou não) não compra um
+            # 3º em outro pedido.
+            if len(existentes) >= 2 or _ingressos_na_conta(existentes) >= evento["quantidade_max_ingressos"]:
                 return render_template("comprar.html", limite_atingido=True)
 
             slot = 2 if existentes else 1
@@ -698,7 +707,7 @@ def meus_pedidos():
             evento = _evento_ativo(cur)
             if evento:
                 existentes = _pedidos_ativos(cur, usuario["id_usuario"], evento["id_evento"])
-                if len(existentes) < 2:
+                if len(existentes) < 2 and _ingressos_na_conta(existentes) < evento["quantidade_max_ingressos"]:
                     vagas_restantes = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)
                     max_seguinte = evento["quantidade_max_ingressos"] if not existentes else 1
                     pode_comprar_mais = max(0, min(max_seguinte, vagas_restantes))
