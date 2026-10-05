@@ -42,7 +42,15 @@ BREVO_FROM_NOME = os.environ.get("BREVO_FROM_NOME", "Horror Night Party")
 PIX_KEYS = {
     30.0: os.environ.get("PIX_KEY_30", ""),
     60.0: os.environ.get("PIX_KEY_60", ""),
+    50.0: os.environ.get("PIX_KEY_50", ""),  # promoção casadinha (2 por R$ 50)
 }
+
+# Promoção "casadinha": 2 ingressos no MESMO pedido por um valor fechado, em
+# vez de valor_entrada x 2. Quem liga/desliga é o admin (evento.promo_casadinha,
+# tela Evento). O valor é fixo aqui porque cada valor possível precisa de uma
+# chave Pix (PIX_KEYS) e de um link de cartão (LINKS_PAGAMENTO_CARTAO) criados
+# à mão -- se mudar, cadastre os dois pro valor novo.
+PROMO_CASADINHA_VALOR = 50.0
 BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:5000")
 
 MERCADOPAGO_ACCESS_TOKEN = os.environ.get("MERCADOPAGO_ACCESS_TOKEN", "")
@@ -54,4 +62,5 @@ MERCADOPAGO_ACCESS_TOKEN = os.environ.get("MERCADOPAGO_ACCESS_TOKEN", "")
 LINKS_PAGAMENTO_CARTAO = {
     30.0: os.environ.get("LINK_PAGAMENTO_30", ""),
     60.0: os.environ.get("LINK_PAGAMENTO_60", ""),
+    50.0: os.environ.get("LINK_PAGAMENTO_50", ""),
 }

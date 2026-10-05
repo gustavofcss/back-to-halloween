@@ -20,6 +20,7 @@ from zoneinfo import ZoneInfo
 import psycopg2
 from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
 
+import config
 import db
 from auth import EMAIL_RE, admin_required, current_user
 from email_utils import enviar_cadastro_aprovado, enviar_confirmacao_pedido, enviar_email_avulso
@@ -1192,6 +1193,7 @@ def eventos():
         bairro = ultimo["bairro"] if ultimo else None
         capacidade_maxima = ultimo["capacidade_maxima"] if ultimo else 60
         numero_lote = (ultimo["numero_lote"] + 1) if ultimo else 1
+        promo_casadinha = bool(ultimo["promo_casadinha"]) if ultimo else False
 
         with db.get_conn() as conn:
             with conn.cursor() as cur:
@@ -1199,8 +1201,9 @@ def eventos():
                     """
                     INSERT INTO evento
                         (nome_evento, data_evento, hora_evento, endereco, bairro, numero_lote,
-                         valor_entrada, quantidade_max_ingressos, capacidade_maxima, usuario_cadastro)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                         valor_entrada, quantidade_max_ingressos, capacidade_maxima, usuario_cadastro,
+                         promo_casadinha)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """,
                     (
                         nome_evento,
@@ -1213,6 +1216,7 @@ def eventos():
                         quantidade_max_ingressos,
                         capacidade_maxima,
                         current_user()["id_usuario"],
+                        promo_casadinha,
                     ),
                 )
         return redirect(url_for("admin.eventos"))
@@ -1249,6 +1253,8 @@ def eventos():
         endereco=endereco,
         bairro=bairro,
         ingressos_vendidos_total=ingressos_vendidos_total,
+        promo_casadinha_valor=int(config.PROMO_CASADINHA_VALOR),
+        promo_casadinha_pix_ok=bool(config.PIX_KEYS.get(config.PROMO_CASADINHA_VALOR)),
     )
 
 
@@ -1292,6 +1298,26 @@ def eventos_nome_data():
                     "UPDATE evento SET nome_evento = %s, data_evento = %s, hora_evento = %s WHERE id_evento = %s",
                     (nome_evento, data_evento, hora_evento, ultimo["id_evento"]),
                 )
+    return redirect(url_for("admin.eventos"))
+
+
+@admin_bp.route("/eventos/casadinha", methods=["POST"])
+@admin_required
+def eventos_casadinha():
+    # Liga/desliga a promoção casadinha no lote ativo (o mais recente, mesmo
+    # padrão de eventos_capacidade). Pedidos já criados guardam o próprio
+    # valor, então desligar não mexe em quem já está pagando.
+    ligar = request.form.get("ativo") == "1"
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1")
+            ultimo = cur.fetchone()
+            if ultimo:
+                cur.execute(
+                    "UPDATE evento SET promo_casadinha = %s WHERE id_evento = %s",
+                    (ligar, ultimo["id_evento"]),
+                )
+    flash("Promoção casadinha ligada." if ligar else "Promoção casadinha desligada.")
     return redirect(url_for("admin.eventos"))
 
 

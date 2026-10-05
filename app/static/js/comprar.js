@@ -3,6 +3,7 @@
   if (!form) { return; }
   var max = parseInt(form.dataset.max, 10);
   var price = parseFloat(form.dataset.preco);
+  var promo2 = form.dataset.promo2 ? parseFloat(form.dataset.promo2) : 0;
   var input = document.getElementById('quantidade');
   var display = document.getElementById('qty-display');
   var totalDisplay = document.getElementById('total-display');
@@ -13,7 +14,9 @@
 
   function render() {
     display.textContent = input.value;
-    totalDisplay.textContent = (price * parseInt(input.value, 10)).toFixed(2);
+    var qtd = parseInt(input.value, 10);
+    var total = (promo2 && qtd === 2) ? promo2 : price * qtd;
+    totalDisplay.textContent = total.toFixed(2);
     if (acompanhanteBox) {
       var precisa = parseInt(input.value, 10) === 2;
       // 'flex', não 'block' -- .dashed-top é display:flex;gap:12px

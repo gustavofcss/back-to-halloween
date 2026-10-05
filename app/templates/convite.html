@@ -61,6 +61,9 @@
       {%- else %}Comprar ingresso{% if evento %} · Lote {{ evento.numero_lote }} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
       {%- endif %}
     </a>
+    {% if evento and evento.promo_casadinha and evento.quantidade_max_ingressos >= 2 %}
+    <p class="muted mt-14"><strong>🎟️ Casadinha: 2 ingressos por R$&nbsp;{{ promo_casadinha_valor }}</strong></p>
+    {% endif %}
     <p class="muted mt-14">Vagas limitadas · Pagamento via Pix</p>
   </section>
 </div>

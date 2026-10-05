@@ -52,6 +52,10 @@ CREATE TABLE IF NOT EXISTS evento (
     data_cadastro             TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Promoção casadinha (2 ingressos no mesmo pedido por config.PROMO_CASADINHA_VALOR).
+-- Liga/desliga pelo admin (tela Evento). Em banco já existente, rode só esta linha.
+ALTER TABLE evento ADD COLUMN IF NOT EXISTS promo_casadinha BOOLEAN NOT NULL DEFAULT FALSE;
+
 CREATE TABLE IF NOT EXISTS pedido (
     id_pedido      SERIAL PRIMARY KEY,
     id_usuario     INTEGER NOT NULL REFERENCES login_usuario(id_usuario) ON DELETE CASCADE,
