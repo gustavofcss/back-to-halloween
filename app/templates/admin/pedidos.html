@@ -11,10 +11,10 @@
 {% endblock %}
 {% block admin_body %}
 {% set status_pill = {'confirmado': 'admin-pill--ok', 'pendente': 'admin-pill--warn', 'cancelado': 'admin-pill--bad'} %}
-{% set ns = namespace(total_valor=0, confirmados=0, pendentes=0) %}
+{% set ns = namespace(total_valor=0, confirmados=0, ingressos_confirmados=0, pendentes=0) %}
 {% for p in pedidos %}
   {% if p.status_pedido != 'cancelado' %}{% set ns.total_valor = ns.total_valor + (p.valor or 0) %}{% endif %}
-  {% if p.status_pedido == 'confirmado' %}{% set ns.confirmados = ns.confirmados + 1 %}{% endif %}
+  {% if p.status_pedido == 'confirmado' %}{% set ns.confirmados = ns.confirmados + 1 %}{% set ns.ingressos_confirmados = ns.ingressos_confirmados + (p.quantidade or 0) %}{% endif %}
   {% if p.status_pedido == 'pendente' %}{% set ns.pendentes = ns.pendentes + 1 %}{% endif %}
 {% endfor %}
 
@@ -32,7 +32,7 @@
   <div class="a-card">
     <span class="a-kpi__label">Confirmados</span>
     <span class="a-kpi__value"><span data-admin-total="confirmados">{{ ns.confirmados }}</span></span>
-    <span class="a-kpi__note">{{ ns.confirmados }} ingresso(s)</span>
+    <span class="a-kpi__note"><span data-admin-total="ingressos_confirmados">{{ ns.ingressos_confirmados }}</span> ingresso(s)</span>
   </div>
   {% set pct_vendido = ((ingressos_vendidos_total / capacidade_maxima * 100) if capacidade_maxima else 0) %}
   <div class="a-card">

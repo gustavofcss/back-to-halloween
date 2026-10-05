@@ -207,6 +207,7 @@ def _totais_pedidos(cur) -> dict:
                COALESCE(SUM(quantidade) FILTER (WHERE status_pedido != 'cancelado'), 0) AS ingressos_vendidos,
                COALESCE(SUM(valor) FILTER (WHERE status_pedido != 'cancelado'), 0) AS valor_total,
                COUNT(*) FILTER (WHERE status_pedido = 'confirmado') AS confirmados,
+               COALESCE(SUM(quantidade) FILTER (WHERE status_pedido = 'confirmado'), 0) AS ingressos_confirmados,
                COUNT(*) FILTER (WHERE status_pedido = 'pendente') AS pendentes
         FROM pedido
         """
@@ -218,6 +219,7 @@ def _totais_pedidos(cur) -> dict:
         "total_pedidos": agregados["total"],
         "valor_total": f"{agregados['valor_total']:.2f}",
         "confirmados": agregados["confirmados"],
+        "ingressos_confirmados": agregados["ingressos_confirmados"],
         "pendentes": agregados["pendentes"],
     }
 
