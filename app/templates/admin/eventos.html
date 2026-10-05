@@ -52,6 +52,27 @@
   </form>
 </section>
 
+<section class="a-card">
+  <h2 class="a-card__title fs-18">Promoção casadinha</h2>
+  <p class="help-text no-margin">
+    {% if ultimo and ultimo.promo_casadinha %}<strong>Ligada</strong>{% else %}Desligada{% endif %}
+    — quem comprar 2 ingressos no mesmo pedido paga R$ {{ promo_casadinha_valor }} no total
+    {% if ultimo %}(em vez de R$ {{ ultimo.valor_entrada * 2 }}){% endif %}.
+  </p>
+  {% if not promo_casadinha_pix_ok %}
+  <p class="help-text no-margin">⚠️ Falta configurar a chave Pix de R$ {{ promo_casadinha_valor }} (PIX_KEY_{{ promo_casadinha_valor }}) no servidor — sem ela o cliente não consegue pagar.</p>
+  {% endif %}
+  <form method="post" action="/admin/eventos/casadinha">
+    {% if ultimo and ultimo.promo_casadinha %}
+    <input type="hidden" name="ativo" value="0">
+    <button type="submit" class="admin-btn-outline">Desligar promoção</button>
+    {% else %}
+    <input type="hidden" name="ativo" value="1">
+    <button type="submit" class="admin-btn-primary">Ligar promoção</button>
+    {% endif %}
+  </form>
+</section>
+
 <section class="a-card a-card--form is-hidden" id="form-lote">
   <h2 class="a-card__title">Cadastrar novo lote</h2>
   <p class="help-text no-margin">

@@ -157,6 +157,9 @@
         ▶ COMPRAR INGRESSO{% if evento %} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
       {%- endif -%}
     </a>
+    {% if evento and evento.promo_casadinha and evento.quantidade_max_ingressos >= 2 %}
+    <p class="bth-btn-note"><strong>CASADINHA · 2 INGRESSOS POR R$&nbsp;{{ promo_casadinha_valor }}</strong></p>
+    {% endif %}
     <p class="bth-btn-note">VAGAS LIMITADAS · PAGAMENTO VIA PIX</p>
 
     <article class="bth-news">

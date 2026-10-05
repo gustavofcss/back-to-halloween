@@ -76,7 +76,10 @@ def index():
         if evento.get("hora_evento"):
             data_formatada += f" | {evento['hora_evento'].strftime('%H:%M')}"
 
-    return render_template("convite.html", evento=evento, data_formatada=data_formatada)
+    return render_template(
+        "convite.html", evento=evento, data_formatada=data_formatada,
+        promo_casadinha_valor=int(config.PROMO_CASADINHA_VALOR),
+    )
 
 
 if __name__ == "__main__":

@@ -183,6 +183,15 @@ def _ingressos_vendidos_total(cur) -> int:
     return cur.fetchone()["total"]
 
 
+def _valor_do_pedido(evento: dict, slot: int, quantidade: int) -> Decimal:
+    """Casadinha: com a promoção ligada pelo admin, 2 ingressos no mesmo
+    pedido (slot 1, você + acompanhante) saem por config.PROMO_CASADINHA_VALOR.
+    O 2º pedido separado (slot 2, 1 ingresso) nunca entra na promoção."""
+    if evento.get("promo_casadinha") and slot == 1 and quantidade == 2:
+        return Decimal(str(config.PROMO_CASADINHA_VALOR))
+    return evento["valor_entrada"] * quantidade
+
+
 def _pedido_do_usuario(cur, id_pedido: int, id_usuario: int):
     cur.execute(
         "SELECT * FROM pedido WHERE id_pedido = %s AND id_usuario = %s",
@@ -363,6 +372,7 @@ def _comprar_impl(usuario: dict):
                 return render_template(
                     "comprar.html", usuario=usuario, evento=evento,
                     max_permitido=max_permitido, slot=slot,
+                    promo_casadinha_valor=int(config.PROMO_CASADINHA_VALOR),
                 )
 
             rg = _validar_rg(request.form.get("rg"))
@@ -443,10 +453,11 @@ def _comprar_impl(usuario: dict):
                     evento=evento,
                     max_permitido=max_permitido,
                     slot=slot,
+                    promo_casadinha_valor=int(config.PROMO_CASADINHA_VALOR),
                     erro=erro,
                 ), 400
 
-            valor = evento["valor_entrada"] * quantidade
+            valor = _valor_do_pedido(evento, slot, quantidade)
             cur.execute(
                 """
                 INSERT INTO pedido (
