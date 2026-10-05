@@ -84,19 +84,19 @@ def _email_shell(corpo_interno: str) -> str:
 <meta name="color-scheme" content="dark only">
 <meta name="supported-color-schemes" content="dark only">
 </head>
-<body bgcolor="{_FUNDO}" style="margin:0;padding:0;background-color:{_FUNDO} !important;">
-<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="{_FUNDO}" style="background-color:{_FUNDO} !important;">
+<body bgcolor="{_FUNDO}" style="margin:0;padding:0;background-color:{_FUNDO} !important;background-image:linear-gradient({_FUNDO},{_FUNDO});">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="{_FUNDO}" style="background-color:{_FUNDO} !important;background-image:linear-gradient({_FUNDO},{_FUNDO});">
   <tr><td align="center" style="padding:24px 12px;">
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;">
-      <tr><td bgcolor="{_FUNDO}" style="background-color:{_FUNDO} !important;padding:0 4px 14px;font-family:{_MONO};font-size:15px;letter-spacing:3px;text-transform:uppercase;color:{_TEXTO} !important;">
+      <tr><td bgcolor="{_FUNDO}" style="background-color:{_FUNDO} !important;background-image:linear-gradient({_FUNDO},{_FUNDO});padding:0 4px 14px;font-family:{_MONO};font-size:15px;letter-spacing:3px;text-transform:uppercase;color:{_TEXTO} !important;">
         <span style="color:{_VERMELHO} !important;">&#9679;</span>&nbsp;REC
         <span style="float:right;color:{_TEXTO_SUAVE} !important;">&#9654; PLAY</span>
       </td></tr>
-      <tr><td bgcolor="{_CARD}" style="background-color:{_CARD} !important;border:1px solid {_LINHA};border-top:3px solid {_VERMELHO};padding:28px 26px;font-family:{_MONO};font-size:15px;line-height:1.65;color:{_TEXTO} !important;">
+      <tr><td bgcolor="{_CARD}" style="background-color:{_CARD} !important;background-image:linear-gradient({_CARD},{_CARD});border:1px solid {_LINHA};border-top:3px solid {_VERMELHO};padding:28px 26px;font-family:{_MONO};font-size:15px;line-height:1.65;color:{_TEXTO} !important;">
         <p style="margin:0 0 18px;font-size:22px;letter-spacing:3px;text-transform:uppercase;color:{_TEXTO} !important;">Back to Halloween</p>
         {corpo_interno}
       </td></tr>
-      <tr><td bgcolor="{_FUNDO}" style="background-color:{_FUNDO} !important;padding:14px 4px 0;font-family:{_MONO};font-size:12px;letter-spacing:2px;text-transform:uppercase;color:{_TEXTO_SUAVE} !important;">
+      <tr><td bgcolor="{_FUNDO}" style="background-color:{_FUNDO} !important;background-image:linear-gradient({_FUNDO},{_FUNDO});padding:14px 4px 0;font-family:{_MONO};font-size:12px;letter-spacing:2px;text-transform:uppercase;color:{_TEXTO_SUAVE} !important;">
         OUT. 31 &middot; FIM DA FITA
       </td></tr>
     </table>
@@ -114,7 +114,7 @@ def _p(texto: str) -> str:
 def _botao(rotulo: str, url: str) -> str:
     return (
         f'<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 18px;"><tr>'
-        f'<td bgcolor="{_VERMELHO}" style="background-color:{_VERMELHO} !important;padding:12px 22px;">'
+        f'<td bgcolor="{_VERMELHO}" style="background-color:{_VERMELHO} !important;background-image:linear-gradient({_VERMELHO},{_VERMELHO});padding:12px 22px;">'
         f'<a href="{_esc(url)}" style="font-family:{_MONO};font-size:15px;letter-spacing:3px;'
         f'text-transform:uppercase;text-decoration:none;color:#ffffff !important;">&#9654; {_esc(rotulo)}</a>'
         f'</td></tr></table>'
@@ -124,7 +124,7 @@ def _botao(rotulo: str, url: str) -> str:
 def _codigo_html(codigo: str) -> str:
     return (
         f'<table role="presentation" cellpadding="0" cellspacing="0" style="margin:6px 0 18px;"><tr>'
-        f'<td bgcolor="#000000" style="background-color:#000000 !important;border:1px solid {_VERMELHO};'
+        f'<td bgcolor="#000000" style="background-color:#000000 !important;background-image:linear-gradient(#000000,#000000);border:1px solid {_VERMELHO};'
         f'padding:14px 26px;font-family:{_MONO};font-size:32px;letter-spacing:10px;'
         f'color:{_VERMELHO} !important;">{_esc(codigo)}</td></tr></table>'
     )
@@ -155,10 +155,10 @@ def _ticket_html(pedido, nome_titular: str) -> str:
 
     return f"""
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 18px;border:1px solid {_VERMELHO};">
-      <tr><td bgcolor="{_VERMELHO}" style="background-color:{_VERMELHO} !important;padding:8px 18px;font-family:{_MONO};font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#ffffff !important;">
+      <tr><td bgcolor="{_VERMELHO}" style="background-color:{_VERMELHO} !important;background-image:linear-gradient({_VERMELHO},{_VERMELHO});padding:8px 18px;font-family:{_MONO};font-size:12px;letter-spacing:3px;text-transform:uppercase;color:#ffffff !important;">
         LADO A &middot; INGRESSO
       </td></tr>
-      <tr><td bgcolor="#000000" style="background-color:#000000 !important;padding:18px 18px 14px;font-family:{_MONO};">
+      <tr><td bgcolor="#000000" style="background-color:#000000 !important;background-image:linear-gradient(#000000,#000000);padding:18px 18px 14px;font-family:{_MONO};">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>
           <td style="font-family:{_MONO};">
             <p style="margin:0 0 4px;font-size:20px;color:{_TEXTO} !important;">{pedido['quantidade']} &times; Entrada</p>
@@ -167,11 +167,11 @@ def _ticket_html(pedido, nome_titular: str) -> str:
           <td align="right" valign="top" style="font-family:{_MONO};font-size:26px;color:{_VERMELHO} !important;">R$&nbsp;{pedido['valor']}</td>
         </tr></table>
       </td></tr>
-      <tr><td bgcolor="#000000" style="background-color:#000000 !important;padding:0 18px 16px;font-family:{_MONO};">
+      <tr><td bgcolor="#000000" style="background-color:#000000 !important;background-image:linear-gradient(#000000,#000000);padding:0 18px 16px;font-family:{_MONO};">
         {titulares_html}
       </td></tr>
-      <tr><td bgcolor="#000000" style="background-color:#000000 !important;padding:0 18px;"><div style="border-top:2px dashed {_LINHA};"></div></td></tr>
-      <tr><td bgcolor="#000000" style="background-color:#000000 !important;padding:14px 18px 18px;font-family:{_MONO};font-size:13px;line-height:1.6;color:{_TEXTO_SUAVE} !important;">
+      <tr><td bgcolor="#000000" style="background-color:#000000 !important;background-image:linear-gradient(#000000,#000000);padding:0 18px;"><div style="border-top:2px dashed {_LINHA};"></div></td></tr>
+      <tr><td bgcolor="#000000" style="background-color:#000000 !important;background-image:linear-gradient(#000000,#000000);padding:14px 18px 18px;font-family:{_MONO};font-size:13px;line-height:1.6;color:{_TEXTO_SUAVE} !important;">
         Apresente este pedido (#{pedido['id_pedido']}) na entrada da festa.
       </td></tr>
     </table>
