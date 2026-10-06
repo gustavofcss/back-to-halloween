@@ -35,10 +35,9 @@ BREVO_FROM_NOME = os.environ.get("BREVO_FROM_NOME", "Horror Night Party")
 
 # Uma chave Pix DIFERENTE por valor possível de pedido (preço do lote x
 # quantidade) -- pedido explícito do usuário: 1 ingresso paga numa chave,
-# 2 ingressos pagam noutra, cada uma criada à parte no Mercado Pago. Mesmo
-# padrão de LINKS_PAGAMENTO_CARTAO logo abaixo. Se o preço do lote mudar,
-# precisa cadastrar uma chave nova pro valor novo (e a variável de
-# ambiente correspondente).
+# 2 ingressos pagam noutra, cada uma criada à parte no Mercado Pago. Se o
+# preço do lote mudar, precisa cadastrar uma chave nova pro valor novo (e a
+# variável de ambiente correspondente).
 PIX_KEYS = {
     30.0: os.environ.get("PIX_KEY_30", ""),
     60.0: os.environ.get("PIX_KEY_60", ""),
@@ -48,19 +47,9 @@ PIX_KEYS = {
 # Promoção "casadinha": 2 ingressos no MESMO pedido por um valor fechado, em
 # vez de valor_entrada x 2. Quem liga/desliga é o admin (evento.promo_casadinha,
 # tela Evento). O valor é fixo aqui porque cada valor possível precisa de uma
-# chave Pix (PIX_KEYS) e de um link de cartão (LINKS_PAGAMENTO_CARTAO) criados
-# à mão -- se mudar, cadastre os dois pro valor novo.
+# chave Pix (PIX_KEYS) criada à mão -- se mudar, cadastre a chave pro valor
+# novo.
 PROMO_CASADINHA_VALOR = 50.0
 BASE_URL = os.environ.get("BASE_URL", "http://127.0.0.1:5000")
 
 MERCADOPAGO_ACCESS_TOKEN = os.environ.get("MERCADOPAGO_ACCESS_TOKEN", "")
-
-# Links de pagamento por cartão (Checkout Pro) criados manualmente pelo
-# usuário no site do Mercado Pago -- um por valor possível de pedido (preço
-# do lote x quantidade). Se o preço do lote mudar, esses links precisam ser
-# recriados manualmente e atualizados aqui.
-LINKS_PAGAMENTO_CARTAO = {
-    30.0: os.environ.get("LINK_PAGAMENTO_30", ""),
-    60.0: os.environ.get("LINK_PAGAMENTO_60", ""),
-    50.0: os.environ.get("LINK_PAGAMENTO_50", ""),
-}

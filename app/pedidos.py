@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import re
+import time
 from datetime import datetime, timedelta, timezone
 from decimal import Decimal
 
@@ -79,6 +80,15 @@ def _consultar_pagamento(mp_payment_id: str) -> dict:
     return resultado["response"]
 
 
+# Cache curto da busca: com vários clientes na tela de pagamento (polling de 5s
+# cada um) o servidor fazia 1 chamada à API do Mercado Pago por cliente a cada
+# ciclo, e com poucos workers isso travava o site. A janela é arredondada pro
+# minuto (a busca começa no INÍCIO daquele minuto, então cobre qualquer pedido
+# criado nele) e o resultado vale por poucos segundos.
+_CACHE_BUSCA_PIX: dict = {}
+_CACHE_BUSCA_TTL = 3.0
+
+
 def _buscar_pagamentos_pix_aprovados(desde: datetime) -> list[dict]:
     """Consulta a API de Pagamentos (não a de relatório de liquidação --
     essa só cobre reserva de venda e nunca mostrou um Pix pago direto na
@@ -87,8 +97,14 @@ def _buscar_pagamentos_pix_aprovados(desde: datetime) -> list[dict]:
     desalinhamento de relógio entre nosso servidor e o Mercado Pago -- a
     filtragem de verdade (achar o pedido certo) é por valor + reivindicação
     única em `_tentar_conciliar_pix_direto`, não por essa janela sozinha."""
+    chave = desde.replace(second=0, microsecond=0)
+    agora = time.monotonic()
+    em_cache = _CACHE_BUSCA_PIX.get(chave)
+    if em_cache and agora - em_cache[0] < _CACHE_BUSCA_TTL:
+        return em_cache[1]
+
     params = {
-        "begin_date": (desde - timedelta(seconds=30)).strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
+        "begin_date": (chave - timedelta(seconds=30)).strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
         "end_date": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
         "range": "date_approved",
         "sort": "date_approved",
@@ -101,7 +117,11 @@ def _buscar_pagamentos_pix_aprovados(desde: datetime) -> list[dict]:
         timeout=15,
     )
     resp.raise_for_status()
-    return resp.json().get("results", [])
+    resultados = resp.json().get("results", [])
+    if len(_CACHE_BUSCA_PIX) > 20:
+        _CACHE_BUSCA_PIX.clear()
+    _CACHE_BUSCA_PIX[chave] = (agora, resultados)
+    return resultados
 
 
 def _tentar_conciliar_pix_direto(cur, pedido: dict, usuario: dict) -> str:
@@ -208,10 +228,25 @@ def _ingressos_na_conta(pedidos_ativos: list) -> int:
 def _pedidos_ativos(cur, id_usuario: int, id_evento: int) -> list:
     cur.execute(
         "SELECT * FROM pedido WHERE id_usuario = %s AND id_evento = %s "
-        "AND status_pedido != 'cancelado' ORDER BY slot",
+        "AND status_pedido != 'cancelado' AND NOT cortesia ORDER BY slot",
         (id_usuario, id_evento),
     )
     return cur.fetchall()
+
+
+def _proximo_slot(existentes: list, evento: dict) -> tuple[int, int] | None:
+    """(slot, máximo de ingressos) da PRÓXIMA compra da conta, ou None se ela já
+    bateu o limite. Até 2 pedidos e até `quantidade_max_ingressos` ingressos no
+    total. Usa o 1º slot LIVRE (e não "2 se já tem algum pedido"): se o pedido
+    do slot 1 foi cancelado e o do slot 2 continua, a conta volta a poder
+    comprar no slot 1 em vez de esbarrar no índice único."""
+    restante = evento["quantidade_max_ingressos"] - _ingressos_na_conta(existentes)
+    if len(existentes) >= 2 or restante <= 0:
+        return None
+    ocupados = {p["slot"] for p in existentes}
+    if 1 not in ocupados:
+        return 1, restante
+    return 2, min(1, restante)
 
 
 def _titular_do_pedido(pedido: dict, nome_conta: str, email_conta: str) -> dict:
@@ -228,7 +263,7 @@ def _titular_do_pedido(pedido: dict, nome_conta: str, email_conta: str) -> dict:
 
 def _chave_pix_do_pedido(pedido: dict) -> str | None:
     """Uma chave Pix DIFERENTE por valor (config.PIX_KEYS) -- mesmo padrão
-    de config.LINKS_PAGAMENTO_CARTAO/pagamento_cartao. `round(...)` porque
+    de PIX_KEYS em config.py. `round(...)` porque
     valor vem do Postgres como Decimal, e a chave do dict é float."""
     return config.PIX_KEYS.get(round(float(pedido["valor"]), 2))
 
@@ -322,10 +357,52 @@ def _verificar_com_expiracao(cur, pedido: dict, titular: dict) -> str:
     return status_atual
 
 
+def expirar_pedidos_vencidos(limite: int = 20) -> None:
+    """Expira os pedidos pendentes que passaram da janela de pagamento mesmo que
+    o dono nunca mais tenha aberto a tela -- sem isso, quem criava o pedido e
+    fechava a aba segurava a vaga pra sempre (a expiração só rodava quando o
+    PRÓPRIO dono abria Pagamento/Meus pedidos). Reconsulta o Mercado Pago antes
+    de cancelar (mesma regra de _verificar_com_expiracao: nunca cancela um
+    pedido que acabou de ser pago). Cada pedido numa transação própria, pra uma
+    falha (ou o rollback da trava de pagamento duplicado) não desfazer os
+    outros. Só atua com o Mercado Pago configurado, como o resto da expiração."""
+    if not config.MERCADOPAGO_ACCESS_TOKEN:
+        return
+    try:
+        with db.get_conn() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    SELECT p.*, u.nome AS nome_conta, u.email AS email_conta
+                    FROM pedido p
+                    JOIN login_usuario u ON u.id_usuario = p.id_usuario
+                    WHERE p.status_pedido = 'pendente' AND NOT p.cortesia
+                      AND p.data_pedido < now() - %s
+                    ORDER BY p.data_pedido
+                    LIMIT %s
+                    """,
+                    (_JANELA_PAGAMENTO, limite),
+                )
+                vencidos = cur.fetchall()
+    except Exception:
+        logger.warning("Falha ao listar pedidos vencidos", exc_info=True)
+        return
+
+    for pedido in vencidos:
+        try:
+            with db.get_conn() as conn:
+                with conn.cursor() as cur:
+                    titular = _titular_do_pedido(pedido, pedido["nome_conta"], pedido["email_conta"])
+                    _verificar_com_expiracao(cur, pedido, titular)
+        except Exception:
+            logger.warning("Falha ao expirar o pedido #%s", pedido["id_pedido"], exc_info=True)
+
+
 @pedidos_bp.route("/comprar", methods=["GET", "POST"])
 @login_required
 def comprar():
     usuario = current_user()
+    expirar_pedidos_vencidos()
 
     try:
         return _comprar_impl(usuario)
@@ -350,26 +427,24 @@ def _comprar_impl(usuario: dict):
             if not evento:
                 return render_template("comprar.html", sem_evento=True)
 
-            # Até 2 PEDIDOS por conta+evento (não é "até quantidade_max_
-            # ingressos ao longo do tempo", achado real de antes que deixava
-            # comprar de novo depois de já ter pedido). O 1º (slot 1) é
-            # sempre o titular = a própria conta, com o limite de
-            # quantidade_max_ingressos valendo DENTRO dele (você + 1
-            # acompanhante no mesmo checkout). O 2º (slot 2) é um pedido À
-            # PARTE pra OUTRA pessoa -- pedido explícito do usuário: quem já
-            # comprou pode comprar mais 1 ingresso, mas só se for pra
-            # alguém diferente (nome/e-mail/RG/WhatsApp não podem ser os
-            # mesmos já usados pela conta).
-            existentes = _pedidos_ativos(cur, usuario["id_usuario"], evento["id_evento"])
-            # Além do teto de 2 pedidos, a conta tem um teto de INGRESSOS no
-            # total (quantidade_max_ingressos): quem já tem 2 ingressos num
-            # pedido só (você + acompanhante, casadinha ou não) não compra um
-            # 3º em outro pedido.
-            if len(existentes) >= 2 or _ingressos_na_conta(existentes) >= evento["quantidade_max_ingressos"]:
-                return render_template("comprar.html", limite_atingido=True)
+            # Serializa as compras do evento: sem a trava, duas contas comprando
+            # ao mesmo tempo liam o mesmo "vagas restantes" e as duas passavam
+            # (venda acima da capacidade). Vale até o commit; só no POST.
+            if request.method == "POST":
+                cur.execute("SELECT 1 FROM evento WHERE id_evento = %s FOR UPDATE", (evento["id_evento"],))
 
-            slot = 2 if existentes else 1
-            max_permitido = evento["quantidade_max_ingressos"] if slot == 1 else 1
+            # Até 2 PEDIDOS por conta+evento e até quantidade_max_ingressos
+            # ingressos NO TOTAL. O 1º (slot 1) é o titular = a própria conta, com
+            # você + 1 acompanhante no mesmo checkout. O 2º (slot 2) é um pedido À
+            # PARTE pra OUTRA pessoa -- pedido explícito do usuário: quem já
+            # comprou pode comprar mais 1 ingresso, mas só se for pra alguém
+            # diferente (nome/e-mail/RG/WhatsApp não podem ser os mesmos já
+            # usados pela conta) e sem passar do total (ver _proximo_slot).
+            existentes = _pedidos_ativos(cur, usuario["id_usuario"], evento["id_evento"])
+            proximo = _proximo_slot(existentes, evento)
+            if not proximo:
+                return render_template("comprar.html", limite_atingido=True)
+            slot, max_permitido = proximo
 
             vagas_restantes = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)
             max_permitido = max(0, min(max_permitido, vagas_restantes))
@@ -412,7 +487,12 @@ def _comprar_impl(usuario: dict):
             if not erro and slot == 2:
                 titular_nome = (request.form.get("titular_nome") or "").strip()
                 titular_email = (request.form.get("titular_email") or "").strip().lower()
-                if not titular_nome or not EMAIL_RE.match(titular_email):
+                if (
+                    not titular_nome
+                    or not EMAIL_RE.match(titular_email)
+                    or len(titular_nome) > 120
+                    or len(titular_email) > 160
+                ):
                     erro = "Preencha nome e e-mail válidos de quem vai usar esse ingresso."
                 elif (
                     titular_nome.casefold() == usuario["nome"].strip().casefold()
@@ -449,6 +529,8 @@ def _comprar_impl(usuario: dict):
                 acompanhante_whatsapp = _validar_whatsapp(request.form.get("acompanhante_whatsapp"))
                 if (
                     not acompanhante_nome
+                    or len(acompanhante_nome) > 120
+                    or len(acompanhante_email) > 160
                     or not EMAIL_RE.match(acompanhante_email)
                     or not acompanhante_rg
                     or not acompanhante_whatsapp
@@ -582,10 +664,9 @@ def pagamento_verificar(id_pedido: int):
 
 @pedidos_bp.route("/pagamento/webhook/mercadopago", methods=["POST"])
 def webhook_mercadopago():
-    # Nenhum fluxo do app registra notification_url pra esta rota hoje (o
-    # link de cartão é um link estático criado manualmente no Mercado Pago,
-    # LINKS_PAGAMENTO_CARTAO; o Pix direto na chave não chama a API pra
-    # criar nada, ver pix_copia_cola.py/_tentar_conciliar_pix_direto) -- só
+    # Nenhum fluxo do app registra notification_url pra esta rota hoje (o Pix
+    # direto na chave não chama a API pra criar nada, ver
+    # pix_copia_cola.py/_tentar_conciliar_pix_direto) -- só
     # dispara se a conta tiver um webhook configurado no painel do Mercado
     # Pago pra TODOS os pagamentos (não confirmado se existe). Deixada
     # funcionando como bônus, sem depender dela: o polling já cobre os dois
@@ -639,27 +720,6 @@ def webhook_mercadopago():
     return jsonify({"ok": True}), 200
 
 
-@pedidos_bp.route("/pagamento/<int:id_pedido>/cartao", methods=["POST"])
-@login_required
-def pagamento_cartao(id_pedido: int):
-    usuario = current_user()
-    with db.get_conn() as conn:
-        with conn.cursor() as cur:
-            pedido = _pedido_do_usuario(cur, id_pedido, usuario["id_usuario"])
-            if not pedido:
-                abort(404)
-
-    # Link estático de Checkout Pro (criado manualmente no painel do Mercado
-    # Pago para cada valor possível) em vez de uma preference dinâmica --
-    # pedido explícito do usuário.
-    link = config.LINKS_PAGAMENTO_CARTAO.get(round(float(pedido["valor"]), 2))
-    if not link:
-        logger.warning("Sem link de pagamento por cartão cadastrado para o valor %s", pedido["valor"])
-        return redirect(url_for("pedidos.pagamento", id_pedido=id_pedido))
-
-    return redirect(link)
-
-
 @pedidos_bp.route("/meus-pedidos")
 @login_required
 def meus_pedidos():
@@ -692,24 +752,26 @@ def meus_pedidos():
                 if p["status_pedido"] != "pendente":
                     continue
                 titular = _titular_do_pedido(p, usuario["nome"], usuario["email"])
-                status_atual = _verificar_com_expiracao(cur, p, titular)
+                # Transação própria por pedido: o rollback da trava de pagamento
+                # duplicado (_tentar_conciliar_pix_direto) desfazia também as
+                # confirmações anteriores do loop, e o e-mail já tinha saído.
+                with db.get_conn() as conn_p:
+                    with conn_p.cursor() as cur_p:
+                        status_atual = _verificar_com_expiracao(cur_p, p, titular)
                 if status_atual != p["status_pedido"]:
                     p = dict(p)
                     p["status_pedido"] = status_atual
                     pedidos[i] = p
 
-            # Mesma regra de "até 2 pedidos por conta" do /comprar: só mostra
-            # o link de comprar mais enquanto ainda não bateu esse limite.
-            # Com 1 pedido ativo, o próximo é sempre pra OUTRA pessoa (slot
-            # 2, 1 ingresso só) -- por isso o teto aqui já reflete isso, não
-            # mais quantidade_max_ingressos completo de novo.
+            # Mesma regra do /comprar (_proximo_slot): só mostra o link de comprar
+            # mais enquanto a conta não bateu o limite de pedidos/ingressos.
             pode_comprar_mais = 0
             evento = _evento_ativo(cur)
             if evento:
                 existentes = _pedidos_ativos(cur, usuario["id_usuario"], evento["id_evento"])
-                if len(existentes) < 2 and _ingressos_na_conta(existentes) < evento["quantidade_max_ingressos"]:
+                proximo = _proximo_slot(existentes, evento)
+                if proximo:
                     vagas_restantes = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)
-                    max_seguinte = evento["quantidade_max_ingressos"] if not existentes else 1
-                    pode_comprar_mais = max(0, min(max_seguinte, vagas_restantes))
+                    pode_comprar_mais = max(0, min(proximo[1], vagas_restantes))
 
     return render_template("meus_pedidos.html", pedidos=pedidos, pode_comprar_mais=pode_comprar_mais)
