@@ -40,6 +40,12 @@ oauth.register(
 
 EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
+# Os códigos de 6 dígitos (confirmar e-mail, redefinir senha) têm só 1 milhão de
+# combinações: sem limite de tentativas dava pra forçar o código e tomar a
+# conta de qualquer e-mail. Depois de _MAX_TENTATIVAS_CODIGO erros o código é
+# invalidado e a pessoa precisa pedir outro.
+_MAX_TENTATIVAS_CODIGO = 5
+
 
 def login_required(view_func):
     @wraps(view_func)
@@ -146,7 +152,14 @@ def signup():
     email = (request.form.get("email") or "").strip().lower()
     senha = request.form.get("senha") or ""
 
-    if len(nome.split()) < 2 or not EMAIL_RE.match(email) or len(senha) < 6:
+    if (
+        len(nome.split()) < 2
+        or len(nome) > 120
+        or len(email) > 160
+        or not EMAIL_RE.match(email)
+        or len(senha) < 6
+        or len(senha) > 128
+    ):
         flash("Preencha o nome completo (nome e sobrenome), e-mail válido e senha com pelo menos 6 caracteres.")
         return render_template("signup.html"), 400
 
@@ -213,11 +226,20 @@ def confirmar_email():
             )
 
             if not valido:
+                if usuario and usuario["email_verificacao_codigo_hash"]:
+                    cur.execute(
+                        "UPDATE login_usuario SET "
+                        "email_verificacao_tentativas = email_verificacao_tentativas + 1, "
+                        "email_verificacao_codigo_hash = CASE WHEN email_verificacao_tentativas + 1 >= %s "
+                        "THEN NULL ELSE email_verificacao_codigo_hash END "
+                        "WHERE id_usuario = %s",
+                        (_MAX_TENTATIVAS_CODIGO, usuario["id_usuario"]),
+                    )
                 flash("Código inválido ou expirado.")
                 return render_template("verifique_email.html", email=email), 400
 
             cur.execute(
-                "UPDATE login_usuario SET email_verificado = TRUE, "
+                "UPDATE login_usuario SET email_verificado = TRUE, email_verificacao_tentativas = 0, "
                 "email_verificacao_codigo_hash = NULL, email_verificacao_codigo_expira = NULL, "
                 "data_atualizacao = now() WHERE id_usuario = %s",
                 (usuario["id_usuario"],),
@@ -229,26 +251,33 @@ def confirmar_email():
 @auth_bp.route("/confirmar-email/reenviar", methods=["POST"])
 def confirmar_email_reenviar():
     email = (request.form.get("email") or "").strip().lower()
+    codigo = None
 
     with db.get_conn() as conn:
         with conn.cursor() as cur:
+            # "recente": o código atual saiu há menos de 1 minuto (ele vale 15).
+            # Sem esse intervalo, o endpoint (sem login) servia pra disparar
+            # e-mail em massa pra qualquer endereço.
             cur.execute(
-                "SELECT id_usuario, nome FROM login_usuario WHERE email = %s AND email_verificado = FALSE",
+                "SELECT id_usuario, nome, "
+                "email_verificacao_codigo_expira > now() + interval '14 minutes' AS recente "
+                "FROM login_usuario WHERE email = %s AND email_verificado = FALSE",
                 (email,),
             )
             usuario = cur.fetchone()
 
-            if usuario:
+            if usuario and not usuario["recente"]:
                 codigo = f"{secrets.randbelow(1000000):06d}"
                 codigo_hash = generate_password_hash(codigo)
                 cur.execute(
                     "UPDATE login_usuario SET email_verificacao_codigo_hash = %s, "
+                    "email_verificacao_tentativas = 0, "
                     "email_verificacao_codigo_expira = now() + interval '15 minutes' "
                     "WHERE id_usuario = %s",
                     (codigo_hash, usuario["id_usuario"]),
                 )
 
-    if usuario:
+    if codigo:
         try:
             enviar_codigo_verificacao_email(email, usuario["nome"], codigo)
         except Exception:
@@ -269,7 +298,7 @@ def confirmar_email_mudar():
     email_atual = (request.form.get("email_atual") or "").strip().lower()
     novo_email = (request.form.get("novo_email") or "").strip().lower()
 
-    if not EMAIL_RE.match(novo_email):
+    if not EMAIL_RE.match(novo_email) or len(novo_email) > 160:
         flash("Digite um e-mail válido.")
         return render_template("verifique_email.html", email=email_atual), 400
 
@@ -294,6 +323,7 @@ def confirmar_email_mudar():
             codigo_hash = generate_password_hash(codigo)
             cur.execute(
                 "UPDATE login_usuario SET email = %s, email_verificacao_codigo_hash = %s, "
+                "email_verificacao_tentativas = 0, "
                 "email_verificacao_codigo_expira = now() + interval '15 minutes', "
                 "data_atualizacao = now() WHERE id_usuario = %s",
                 (novo_email, codigo_hash, usuario["id_usuario"]),
@@ -355,26 +385,29 @@ def esqueci_senha():
         return render_template("esqueci_senha.html")
 
     email = (request.form.get("email") or "").strip().lower()
+    codigo = None
 
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id_usuario, nome FROM login_usuario WHERE email = %s",
+                "SELECT id_usuario, nome, "
+                "reset_codigo_expira > now() + interval '14 minutes' AS recente "
+                "FROM login_usuario WHERE email = %s",
                 (email,),
             )
             usuario = cur.fetchone()
 
-            if usuario:
+            if usuario and not usuario["recente"]:
                 codigo = f"{secrets.randbelow(1000000):06d}"
                 codigo_hash = generate_password_hash(codigo)
                 cur.execute(
-                    "UPDATE login_usuario SET reset_codigo_hash = %s, "
+                    "UPDATE login_usuario SET reset_codigo_hash = %s, reset_tentativas = 0, "
                     "reset_codigo_expira = now() + interval '15 minutes' "
                     "WHERE id_usuario = %s",
                     (codigo_hash, usuario["id_usuario"]),
                 )
 
-    if usuario:
+    if codigo:
         try:
             enviar_codigo_recuperacao(email, usuario["nome"], codigo)
         except Exception:
@@ -410,12 +443,21 @@ def redefinir_senha():
                 and check_password_hash(usuario["reset_codigo_hash"], codigo)
             )
 
-            if not valido or len(nova_senha) < 6:
+            if not valido and usuario and usuario["reset_codigo_hash"]:
+                cur.execute(
+                    "UPDATE login_usuario SET reset_tentativas = reset_tentativas + 1, "
+                    "reset_codigo_hash = CASE WHEN reset_tentativas + 1 >= %s "
+                    "THEN NULL ELSE reset_codigo_hash END "
+                    "WHERE id_usuario = %s",
+                    (_MAX_TENTATIVAS_CODIGO, usuario["id_usuario"]),
+                )
+
+            if not valido or len(nova_senha) < 6 or len(nova_senha) > 128:
                 flash("Código inválido ou expirado.")
                 return render_template("redefinir_senha.html"), 400
 
             cur.execute(
-                "UPDATE login_usuario SET senha_hash = %s, reset_codigo_hash = NULL, "
+                "UPDATE login_usuario SET senha_hash = %s, reset_tentativas = 0, reset_codigo_hash = NULL, "
                 "reset_codigo_expira = NULL, data_atualizacao = now() WHERE id_usuario = %s",
                 (generate_password_hash(nova_senha), usuario["id_usuario"]),
             )
@@ -440,7 +482,10 @@ def auth_google_callback():
     userinfo = token["userinfo"]
     google_id = userinfo["sub"]
     email = userinfo["email"].strip().lower()
-    nome = userinfo.get("name") or email
+    nome = (userinfo.get("name") or email)[:120]
+    if not userinfo.get("email_verified") or len(email) > 160:
+        flash("Não foi possível entrar com essa conta Google: o e-mail dela não está verificado.")
+        return redirect(url_for("auth.login"))
 
     with db.get_conn() as conn:
         with conn.cursor() as cur:
@@ -458,8 +503,17 @@ def auth_google_callback():
                 # loga com Google usando o mesmo e-mail, o Google acabou de
                 # provar que ela é dona dele; não faz sentido continuar
                 # exigindo o código por e-mail depois disso.
+                # Se a conta existia SEM e-mail verificado (cadastro por senha que
+                # nunca confirmou o código), quem escolheu aquela senha pode não
+                # ser o dono do e-mail -- alguém podia ter cadastrado o e-mail da
+                # vítima antes dela. Nesse caso a senha antiga é descartada, senão
+                # o login Google da vítima "verificava" a conta e a senha do
+                # atacante passava a funcionar nela.
                 cur.execute(
-                    "UPDATE login_usuario SET google_id = %s, email_verificado = TRUE, "
+                    "UPDATE login_usuario SET google_id = %s, "
+                    "senha_hash = CASE WHEN email_verificado THEN senha_hash ELSE NULL END, "
+                    "email_verificado = TRUE, email_verificacao_codigo_hash = NULL, "
+                    "email_verificacao_codigo_expira = NULL, "
                     "data_atualizacao = now() WHERE id_usuario = %s",
                     (google_id, id_usuario),
                 )

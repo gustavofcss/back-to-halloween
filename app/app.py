@@ -4,9 +4,10 @@ outro projeto/credencial de trabalho.
 """
 from __future__ import annotations
 
+from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
-from flask import Flask, render_template
+from flask import Flask, abort, render_template, request
 
 import config
 import db
@@ -16,11 +17,30 @@ from pedidos import pedidos_bp
 
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
+app.config.update(
+    # Lax: o navegador não manda o cookie de sessão em POST vindo de outro site.
+    SESSION_COOKIE_SAMESITE="Lax",
+    # Secure só quando o site é https de verdade (em dev local é http).
+    SESSION_COOKIE_SECURE=config.BASE_URL.startswith("https://"),
+)
 
 oauth.init_app(app)
 app.register_blueprint(auth_bp)
 app.register_blueprint(pedidos_bp)
 app.register_blueprint(admin_bp)
+
+
+@app.before_request
+def _bloquear_post_de_outro_site():
+    """Defesa contra CSRF: um site de fora não consegue fazer o navegador do
+    admin/cliente mandar um formulário pra cá. Navegador sempre manda `Origin`
+    em POST/PUT/PATCH/DELETE; se ele aponta pra outro endereço (ou é "null"), a
+    requisição é recusada. Sem `Origin` (curl, webhook do Mercado Pago, que é
+    servidor-pra-servidor) passa -- o webhook nunca confia no corpo mesmo."""
+    if request.method in ("POST", "PUT", "PATCH", "DELETE"):
+        origem = request.headers.get("Origin")
+        if origem is not None and urlsplit(origem).netloc != request.host:
+            abort(403)
 
 
 @app.context_processor

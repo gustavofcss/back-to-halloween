@@ -56,6 +56,12 @@ CREATE TABLE IF NOT EXISTS evento (
 -- Liga/desliga pelo admin (tela Evento). Em banco já existente, rode só esta linha.
 ALTER TABLE evento ADD COLUMN IF NOT EXISTS promo_casadinha BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- Limite de tentativas dos códigos de 6 dígitos (confirmar e-mail e "esqueci a
+-- senha"): depois de 5 erros o código é invalidado (auth.py,
+-- _MAX_TENTATIVAS_CODIGO). Em banco já existente, rode só estas duas linhas.
+ALTER TABLE login_usuario ADD COLUMN IF NOT EXISTS email_verificacao_tentativas INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE login_usuario ADD COLUMN IF NOT EXISTS reset_tentativas INTEGER NOT NULL DEFAULT 0;
+
 CREATE TABLE IF NOT EXISTS pedido (
     id_pedido      SERIAL PRIMARY KEY,
     id_usuario     INTEGER NOT NULL REFERENCES login_usuario(id_usuario) ON DELETE CASCADE,
