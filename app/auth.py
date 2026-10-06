@@ -283,7 +283,12 @@ def confirmar_email_reenviar():
         except Exception:
             logger.warning("Falha ao reenviar código de verificação de e-mail", exc_info=True)
 
-    flash("Se esse e-mail existir e ainda não tiver sido confirmado, reenviamos o código.")
+    if usuario and usuario["recente"]:
+        # Intervalo mínimo de 1 min entre códigos: avisar, senão a pessoa clica
+        # em "Reenviar" achando que mandou e nada sai.
+        flash("Aguarde 1 minuto antes de pedir outro código -- o último acabou de ser enviado. Olhe também a caixa de spam.")
+    else:
+        flash("Se esse e-mail existir e ainda não tiver sido confirmado, reenviamos o código. Olhe também a caixa de spam.")
     return render_template("verifique_email.html", email=email)
 
 

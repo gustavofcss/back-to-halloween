@@ -25,9 +25,9 @@ _BREVO_URL = "https://api.brevo.com/v3/smtp/email"
 
 def _enviar(destinatario: str, assunto: str, corpo: str, corpo_html: str | None = None) -> None:
     if not config.BREVO_API_KEY:
-        logger.warning(
-            "BREVO_API_KEY não configurada, e-mail '%s' não enviado -- "
-            "configure BREVO_API_KEY no .env",
+        logger.error(
+            "BREVO_API_KEY não configurada, e-mail '%s' NÃO foi enviado -- "
+            "configure BREVO_API_KEY (Environment do Render / .env)",
             assunto,
         )
         return
@@ -50,6 +50,14 @@ def _enviar(destinatario: str, assunto: str, corpo: str, corpo_html: str | None 
         json=payload,
         timeout=10,
     )
+    if not resposta.ok:
+        # O corpo da resposta do Brevo diz o MOTIVO (remetente não verificado,
+        # chave inválida, limite diário...) -- raise_for_status sozinho só dava
+        # "400 Client Error" e a causa ficava invisível no log.
+        logger.error(
+            "Brevo recusou o e-mail '%s' (HTTP %s): %s",
+            assunto, resposta.status_code, resposta.text[:300],
+        )
     resposta.raise_for_status()
 
 
