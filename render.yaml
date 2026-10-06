@@ -4,7 +4,11 @@ services:
     runtime: python
     plan: free
     buildCommand: "pip install -r requirements.txt"
-    startCommand: "cd app && gunicorn app:app"
+    # 2 workers x 4 threads: a conciliação do Pix chama a API do Mercado Pago
+    # (até 15s) a cada polling, e com 1 worker síncrono alguns clientes na tela
+    # de pagamento travavam o site inteiro. O Start Command do painel do Render
+    # tem que ser igual a este.
+    startCommand: "cd app && gunicorn app:app --workers 2 --threads 4 --timeout 30"
     envVars:
       # O runtime Python padrão do Render virou a 3.14, e o psycopg2-binary
       # 2.9.9 não tem wheel compilado pra ela ainda (ImportError: undefined
@@ -30,13 +34,14 @@ services:
         sync: false
       - key: BREVO_FROM_NOME
         sync: false
-      - key: PIX_KEY
+      # Uma chave Pix por valor de pedido (ver config.PIX_KEYS).
+      - key: PIX_KEY_30
+        sync: false
+      - key: PIX_KEY_60
+        sync: false
+      - key: PIX_KEY_50
         sync: false
       - key: BASE_URL
         sync: false
       - key: MERCADOPAGO_ACCESS_TOKEN
-        sync: false
-      - key: LINK_PAGAMENTO_30
-        sync: false
-      - key: LINK_PAGAMENTO_60
         sync: false
