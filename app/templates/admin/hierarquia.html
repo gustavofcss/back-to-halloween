@@ -100,7 +100,7 @@
           </span>
           <span class="admin-group__action admin-group__action--duplo">
             <button type="submit" formaction="/admin/hierarquia/{{ u.id_usuario }}/promover" class="admin-btn-primary">Promover a admin</button>
-            <button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/{{ u.id_usuario }}/remover', 'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.', true)">Apagar</button>
+            <button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/{{ u.id_usuario }}/remover', 'Apagar esse cliente? Pedidos pendentes ou cancelados dele também são apagados; quem tem pedido confirmado não pode ser apagado. Não tem como desfazer.', true)">Apagar</button>
           </span>
         </div>
       </div>

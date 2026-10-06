@@ -12,6 +12,8 @@ from __future__ import annotations
 
 import io
 import logging
+from datetime import date, time as hora_do_dia
+from decimal import Decimal, InvalidOperation
 from functools import wraps
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
@@ -25,11 +27,32 @@ import config
 import db
 from auth import EMAIL_RE, admin_required, current_user
 from email_utils import enviar_cadastro_aprovado, enviar_confirmacao_pedido, enviar_email_avulso
-from pedidos import _evento_ativo, _validar_rg, _validar_whatsapp
+from pedidos import _evento_ativo, _validar_rg, _validar_whatsapp, expirar_pedidos_vencidos
 
 logger = logging.getLogger(__name__)
 
 _TZ_BRASIL = ZoneInfo("America/Sao_Paulo")
+
+
+def _decimal_ou_none(texto, maximo: str = "100000") -> Decimal | None:
+    """Valor em reais digitado pelo admin (aceita vírgula): maior que zero e com
+    teto, ou None. Antes o texto cru ia direto pro banco -- "abc" virava erro
+    500 e valor negativo passava."""
+    try:
+        valor = Decimal((texto or "").strip().replace(",", "."))
+    except InvalidOperation:
+        return None
+    if not valor.is_finite() or valor <= 0 or valor > Decimal(maximo):
+        return None
+    return valor.quantize(Decimal("0.01"))
+
+
+def _inteiro_ou_none(texto, minimo: int, maximo: int) -> int | None:
+    try:
+        valor = int((texto or "").strip())
+    except ValueError:
+        return None
+    return valor if minimo <= valor <= maximo else None
 
 
 def _data_hora_br(valor) -> str:
@@ -287,6 +310,7 @@ def index():
 @admin_bp.route("/pedidos")
 @admin_required
 def pedidos():
+    expirar_pedidos_vencidos()
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -330,7 +354,7 @@ def pedidos_cortesia():
     rg = _validar_rg(request.form.get("rg"))
     whatsapp = _validar_whatsapp(request.form.get("whatsapp"))
 
-    if not nome or not EMAIL_RE.match(email) or not rg or not whatsapp:
+    if not nome or len(nome) > 120 or not EMAIL_RE.match(email) or len(email) > 160 or not rg or not whatsapp:
         flash("Preencha nome, e-mail válido, RG e WhatsApp (só números) do convidado.")
         return redirect(url_for("admin.pedidos"))
 
@@ -471,6 +495,7 @@ def pedidos_exportar():
 @admin_bp.route("/pedidos/lista")
 @admin_required
 def pedidos_lista():
+    expirar_pedidos_vencidos()
     # Polling leve (10s, ver admin/_layout.html) pra detectar pedido novo
     # sem recarregar a página inteira -- devolve só os campos que a linha
     # da tabela precisa pra se desenhar, no mesmo formato que data_hora_br
@@ -797,7 +822,7 @@ def hierarquia_promover(id_usuario: int):
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "UPDATE hierarquia SET hierarquia = 'adm' WHERE id_usuario = %s AND hierarquia != 'adm'",
+                "UPDATE hierarquia SET hierarquia = 'adm' WHERE id_usuario = %s AND hierarquia = 'cliente'",
                 (id_usuario,),
             )
             mudou = cur.rowcount > 0
@@ -805,7 +830,7 @@ def hierarquia_promover(id_usuario: int):
 
     if mudou:
         return _json_ok(aplicados=[{"id": id_usuario, "hierarquia": "adm"}], totais=totais)
-    return _json_ok(ignorados=[{"id": id_usuario, "motivo": "Já era admin ou não existe."}], totais=totais)
+    return _json_ok(ignorados=[{"id": id_usuario, "motivo": "Só dá pra promover cliente (já é admin ou não existe)."}], totais=totais)
 
 
 @admin_bp.route("/hierarquia/<int:id_usuario>/rebaixar", methods=["POST"])
@@ -845,7 +870,9 @@ def hierarquia_remover(id_usuario: int):
         with conn.cursor() as cur:
             cur.execute(
                 "DELETE FROM login_usuario WHERE id_usuario = %s AND id_usuario IN "
-                "(SELECT id_usuario FROM hierarquia WHERE hierarquia = 'cliente')",
+                "(SELECT id_usuario FROM hierarquia WHERE hierarquia = 'cliente') "
+                "AND NOT EXISTS (SELECT 1 FROM pedido p WHERE p.id_usuario = login_usuario.id_usuario "
+                "AND p.status_pedido = 'confirmado')",
                 (id_usuario,),
             )
             apagou = cur.rowcount > 0
@@ -853,7 +880,7 @@ def hierarquia_remover(id_usuario: int):
 
     if apagou:
         return _json_ok(aplicados=[{"id": id_usuario}], totais=totais)
-    return _json_ok(ignorados=[{"id": id_usuario, "motivo": "Só é possível apagar clientes."}], totais=totais)
+    return _json_ok(ignorados=[{"id": id_usuario, "motivo": "Só é possível apagar clientes sem pedido confirmado."}], totais=totais)
 
 
 @admin_bp.route("/hierarquia/promover-lote", methods=["POST"])
@@ -873,7 +900,7 @@ def hierarquia_promover_lote():
                 # promover a mesma pessoa entre a checagem e a mutação.
                 cur.execute(
                     "UPDATE hierarquia SET hierarquia = 'adm' "
-                    "WHERE id_usuario = ANY(%s) AND hierarquia != 'adm' "
+                    "WHERE id_usuario = ANY(%s) AND hierarquia = 'cliente' "
                     "RETURNING id_usuario",
                     (ids,),
                 )
@@ -882,7 +909,7 @@ def hierarquia_promover_lote():
 
     elegiveis_set = set(elegiveis_ids)
     aplicados = [{"id": i, "hierarquia": "adm"} for i in ids if i in elegiveis_set]
-    ignorados = [{"id": i, "motivo": "Já era admin ou não existe."} for i in ids if i not in elegiveis_set]
+    ignorados = [{"id": i, "motivo": "Só dá pra promover cliente (já é admin ou não existe)."} for i in ids if i not in elegiveis_set]
     return _json_ok(aplicados=aplicados, ignorados=ignorados, totais=totais)
 
 
@@ -913,6 +940,8 @@ def hierarquia_remover_lote():
                 cur.execute(
                     "DELETE FROM login_usuario WHERE id_usuario = ANY(%s) AND id_usuario IN "
                     "(SELECT id_usuario FROM hierarquia WHERE hierarquia = 'cliente') "
+                    "AND NOT EXISTS (SELECT 1 FROM pedido p WHERE p.id_usuario = login_usuario.id_usuario "
+                    "AND p.status_pedido = 'confirmado') "
                     "RETURNING id_usuario",
                     (candidatos,),
                 )
@@ -921,7 +950,7 @@ def hierarquia_remover_lote():
 
     elegiveis_set = set(elegiveis_ids)
     aplicados = [{"id": i} for i in candidatos if i in elegiveis_set]
-    ignorados += [{"id": i, "motivo": "Só é possível apagar clientes."} for i in candidatos if i not in elegiveis_set]
+    ignorados += [{"id": i, "motivo": "Só é possível apagar clientes sem pedido confirmado."} for i in candidatos if i not in elegiveis_set]
     return _json_ok(aplicados=aplicados, ignorados=ignorados, totais=totais)
 
 
@@ -1100,8 +1129,11 @@ def cadastros_recusar_lote():
 def material():
     if request.method == "POST":
         nome_material = (request.form.get("nome_material") or "").strip()
-        valor = request.form.get("valor") or "0"
+        valor = _decimal_ou_none(request.form.get("valor"))
         descricao = (request.form.get("descricao") or "").strip()
+        if not nome_material or len(nome_material) > 160 or valor is None:
+            flash("Informe o nome do material (até 160 caracteres) e um valor maior que zero.")
+            return redirect(url_for("admin.material"))
         with db.get_conn() as conn:
             with conn.cursor() as cur:
                 cur.execute(
@@ -1202,10 +1234,17 @@ def eventos():
             ultimo = cur.fetchone()
 
     if request.method == "POST":
-        valor_entrada = request.form.get("valor_entrada") or "0"
-        quantidade_max_ingressos = request.form.get("quantidade_max_ingressos") or (
-            str(ultimo["quantidade_max_ingressos"]) if ultimo else "2"
+        valor_entrada = _decimal_ou_none(request.form.get("valor_entrada"))
+        # O formulário de compra só tem campos pra 1 ingresso + 1 acompanhante.
+        quantidade_max_ingressos = _inteiro_ou_none(
+            request.form.get("quantidade_max_ingressos")
+            or (str(ultimo["quantidade_max_ingressos"]) if ultimo else "2"),
+            1,
+            2,
         )
+        if valor_entrada is None or quantidade_max_ingressos is None:
+            flash("Informe um valor de entrada maior que zero e 1 ou 2 ingressos por pessoa.")
+            return redirect(url_for("admin.eventos"))
         nome_evento = ultimo["nome_evento"] if ultimo else "BACK TO HALLOWEEN"
         data_evento = ultimo["data_evento"] if ultimo else None
         hora_evento = ultimo["hora_evento"] if ultimo else None
@@ -1281,7 +1320,10 @@ def eventos():
 @admin_bp.route("/eventos/capacidade", methods=["POST"])
 @admin_required
 def eventos_capacidade():
-    capacidade_maxima = request.form.get("capacidade_maxima") or "60"
+    capacidade_maxima = _inteiro_ou_none(request.form.get("capacidade_maxima") or "60", 1, 5000)
+    if capacidade_maxima is None:
+        flash("Informe uma capacidade entre 1 e 5000.")
+        return redirect(url_for("admin.eventos"))
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1")
@@ -1302,11 +1344,17 @@ def eventos_nome_data():
     # FESTA, não do lote em si, e a tela pública (convite.html) só lê o
     # evento mais recente mesmo.
     nome_evento = (request.form.get("nome_evento") or "").strip()
-    data_evento = request.form.get("data_evento") or None
-    hora_evento = request.form.get("hora_evento") or None
+    data_texto = request.form.get("data_evento") or None
+    hora_texto = request.form.get("hora_evento") or None
 
-    if not nome_evento:
-        flash("O nome do evento não pode ficar em branco.")
+    if not nome_evento or len(nome_evento) > 160:
+        flash("Informe o nome do evento (até 160 caracteres).")
+        return redirect(url_for("admin.eventos"))
+    try:
+        data_evento = date.fromisoformat(data_texto) if data_texto else None
+        hora_evento = hora_do_dia.fromisoformat(hora_texto) if hora_texto else None
+    except ValueError:
+        flash("Data ou hora inválida.")
         return redirect(url_for("admin.eventos"))
 
     with db.get_conn() as conn:
@@ -1351,6 +1399,9 @@ def eventos_endereco():
     # (convite.html) só lê o evento mais recente mesmo.
     endereco = (request.form.get("endereco") or "").strip()
     bairro = (request.form.get("bairro") or "").strip()
+    if len(endereco) > 200 or len(bairro) > 100:
+        flash("Endereço (até 200 caracteres) ou bairro (até 100) grande demais.")
+        return redirect(url_for("admin.eventos"))
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1")

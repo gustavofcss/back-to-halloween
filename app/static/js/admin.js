@@ -535,7 +535,7 @@ if (paginaAdmin === 'hierarquia') {
         '<span class="admin-group__info"><span class="admin-group__name">' + esc(item.nome) + '</span><span class="admin-group__email">' + esc(item.email) + '</span></span>' +
         '<span class="admin-group__action admin-group__action--duplo">' +
         '<button type="submit" formaction="/admin/hierarquia/' + item.id + '/promover" class="admin-btn-primary">Promover a admin</button>' +
-        '<button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById(\'clientes-lote-form\'), \'/admin/hierarquia/' + item.id + '/remover\', \'Apagar esse cliente? Isso também apaga os pedidos dele. Não tem como desfazer.\', true)">Apagar</button>' +
+        '<button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById(\'clientes-lote-form\'), \'/admin/hierarquia/' + item.id + '/remover\', \'Apagar esse cliente? Pedidos pendentes ou cancelados dele também são apagados; quem tem pedido confirmado não pode ser apagado. Não tem como desfazer.\', true)">Apagar</button>' +
         '</span>' +
         '</div>';
       lista.insertBefore(div, lista.firstChild);
