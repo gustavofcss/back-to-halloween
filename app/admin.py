@@ -1192,6 +1192,7 @@ def material_lista():
                     "id": m["id"],
                     "nome": m["nome_material"],
                     "descricao": m["descricao"] or "—",
+                    "descricao_edicao": m["descricao"] or "",
                     "valor": f"{m['valor']:.2f}",
                     "data": m["data_compra"].strftime("%d/%m/%Y"),
                     "cadastrado_por": m["cadastrado_por"] or "--",
@@ -1201,6 +1202,29 @@ def material_lista():
             "totais": totais,
         }
     )
+
+
+@admin_bp.route("/material/<int:id_material>/editar", methods=["POST"])
+@admin_required
+def material_editar(id_material: int):
+    # Mesmas regras do cadastro (material): nome obrigatório, valor maior que zero.
+    nome_material = (request.form.get("nome_material") or "").strip()
+    valor = _decimal_ou_none(request.form.get("valor"))
+    descricao = (request.form.get("descricao") or "").strip()
+    if not nome_material or len(nome_material) > 160 or valor is None:
+        flash("Informe o nome do material (até 160 caracteres) e um valor maior que zero.")
+        return redirect(url_for("admin.material"))
+
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                "UPDATE despesa_material SET nome_material = %s, valor = %s, descricao = %s WHERE id = %s",
+                (nome_material, valor, descricao, id_material),
+            )
+            atualizou = cur.rowcount > 0
+
+    flash("Material atualizado." if atualizou else "Material não encontrado.")
+    return redirect(url_for("admin.material"))
 
 
 @admin_bp.route("/material/<int:id_material>/apagar", methods=["POST"])

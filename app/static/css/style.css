@@ -787,3 +787,18 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .a-quick-link:hover{box-shadow:0 0 0 1px rgba(255,45,69,.5)!important}
 .a-quick-link__icon{font-family:var(--bth-vhs)!important;font-size:34px!important;line-height:1;letter-spacing:-2px;color:var(--bth-red-hi)!important}
 .a-quick-link__label{font-family:var(--bth-title)!important;font-weight:400!important;font-size:19px!important;text-transform:uppercase;color:#fff!important}
+
+/* ---- editar material: o card troca a visão pelo formulário ---- */
+.a-material__actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.a-material__actions form{margin:0!important}
+.a-material__edit{display:none}
+.a-material-grid .is-editing .a-material__view{display:none!important}
+.a-material-grid .is-editing .a-material__edit{display:flex;flex-direction:column;gap:10px}
+/* o card de material é de papel claro: rótulo escuro pra continuar legível */
+.a-material-grid .field label{color:#3a2a30!important}
+
+/* ---- botão Atualizar ---- */
+.a-atualizar__icone{display:inline-block}
+.is-atualizando .a-atualizar__icone{animation:girarAtualizar .8s linear infinite}
+@keyframes girarAtualizar{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.is-atualizando .a-atualizar__icone{animation:none}}

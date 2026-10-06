@@ -52,3 +52,13 @@ document.querySelectorAll('[data-fechar-form]').forEach(function (btn) {
     if (alvo) { alvo.classList.add('is-hidden'); }
   });
 });
+
+// Botão "Atualizar" das páginas (admin e Meus pedidos): recarrega a página no
+// lugar do F5. Trava o botão e gira o ícone pra mostrar que está trabalhando.
+document.querySelectorAll('[data-atualizar-pagina]').forEach(function (btn) {
+  btn.addEventListener('click', function () {
+    btn.disabled = true;
+    btn.classList.add('is-atualizando');
+    window.location.reload();
+  });
+});

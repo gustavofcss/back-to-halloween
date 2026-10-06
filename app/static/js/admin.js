@@ -554,6 +554,20 @@ if (paginaAdmin === 'hierarquia') {
 // admin/material.html -- reação a admin:sucesso (apagar tira o card) e
 // polling de material novo.
 if (paginaAdmin === 'material') {
+  // Editar um material: o card troca a visão pelo formulário (CSS .is-editing).
+  document.addEventListener('click', function (evt) {
+    var botao = evt.target.closest('[data-material-editar], [data-material-cancelar]');
+    if (!botao) { return; }
+    var card = botao.closest('[data-material-id]');
+    if (!card) { return; }
+    var editando = botao.hasAttribute('data-material-editar');
+    card.classList.toggle('is-editing', editando);
+    if (editando) {
+      var primeiro = card.querySelector('.a-material__edit input');
+      if (primeiro) { primeiro.focus(); }
+    }
+  });
+
   document.addEventListener('admin:sucesso', function (evt) {
     evt.detail.dados.aplicados.forEach(function (item) {
       var card = document.querySelector('[data-material-id="' + item.id + '"]');
@@ -575,13 +589,27 @@ if (paginaAdmin === 'material') {
       var div = document.createElement('div');
       div.className = 'a-card a-item-novo';
       div.setAttribute('data-material-id', item.id);
+      var nome = esc(item.nome);
+      var id = parseInt(item.id, 10);
       div.innerHTML =
-        '<span class="a-material__name">' + esc(item.nome) + '</span>' +
-        '<span class="a-material__desc">' + esc(item.descricao) + '</span>' +
-        '<span class="a-material__value">R$ ' + esc(item.valor) + '</span>' +
-        '<span class="a-material__meta">' + esc(item.data) + ' &middot; ' + esc(item.cadastrado_por) + '</span>' +
-        '<form method="post" action="/admin/material/' + item.id + '/apagar" onsubmit="return confirmarAcao(this, \'Apagar esse material?\', true)">' +
+        '<span class="a-material__name a-material__view">' + nome + '</span>' +
+        '<span class="a-material__desc a-material__view">' + esc(item.descricao) + '</span>' +
+        '<span class="a-material__value a-material__view">R$ ' + esc(item.valor) + '</span>' +
+        '<span class="a-material__meta a-material__view">' + esc(item.data) + ' &middot; ' + esc(item.cadastrado_por) + '</span>' +
+        '<div class="a-material__actions a-material__view">' +
+        '<button type="button" class="admin-btn-outline" data-material-editar>Editar</button>' +
+        '<form method="post" action="/admin/material/' + id + '/apagar" onsubmit="return confirmarAcao(this, \'Apagar esse material?\', true)">' +
         '<button type="submit" class="admin-btn-outline is-danger">Apagar</button>' +
+        '</form></div>' +
+        '<form method="post" action="/admin/material/' + id + '/editar" class="a-material__edit">' +
+        '<div class="field"><label for="mat-nome-' + id + '">Nome do material</label>' +
+        '<input id="mat-nome-' + id + '" name="nome_material" class="input" value="' + nome + '" maxlength="160" required></div>' +
+        '<div class="field"><label for="mat-valor-' + id + '">Valor (R$)</label>' +
+        '<input id="mat-valor-' + id + '" name="valor" class="input" type="number" step="0.01" min="0.01" value="' + esc(item.valor) + '" required></div>' +
+        '<div class="field"><label for="mat-desc-' + id + '">Descrição (opcional)</label>' +
+        '<input id="mat-desc-' + id + '" name="descricao" class="input" value="' + esc(item.descricao_edicao) + '"></div>' +
+        '<div class="row"><button type="submit" class="admin-btn-primary">Salvar</button>' +
+        '<button type="button" class="admin-btn-outline" data-material-cancelar>Cancelar</button></div>' +
         '</form>';
       grid.insertBefore(div, grid.firstChild);
     }

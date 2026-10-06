@@ -48,12 +48,33 @@
 <div class="a-material-grid">
   {% for m in materiais %}
   <div class="a-card" data-material-id="{{ m.id }}">
-    <span class="a-material__name">{{ m.nome_material }}</span>
-    <span class="a-material__desc">{{ m.descricao or '—' }}</span>
-    <span class="a-material__value">R$ {{ m.valor }}</span>
-    <span class="a-material__meta">{{ m.data_compra.strftime('%d/%m/%Y') }} &middot; {{ m.cadastrado_por or '--' }}</span>
-    <form method="post" action="/admin/material/{{ m.id }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse material?', true)">
-      <button type="submit" class="admin-btn-outline is-danger">Apagar</button>
+    <span class="a-material__name a-material__view">{{ m.nome_material }}</span>
+    <span class="a-material__desc a-material__view">{{ m.descricao or '—' }}</span>
+    <span class="a-material__value a-material__view">R$ {{ m.valor }}</span>
+    <span class="a-material__meta a-material__view">{{ m.data_compra.strftime('%d/%m/%Y') }} &middot; {{ m.cadastrado_por or '--' }}</span>
+    <div class="a-material__actions a-material__view">
+      <button type="button" class="admin-btn-outline" data-material-editar>Editar</button>
+      <form method="post" action="/admin/material/{{ m.id }}/apagar" onsubmit="return confirmarAcao(this, 'Apagar esse material?', true)">
+        <button type="submit" class="admin-btn-outline is-danger">Apagar</button>
+      </form>
+    </div>
+    <form method="post" action="/admin/material/{{ m.id }}/editar" class="a-material__edit">
+      <div class="field">
+        <label for="mat-nome-{{ m.id }}">Nome do material</label>
+        <input id="mat-nome-{{ m.id }}" name="nome_material" class="input" value="{{ m.nome_material }}" maxlength="160" required>
+      </div>
+      <div class="field">
+        <label for="mat-valor-{{ m.id }}">Valor (R$)</label>
+        <input id="mat-valor-{{ m.id }}" name="valor" class="input" type="number" step="0.01" min="0.01" value="{{ m.valor }}" required>
+      </div>
+      <div class="field">
+        <label for="mat-desc-{{ m.id }}">Descrição (opcional)</label>
+        <input id="mat-desc-{{ m.id }}" name="descricao" class="input" value="{{ m.descricao or '' }}">
+      </div>
+      <div class="row">
+        <button type="submit" class="admin-btn-primary">Salvar</button>
+        <button type="button" class="admin-btn-outline" data-material-cancelar>Cancelar</button>
+      </div>
     </form>
   </div>
   {% endfor %}
