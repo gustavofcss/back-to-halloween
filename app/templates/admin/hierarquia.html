@@ -86,7 +86,7 @@
     <div class="admin-bulk-bar" id="clientes-bulk-bar">
       <span class="admin-bulk-bar__count" id="clientes-bulk-count">0 selecionado(s)</span>
       <button type="submit" formaction="/admin/hierarquia/promover-lote" class="admin-btn-primary">Promover selecionados</button>
-      <button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/remover-lote', 'Apagar os clientes selecionados? Isso também apaga os pedidos deles. Não tem como desfazer.', true)">Apagar selecionados</button>
+      <button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/remover-lote', 'Apagar os clientes selecionados? Pedidos pendentes ou cancelados deles também são apagados; quem tem pedido confirmado não é apagado. Não tem como desfazer.', true)">Apagar selecionados</button>
     </div>
     <div class="admin-group__list">
       {% for u in clientes %}
