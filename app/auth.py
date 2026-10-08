@@ -24,7 +24,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import config
 import db
-from email_utils import enviar_codigo_recuperacao, enviar_codigo_verificacao_email
+from email_utils import avisar_admins_cadastro_pendente, enviar_codigo_recuperacao, enviar_codigo_verificacao_email
 
 auth_bp = Blueprint("auth", __name__)
 logger = logging.getLogger(__name__)
@@ -210,7 +210,7 @@ def confirmar_email():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id_usuario, email_verificado, email_verificacao_codigo_hash, "
+                "SELECT id_usuario, nome, email_verificado, email_verificacao_codigo_hash, "
                 "email_verificacao_codigo_expira FROM login_usuario WHERE email = %s",
                 (email,),
             )
@@ -245,6 +245,8 @@ def confirmar_email():
                 (usuario["id_usuario"],),
             )
 
+    # Só chega aqui com o código certo: a conta acabou de entrar na fila.
+    avisar_admins_cadastro_pendente(usuario["nome"], email)
     return render_template("cadastro_pendente.html")
 
 
@@ -495,14 +497,19 @@ def auth_google_callback():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id_usuario, email_confirmado FROM login_usuario WHERE google_id = %s OR email = %s",
+                "SELECT id_usuario, email_confirmado, email_verificado FROM login_usuario "
+                "WHERE google_id = %s OR email = %s",
                 (google_id, email),
             )
             usuario = cur.fetchone()
 
+            entrou_na_fila = False
             if usuario:
                 id_usuario = usuario["id_usuario"]
                 email_confirmado = usuario["email_confirmado"]
+                # Conta que ainda não estava verificada e que o admin ainda não
+                # aprovou: o login Google a coloca na fila agora.
+                entrou_na_fila = not usuario["email_verificado"] and not email_confirmado
                 # email_verificado = TRUE aqui também -- se a conta já existia
                 # (cadastro por e-mail/senha ainda não confirmado) e a pessoa
                 # loga com Google usando o mesmo e-mail, o Google acabou de
@@ -544,6 +551,10 @@ def auth_google_callback():
                     (id_usuario,),
                 )
                 email_confirmado = False
+                entrou_na_fila = True
+
+    if entrou_na_fila:
+        avisar_admins_cadastro_pendente(nome, email)
 
     if not email_confirmado:
         session.pop("login_next", None)

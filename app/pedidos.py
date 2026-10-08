@@ -15,7 +15,7 @@ from flask import Blueprint, abort, jsonify, redirect, render_template, request,
 import config
 import db
 from auth import EMAIL_RE, current_user, login_required
-from email_utils import enviar_confirmacao_pedido
+from email_utils import avisar_admins_pedido_novo, enviar_confirmacao_pedido
 from pix_copia_cola import gerar_copia_cola, gerar_qr_base64
 
 pedidos_bp = Blueprint("pedidos", __name__)
@@ -567,6 +567,11 @@ def _comprar_impl(usuario: dict):
             )
             id_pedido = cur.fetchone()["id_pedido"]
 
+    # Depois do commit (fora do `with`): o pedido já existe de verdade.
+    avisar_admins_pedido_novo(
+        id_pedido, quantidade, valor, usuario["nome"], usuario["email"],
+        titular_nome=titular_nome, acompanhante_nome=acompanhante_nome,
+    )
     return redirect(url_for("pedidos.pagamento", id_pedido=id_pedido))
 
 

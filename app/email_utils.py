@@ -13,10 +13,12 @@ from __future__ import annotations
 
 import html
 import logging
+import threading
 
 import requests
 
 import config
+import db
 
 logger = logging.getLogger(__name__)
 
@@ -275,3 +277,88 @@ def enviar_codigo_recuperacao(destinatario: str, nome: str, codigo: str) -> None
         + _p("Se você não pediu isso, pode ignorar este e-mail — sua senha continua a mesma.")
     )
     _enviar(destinatario, "Código para redefinir sua senha — Back to Halloween", corpo, corpo_html)
+
+
+# ---- Avisos pros administradores ----
+def _destinatarios_admin() -> list[dict]:
+    """Admins e superadmins já aprovados, um por endereço de e-mail."""
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT DISTINCT ON (u.email) u.email, u.nome
+                FROM login_usuario u
+                JOIN hierarquia h ON h.id_usuario = u.id_usuario
+                WHERE h.hierarquia IN ('adm', 'superadm') AND u.email_confirmado = TRUE
+                ORDER BY u.email
+                """
+            )
+            return cur.fetchall()
+
+
+def _avisar_admins(assunto: str, corpo: str, corpo_html: str) -> None:
+    try:
+        admins = _destinatarios_admin()
+    except Exception:
+        logger.warning("Falha ao listar os admins que recebem o aviso", exc_info=True)
+        return
+    for admin in admins:
+        try:
+            _enviar(admin["email"], assunto, corpo, corpo_html)
+        except Exception:
+            logger.warning("Falha ao avisar o admin %s", admin["email"], exc_info=True)
+
+
+def _avisar_admins_em_segundo_plano(assunto: str, corpo: str, corpo_html: str) -> None:
+    # Thread à parte: o Brevo leva até 10s por e-mail, e quem está cadastrando
+    # ou comprando não pode esperar isso (nem ver um erro se o aviso falhar).
+    threading.Thread(target=_avisar_admins, args=(assunto, corpo, corpo_html), daemon=True).start()
+
+
+def avisar_admins_cadastro_pendente(nome: str, email: str) -> None:
+    """Alguém confirmou o e-mail e entrou na fila de aprovação (Cadastros)."""
+    url = f"{config.BASE_URL}/admin/cadastros"
+    corpo = (
+        "\u25b6 Novo cadastro aguardando aprovação\n\n"
+        f"{nome} ({email}) confirmou o e-mail e espera a sua aprovação.\n\n"
+        f"Ver cadastros: {url}"
+    )
+    corpo_html = _email_shell(
+        _p("Novo cadastro aguardando aprovação.")
+        + _p(f"<strong>{_esc(nome)}</strong> ({_esc(email)}) confirmou o e-mail e espera a sua aprovação.")
+        + _botao("Ver cadastros", url)
+    )
+    _avisar_admins_em_segundo_plano("Novo cadastro aguardando aprovação — Back to Halloween", corpo, corpo_html)
+
+
+def avisar_admins_pedido_novo(
+    id_pedido: int,
+    quantidade: int,
+    valor,
+    comprador_nome: str,
+    comprador_email: str,
+    titular_nome: str | None = None,
+    acompanhante_nome: str | None = None,
+) -> None:
+    """Um pedido acabou de ser criado (ainda aguardando o Pix). `titular_nome`
+    só vem preenchido no pedido de outra pessoa; `acompanhante_nome` no pedido
+    de 2 ingressos."""
+    url = f"{config.BASE_URL}/admin/pedidos"
+    linhas = [
+        f"Pedido #{id_pedido} · {quantidade} ingresso(s) · R$ {valor}",
+        f"Comprador: {comprador_nome} ({comprador_email})",
+    ]
+    if titular_nome:
+        linhas.append(f"Ingresso para: {titular_nome}")
+    if acompanhante_nome:
+        linhas.append(f"Acompanhante: {acompanhante_nome}")
+
+    corpo = "\u25b6 Novo pedido\n\n" + "\n".join(linhas) + f"\n\nVer pedidos: {url}"
+    corpo_html = _email_shell(
+        _p("Novo pedido feito.")
+        + "".join(_p(_esc(linha)) for linha in linhas)
+        + _botao("Ver pedidos", url)
+    )
+    _avisar_admins_em_segundo_plano(
+        f"Novo pedido #{id_pedido} — {quantidade} ingresso(s) · R$ {valor}", corpo, corpo_html
+    )
