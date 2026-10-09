@@ -1,6 +1,4 @@
 (function(){
-  if (document.querySelector('.bth-room')) return; // convite.js cuida dessa página
-
   var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   function initStatic(){
@@ -41,9 +39,10 @@
   }
 
   function initEyes(){
-    document.querySelectorAll('video.eyes').forEach(function(v){
+    document.querySelectorAll('video.eyes, .bth-eyes video').forEach(function(v){
       v.muted = true; v.defaultMuted = true; v.playbackRate = 0.45;   // olhos piscando devagar
       var p = v.play(); if (p) p.catch(function(){});
+      v.addEventListener('loadedmetadata', function(){ v.playbackRate = 0.45; });
     });
   }
 

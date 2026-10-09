@@ -6,12 +6,12 @@ from __future__ import annotations
 
 from datetime import timedelta
 from urllib.parse import urlsplit
-from zoneinfo import ZoneInfo
 
 from flask import Flask, abort, render_template, request
 
 import config
 import db
+from formatacao import data_hora_br
 from admin import admin_bp
 from auth import auth_bp, current_user, oauth
 from pedidos import pedidos_bp
@@ -70,20 +70,9 @@ def inject_usuario():
 
 _DIAS_SEMANA = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]
 _MESES = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
-_TZ_BRASIL = ZoneInfo("America/Sao_Paulo")
 
 
-@app.template_filter("data_hora_br")
-def data_hora_br(valor):
-    # Sem isso, `{{ p.data_pedido }}` no template imprime o repr cru do
-    # datetime do Postgres (com microssegundos e timezone tipo
-    # "2026-09-21 23:26:32.186000+00:00") -- formato estranho pro usuário
-    # (achado real, na aba de pedidos). Formata como dd/mm/aaaa hh:mm.
-    # O valor vem em UTC (TIMESTAMPTZ) -- sem converter, mostra 3h a mais do
-    # que o horário real de Brasília (achado real, na tela de cadastros).
-    if not valor:
-        return "--"
-    return valor.astimezone(_TZ_BRASIL).strftime("%d/%m/%Y %H:%M")
+app.add_template_filter(data_hora_br, "data_hora_br")
 
 
 @app.route("/")

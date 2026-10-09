@@ -89,7 +89,6 @@ CREATE TABLE IF NOT EXISTS pedido (
     -- "Pedido cancelado").
     expirado       BOOLEAN NOT NULL DEFAULT FALSE,
     mp_payment_id     VARCHAR(40),  -- id do pagamento Pix criado no Mercado Pago
-    mp_preference_id  VARCHAR(40),  -- id da preference do Checkout Pro (cartão)
     -- 2º ingresso (quantidade = 2) pode ser pra um acompanhante -- não
     -- precisa ser a mesma pessoa que está logada/comprando. NULL quando
     -- quantidade = 1 (só o titular). Só existe no slot 1 -- o slot 2 é

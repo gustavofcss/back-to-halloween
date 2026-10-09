@@ -16,7 +16,6 @@ from datetime import date, time as hora_do_dia
 from decimal import Decimal, InvalidOperation
 from functools import wraps
 from urllib.parse import urlsplit
-from zoneinfo import ZoneInfo
 
 import psycopg2
 from openpyxl import Workbook
@@ -26,12 +25,11 @@ from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_t
 import config
 import db
 from auth import EMAIL_RE, admin_required, current_user
+from formatacao import data_hora_br
 from email_utils import enviar_cadastro_aprovado, enviar_confirmacao_pedido, enviar_email_em_massa_em_segundo_plano
 from pedidos import _evento_ativo, _validar_rg, _validar_whatsapp, expirar_pedidos_vencidos
 
 logger = logging.getLogger(__name__)
-
-_TZ_BRASIL = ZoneInfo("America/Sao_Paulo")
 
 
 def _decimal_ou_none(texto, maximo: str = "100000") -> Decimal | None:
@@ -54,14 +52,6 @@ def _inteiro_ou_none(texto, minimo: int, maximo: int) -> int | None:
         return None
     return valor if minimo <= valor <= maximo else None
 
-
-def _data_hora_br(valor) -> str:
-    # Mesma lógica do filtro Jinja `data_hora_br` (app.py) -- duplicada aqui
-    # de propósito, pequena o bastante pra não valer o risco de import
-    # circular (app.py já importa admin_bp DESTE módulo).
-    if not valor:
-        return "--"
-    return valor.astimezone(_TZ_BRASIL).strftime("%d/%m/%Y %H:%M")
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/admin")
 
@@ -517,7 +507,7 @@ def pedidos_lista():
                     "quantidade": p["quantidade"],
                     "valor": f"{p['valor']:.2f}",
                     "status": p["status_pedido"],
-                    "data": _data_hora_br(p["data_pedido"]),
+                    "data": data_hora_br(p["data_pedido"]),
                     "acompanhante_nome": p["acompanhante_nome"],
                     "slot": p["slot"],
                     "comprador_nome": p["comprador_nome"],
@@ -977,7 +967,7 @@ def cadastros_lista():
                     "id": p["id_usuario"],
                     "nome": p["nome"],
                     "email": p["email"],
-                    "data": _data_hora_br(p["data_cadastro"]),
+                    "data": data_hora_br(p["data_cadastro"]),
                 }
                 for p in pendentes
             ],
