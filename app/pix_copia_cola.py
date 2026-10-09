@@ -43,7 +43,7 @@ def gerar_copia_cola(
     chave: str,
     valor: Decimal | float,
     *,
-    nome_recebedor: str = "HORROR NIGHT PARTY",
+    nome_recebedor: str = "BACK TO HALLOWEEN",
     cidade: str = "RECIFE",
     txid: str = "***",
 ) -> str:

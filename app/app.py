@@ -4,6 +4,7 @@ outro projeto/credencial de trabalho.
 """
 from __future__ import annotations
 
+from datetime import timedelta
 from urllib.parse import urlsplit
 from zoneinfo import ZoneInfo
 
@@ -20,6 +21,9 @@ app.secret_key = config.SECRET_KEY
 app.config.update(
     # Lax: o navegador não manda o cookie de sessão em POST vindo de outro site.
     SESSION_COOKIE_SAMESITE="Lax",
+    # Login vale por 14 dias (session.permanent em auth.py); sem isso o cookie
+    # morria ao fechar o navegador e o admin no celular logava toda hora.
+    PERMANENT_SESSION_LIFETIME=timedelta(days=14),
     # Secure só quando o site é https de verdade (em dev local é http).
     SESSION_COOKIE_SECURE=config.BASE_URL.startswith("https://"),
 )

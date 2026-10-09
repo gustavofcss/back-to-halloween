@@ -71,6 +71,12 @@ def _validar_whatsapp(bruto: str | None) -> str | None:
     return limpo if _WHATSAPP_RE.match(limpo) else None
 
 
+class PagamentoIndisponivel(Exception):
+    """O Mercado Pago não respondeu (timeout, limite de requisições, fora do ar):
+    não dá pra saber se o Pix caiu ou não. Quem chama NUNCA deve tratar isso como
+    "ninguém pagou" -- em especial, não pode expirar/cancelar o pedido."""
+
+
 def _sdk() -> "mercadopago.SDK":
     return mercadopago.SDK(config.MERCADOPAGO_ACCESS_TOKEN)
 
@@ -124,6 +130,19 @@ def _buscar_pagamentos_pix_aprovados(desde: datetime) -> list[dict]:
     return resultados
 
 
+def _data_aprovacao(pagamento: dict) -> datetime | None:
+    """`date_approved` do pagamento (ISO 8601 com fuso), ou None se vier vazio ou
+    num formato que não dá pra ler."""
+    texto = pagamento.get("date_approved")
+    if not texto:
+        return None
+    try:
+        data = datetime.fromisoformat(texto)
+    except ValueError:
+        return None
+    return data if data.tzinfo else data.replace(tzinfo=timezone.utc)
+
+
 def _tentar_conciliar_pix_direto(cur, pedido: dict, usuario: dict) -> str:
     """Pix pago DIRETO na chave (config.PIX_KEYS, sem passar pela API de
     Checkout -- evita a taxa de ~1%) não tem um mp_payment_id conhecido de
@@ -150,19 +169,26 @@ def _tentar_conciliar_pix_direto(cur, pedido: dict, usuario: dict) -> str:
 
     try:
         candidatos = _buscar_pagamentos_pix_aprovados(pedido["data_pedido"])
-    except Exception:
+    except Exception as erro:
         logger.warning("Falha ao buscar pagamentos Pix no Mercado Pago", exc_info=True)
-        return pedido["status_pedido"]
+        raise PagamentoIndisponivel from erro
 
     valor_pedido = Decimal(str(pedido["valor"]))
+    # O cache da busca (_buscar_pagamentos_pix_aprovados) arredonda a janela pro
+    # início do minuto, então ela pode incluir Pix aprovados até ~1 min ANTES do
+    # pedido. Um Pix de mesmo valor aprovado antes do pedido existir não pode
+    # confirmá-lo -- filtra pela hora de aprovação de verdade.
+    aprovado_depois_de = pedido["data_pedido"] - timedelta(seconds=30)
     for pagamento in candidatos:
         mp_payment_id = str(pagamento.get("id") or "")
+        aprovado_em = _data_aprovacao(pagamento)
         if (
             not mp_payment_id
             or mp_payment_id in ja_usados
             or pagamento.get("status") != "approved"
             or pagamento.get("payment_method_id") != "pix"
             or Decimal(str(pagamento.get("transaction_amount", "0"))) != valor_pedido
+            or (aprovado_em is not None and aprovado_em < aprovado_depois_de)
         ):
             continue
 
@@ -316,9 +342,9 @@ def _verificar_e_confirmar_pagamento(cur, pedido: dict, usuario: dict) -> str:
 
     try:
         pagamento_mp = _consultar_pagamento(pedido["mp_payment_id"])
-    except Exception:
+    except Exception as erro:
         logger.warning("Falha ao verificar pagamento no Mercado Pago", exc_info=True)
-        return status_atual
+        raise PagamentoIndisponivel from erro
 
     return _confirmar_se_aprovado(cur, pedido, usuario, pagamento_mp)
 
@@ -351,7 +377,14 @@ def _verificar_com_expiracao(cur, pedido: dict, titular: dict) -> str:
     que podem encerrar o ciclo de vida do pedido pendente (GET da tela de
     pagamento, "Já paguei" e o polling automático) -- nenhuma marca como
     expirado sem reconsultar a API primeiro."""
-    status_atual = _verificar_e_confirmar_pagamento(cur, pedido, titular)
+    try:
+        status_atual = _verificar_e_confirmar_pagamento(cur, pedido, titular)
+    except PagamentoIndisponivel:
+        # Sem resposta do Mercado Pago não dá pra afirmar que ninguém pagou:
+        # deixa o pedido como está e tenta de novo na próxima consulta. Antes a
+        # falha caía como "status pendente" e o pedido expirava mesmo assim --
+        # um timeout na hora errada cancelava um Pix que podia estar pago.
+        return pedido["status_pedido"]
     if status_atual != "confirmado" and config.MERCADOPAGO_ACCESS_TOKEN and _pedido_expirado(pedido):
         status_atual = _expirar_pedido(cur, pedido)
     return status_atual
@@ -633,7 +666,10 @@ def pagamento(id_pedido: int):
                     # tinha parado) continuava vendo o QR Code de um pedido
                     # que na verdade já tinha sido pago (achado real nesta
                     # revisão, do fluxo antigo -- mesmo risco existe aqui).
-                    status_atual = _verificar_e_confirmar_pagamento(cur, pedido, titular)
+                    try:
+                        status_atual = _verificar_e_confirmar_pagamento(cur, pedido, titular)
+                    except PagamentoIndisponivel:
+                        status_atual = pedido["status_pedido"]
                     if status_atual == "confirmado":
                         pedido = dict(pedido)
                         pedido["status_pedido"] = "confirmado"
@@ -720,7 +756,11 @@ def webhook_mercadopago():
             if not pedido:
                 return jsonify({"ok": True}), 200
             titular = _titular_do_pedido(pedido, pedido["nome"], pedido["email"])
-            _verificar_e_confirmar_pagamento(cur, pedido, titular)
+            try:
+                _verificar_e_confirmar_pagamento(cur, pedido, titular)
+            except PagamentoIndisponivel:
+                # 503 pro Mercado Pago tentar a notificação de novo mais tarde.
+                return jsonify({"ok": False}), 503
 
     return jsonify({"ok": True}), 200
 

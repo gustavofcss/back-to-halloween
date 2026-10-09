@@ -31,7 +31,7 @@ GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET", "")
 # domínio próprio, e ainda assim manda pra qualquer destinatário.
 BREVO_API_KEY = os.environ.get("BREVO_API_KEY", "")
 BREVO_FROM_EMAIL = os.environ.get("BREVO_FROM_EMAIL", "horrornightparty2026@gmail.com")
-BREVO_FROM_NOME = os.environ.get("BREVO_FROM_NOME", "Horror Night Party")
+BREVO_FROM_NOME = os.environ.get("BREVO_FROM_NOME", "Back to Halloween")
 
 # Uma chave Pix DIFERENTE por valor possível de pedido (preço do lote x
 # quantidade) -- pedido explícito do usuário: 1 ingresso paga numa chave,

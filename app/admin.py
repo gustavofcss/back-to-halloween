@@ -26,7 +26,7 @@ from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_t
 import config
 import db
 from auth import EMAIL_RE, admin_required, current_user
-from email_utils import enviar_cadastro_aprovado, enviar_confirmacao_pedido, enviar_email_avulso
+from email_utils import enviar_cadastro_aprovado, enviar_confirmacao_pedido, enviar_email_em_massa_em_segundo_plano
 from pedidos import _evento_ativo, _validar_rg, _validar_whatsapp, expirar_pedidos_vencidos
 
 logger = logging.getLogger(__name__)
@@ -418,17 +418,8 @@ def pedidos_email_massa():
             )
             destinatarios = cur.fetchall()
 
-    enviados = 0
-    falhas = 0
-    for d in destinatarios:
-        try:
-            enviar_email_avulso(d["email"], d["nome"], assunto, mensagem)
-            enviados += 1
-        except Exception:
-            logger.warning("Falha ao enviar e-mail em massa pra %s", d["email"], exc_info=True)
-            falhas += 1
-
-    flash(f"E-mail mandado pra {enviados} cliente(s)." + (f" {falhas} falharam." if falhas else ""))
+    enviar_email_em_massa_em_segundo_plano(destinatarios, assunto, mensagem)
+    flash(f"Enviando o e-mail pra {len(destinatarios)} cliente(s) em segundo plano. Falhas aparecem no log do servidor.")
     return redirect(url_for("admin.pedidos"))
 
 

@@ -344,6 +344,7 @@ def avisar_admins_pedido_novo(
     só vem preenchido no pedido de outra pessoa; `acompanhante_nome` no pedido
     de 2 ingressos."""
     url = f"{config.BASE_URL}/admin/pedidos"
+    valor = f"{float(valor):.2f}"  # o valor da casadinha vem como 50.0, não 50.00
     linhas = [
         f"Pedido #{id_pedido} · {quantidade} ingresso(s) · R$ {valor}",
         f"Comprador: {comprador_nome} ({comprador_email})",
@@ -362,3 +363,22 @@ def avisar_admins_pedido_novo(
     _avisar_admins_em_segundo_plano(
         f"Novo pedido #{id_pedido} — {quantidade} ingresso(s) · R$ {valor}", corpo, corpo_html
     )
+
+
+def enviar_email_em_massa_em_segundo_plano(destinatarios: list[dict], assunto: str, mensagem: str) -> None:
+    """E-mail em massa do admin. Sai numa thread à parte: mandar um a um dentro da
+    requisição passava fácil de 30s com a lista cheia, o gunicorn matava o
+    worker no meio e sobrava um envio pela metade, sem aviso nenhum."""
+
+    def _enviar_todos() -> None:
+        enviados = falhas = 0
+        for d in destinatarios:
+            try:
+                enviar_email_avulso(d["email"], d["nome"], assunto, mensagem)
+                enviados += 1
+            except Exception:
+                logger.warning("Falha ao enviar e-mail em massa pra %s", d["email"], exc_info=True)
+                falhas += 1
+        logger.info("E-mail em massa '%s': %s enviado(s), %s falha(s)", assunto, enviados, falhas)
+
+    threading.Thread(target=_enviar_todos, daemon=True).start()

@@ -22,8 +22,8 @@
         <button type="submit" class="btn btn-primary btn-block btn-lg">▶ ENTRAR</button>
       </form>
       <div class="divider">OU</div>
-      <a href="/auth/google{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}" class="btn btn-google btn-block">Entrar com Google</a>
-      <p class="foot">Não tem conta? <a href="/signup{% if request.args.get('next') %}?next={{ request.args.get('next') }}{% endif %}">Criar conta</a></p>
+      <a href="/auth/google{% if request.args.get('next') %}?next={{ request.args.get('next')|urlencode }}{% endif %}" class="btn btn-google btn-block">Entrar com Google</a>
+      <p class="foot">Não tem conta? <a href="/signup{% if request.args.get('next') %}?next={{ request.args.get('next')|urlencode }}{% endif %}">Criar conta</a></p>
     </div>
   </div>
 </div>

@@ -381,6 +381,7 @@ def login():
         # "Verifique seu e-mail", mesma tela que aparece logo após cadastrar.
         return render_template("cadastro_pendente.html"), 401
 
+    session.permanent = True
     session["user_id"] = usuario["id_usuario"]
     destino = _destino_pos_login(usuario["id_usuario"], request.form.get("next"))
     return redirect(destino)
@@ -498,8 +499,9 @@ def auth_google_callback():
         with conn.cursor() as cur:
             cur.execute(
                 "SELECT id_usuario, email_confirmado, email_verificado FROM login_usuario "
-                "WHERE google_id = %s OR email = %s",
-                (google_id, email),
+                "WHERE google_id = %s OR email = %s "
+                "ORDER BY COALESCE(google_id = %s, FALSE) DESC LIMIT 1",
+                (google_id, email, google_id),
             )
             usuario = cur.fetchone()
 
@@ -560,6 +562,7 @@ def auth_google_callback():
         session.pop("login_next", None)
         return render_template("cadastro_pendente.html"), 401
 
+    session.permanent = True
     session["user_id"] = id_usuario
     destino = _destino_pos_login(id_usuario, session.pop("login_next", None))
     return redirect(destino)
