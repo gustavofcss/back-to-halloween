@@ -22,7 +22,7 @@
   <div class="a-card">
     <span class="a-kpi__label">Pedidos</span>
     <span class="a-kpi__value"><span data-admin-total="total_pedidos">{{ pedidos|length }}</span></span>
-    <span class="a-kpi__note"><span data-admin-total="pendentes">{{ ns.pendentes }}</span> aguardando Pix</span>
+    <span class="a-kpi__note"><span data-admin-total="pedidos_pendentes">{{ ns.pendentes }}</span> aguardando Pix</span>
   </div>
   <div class="a-card">
     <span class="a-kpi__label">Valor total</span>
@@ -81,7 +81,7 @@
 <form method="post" id="pedidos-lote-form" class="admin-ajax-form">
   <div class="admin-bulk-bar" id="pedidos-bulk-bar">
     <span class="admin-bulk-bar__count" id="pedidos-bulk-count">0 selecionado(s)</span>
-    <button type="submit" formaction="/admin/pedidos/confirmar-lote" class="admin-btn-primary">Confirmar selecionados</button>
+    <button type="submit" formaction="/admin/pedidos/confirmar-lote" class="admin-btn-primary" data-confirmar="Marcar {n} pedido(s) como PAGO(S)? Os clientes recebem o ingresso por e-mail." data-perigoso>Confirmar selecionados</button>
     <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/cancelar-lote', 'Cancelar os pedidos selecionados?')">Cancelar selecionados</button>
     <button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/apagar-lote', 'Apagar os pedidos cancelados selecionados? Pedidos pendentes/confirmados na seleção são ignorados. Não tem como desfazer.', true)">Apagar selecionados</button>
   </div>
@@ -111,10 +111,10 @@
         <td data-label="Status"><span class="admin-pill {{ status_pill.get(p.status_pedido, 'admin-pill--neutral') }}">{{ p.status_pedido }}</span></td>
         <td data-label="Ações">
           {% if p.status_pedido == 'pendente' %}
-          <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/confirmar" class="admin-btn-primary">Confirmar Pix</button>
-          <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/cancelar" class="admin-btn-outline">Cancelar</button>
+          <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/confirmar" class="admin-btn-primary" data-confirmar="Confirmar o pagamento deste pedido? O cliente recebe o ingresso por e-mail.">Confirmar Pix</button>
+          <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/cancelar" class="admin-btn-outline" data-confirmar="Cancelar este pedido? A vaga é liberada.">Cancelar</button>
           {% elif p.status_pedido == 'confirmado' %}
-          <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/cancelar" class="admin-btn-outline">Cancelar</button>
+          <button type="submit" formaction="/admin/pedidos/{{ p.id_pedido }}/cancelar" class="admin-btn-outline" data-confirmar="Cancelar este pedido JÁ PAGO? A vaga é liberada e o dinheiro precisa ser devolvido por fora." data-perigoso>Cancelar</button>
           {% elif p.status_pedido == 'cancelado' %}
           <button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById('pedidos-lote-form'), '/admin/pedidos/{{ p.id_pedido }}/apagar', 'Apagar esse pedido cancelado? Não tem como desfazer.', true)">Apagar</button>
           {% endif %}

@@ -382,3 +382,25 @@ def enviar_email_em_massa_em_segundo_plano(destinatarios: list[dict], assunto: s
         logger.info("E-mail em massa '%s': %s enviado(s), %s falha(s)", assunto, enviados, falhas)
 
     threading.Thread(target=_enviar_todos, daemon=True).start()
+
+
+def _em_segundo_plano(funcao, *args) -> None:
+    """Roda um envio de e-mail numa thread: o Brevo leva até 10s, e dentro de uma
+    requisição isso segurava a conexão do banco (e o lock do pedido) ou passava dos
+    30s do gunicorn quando eram muitos e-mails. Falha só vai pro log."""
+
+    def _rodar() -> None:
+        try:
+            funcao(*args)
+        except Exception:
+            logger.warning("Falha num e-mail em segundo plano (%s)", funcao.__name__, exc_info=True)
+
+    threading.Thread(target=_rodar, daemon=True).start()
+
+
+def enviar_confirmacao_pedido_em_segundo_plano(destinatario: str, nome: str, pedido) -> None:
+    _em_segundo_plano(enviar_confirmacao_pedido, destinatario, nome, dict(pedido))
+
+
+def enviar_cadastro_aprovado_em_segundo_plano(destinatario: str, nome: str) -> None:
+    _em_segundo_plano(enviar_cadastro_aprovado, destinatario, nome)

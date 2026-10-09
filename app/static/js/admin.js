@@ -57,7 +57,7 @@
     form.querySelectorAll('input[type="checkbox"]').forEach(function (cb) {
       if (cb.checked) {
         cb.checked = false;
-        cb.dispatchEvent(new Event('change'));
+        cb.dispatchEvent(new Event('change', { bubbles: true }));
       }
     });
   }
@@ -187,6 +187,16 @@
       var submitter = evt.submitter;
       var actionUrl = (submitter && submitter.getAttribute('formaction')) || form.getAttribute('action');
       if (!actionUrl) { return; }
+      // Ação que não tem volta (confirmar pagamento, cancelar pedido pago,
+      // promover a admin...) pede confirmação num modal. {n} vira a quantidade
+      // de itens marcados, pra o admin ver QUANTOS serão afetados.
+      var mensagem = submitter && submitter.getAttribute('data-confirmar');
+      if (mensagem) {
+        var marcados = /-lote$/.test(actionUrl) ? form.querySelectorAll('input[name="ids"]:checked').length : 1;
+        if (marcados === 0) { return; }
+        window.confirmarAcaoLote(form, actionUrl, mensagem.replace('{n}', marcados), submitter.hasAttribute('data-perigoso'));
+        return;
+      }
       window.enviarAcaoAdmin(form, actionUrl);
     });
   });
@@ -224,14 +234,27 @@ window.iniciarPollingAdmin = function (opts) {
       .then(function (resp) { return resp.ok ? resp.json() : null; })
       .then(function (dados) {
         if (!dados || !dados.itens) { return; }
-        var novos = 0;
+        var naLista = new Set();
         dados.itens.forEach(function (item) {
-          if (opts.idsConhecidos.has(item.id)) { return; }
+          naLista.add(item.id);
+          if (opts.idsConhecidos.has(item.id)) {
+            // já estava na tela: o status pode ter mudado (Pix conciliado, pedido
+            // expirado, ação de outro admin) -- antes só linha NOVA era tratada
+            if (opts.atualizarExistente) { opts.atualizarExistente(item); }
+            return;
+          }
           opts.idsConhecidos.add(item.id);
           opts.inserirNovo(item);
-          novos += 1;
         });
-        if (novos > 0) { window.atualizarTotaisAdmin(dados.totais); }
+        // saiu da lista (apagado/aprovado por outro admin): tira da tela também
+        if (opts.removerAusentes) {
+          Array.from(opts.idsConhecidos).forEach(function (id) {
+            if (!naLista.has(id)) { opts.idsConhecidos.delete(id); opts.removerAusentes(id); }
+          });
+        }
+        // totais e selos a CADA ciclo, não só quando chega item novo
+        window.atualizarTotaisAdmin(dados.totais);
+        if (opts.depois) { opts.depois(); }
       })
       .catch(function () {});
   }, opts.intervaloMs);
@@ -246,111 +269,138 @@ var paginaAdmin = (function () {
   return main ? main.dataset.page : '';
 })();
 
+// Busca + seleção em lote de uma lista (Pedidos, Cadastros, Hierarquia).
+// A busca só ESCONDE as linhas (display:none): "Selecionar todos" marca só as que
+// estão à vista, e filtrar desmarca o que ficou escondido. Antes marcava todas, e
+// "Cancelar/Confirmar/Promover selecionados" atingia gente que o admin nem estava
+// vendo. Tudo é consultado AO VIVO (as linhas mudam: polling, apagar...), por isso
+// as linhas que o polling insere já entram na busca e no "Selecionar todos".
+window.ligarListaAdmin = function (cfg) {
+  var checkAll = document.getElementById(cfg.checkAll);
+  var bar = document.getElementById(cfg.bar);
+  var contagem = document.getElementById(cfg.contagem);
+  var busca = cfg.busca ? document.getElementById(cfg.busca) : null;
+
+  function linhas() { return Array.prototype.slice.call(document.querySelectorAll(cfg.linhas)); }
+  function itens() { return Array.prototype.slice.call(document.querySelectorAll(cfg.item)); }
+  function escondida(item) {
+    var linha = item.closest(cfg.linhas);
+    return !!linha && linha.style.display === 'none';
+  }
+
+  function atualizar() {
+    var marcados = document.querySelectorAll(cfg.item + ':checked').length;
+    var visiveis = itens().filter(function (i) { return !escondida(i); });
+    if (bar) { bar.classList.toggle('admin-bulk-bar--visivel', marcados > 0); }
+    if (contagem) { contagem.textContent = marcados + ' selecionado(s)'; }
+    if (checkAll) { checkAll.checked = visiveis.length > 0 && visiveis.every(function (i) { return i.checked; }); }
+  }
+
+  function filtrar() {
+    var q = busca ? busca.value.trim().toLowerCase() : '';
+    linhas().forEach(function (linha) {
+      linha.style.display = (!q || linha.textContent.toLowerCase().includes(q)) ? '' : 'none';
+    });
+    itens().forEach(function (i) { if (escondida(i)) { i.checked = false; } });
+    atualizar();
+  }
+
+  if (busca) { busca.addEventListener('input', filtrar); }
+  if (checkAll) {
+    checkAll.addEventListener('change', function () {
+      var marcar = checkAll.checked;
+      itens().forEach(function (i) { i.checked = marcar && !escondida(i); });
+      atualizar();
+    });
+  }
+  document.addEventListener('change', function (evt) {
+    if (evt.target.matches && evt.target.matches(cfg.item)) { atualizar(); }
+  });
+  atualizar();
+  return { atualizar: atualizar, filtrar: filtrar };
+};
+
+function iniciaisDe(nome) {
+  var partes = String(nome || '').split(' ');
+  var s = (partes[0] ? partes[0][0] : '') + (partes.length > 1 && partes[1] ? partes[1][0] : '');
+  return s.toUpperCase();
+}
+
 // admin/pedidos.html -- busca, seleção em lote, reação a admin:sucesso e
-// polling de pedidos novos.
+// polling (pedidos novos, status que mudaram sozinhos, pedidos que sumiram).
 if (paginaAdmin === 'pedidos') {
   (function () {
-    var input = document.getElementById('admin-pedidos-search');
-    var table = document.getElementById('admin-pedidos-table');
-    if (!input || !table) { return; }
-    var rows = table.querySelectorAll('tbody tr');
-    input.addEventListener('input', function () {
-      var q = input.value.trim().toLowerCase();
-      rows.forEach(function (tr) {
-        tr.style.display = (!q || tr.textContent.toLowerCase().includes(q)) ? '' : 'none';
-      });
-    });
-  })();
-
-  (function () {
-    var checkAll = document.getElementById('pedidos-check-all');
-    var itens = document.querySelectorAll('.pedidos-check-item');
-    var bar = document.getElementById('pedidos-bulk-bar');
-    var contagem = document.getElementById('pedidos-bulk-count');
-    if (!checkAll || !itens.length) { return; }
-
-    function atualizar() {
-      // Recalcula o total AO VIVO (não usa itens.length, capturado uma vez
-      // no load) -- depois que "Apagar" remove uma linha do DOM (via
-      // admin:sucesso), o total de caixinhas realmente presentes cai, mas
-      // itens.length continua contando a linha já removida. Sem isso,
-      // "Selecionar todos" nunca mais fica marcado depois do primeiro apagar.
-      var total = document.querySelectorAll('.pedidos-check-item').length;
-      var marcados = document.querySelectorAll('.pedidos-check-item:checked').length;
-      bar.classList.toggle('admin-bulk-bar--visivel', marcados > 0);
-      contagem.textContent = marcados + ' selecionado(s)';
-      checkAll.checked = total > 0 && marcados === total;
-    }
-    checkAll.addEventListener('change', function () {
-      itens.forEach(function (item) { item.checked = checkAll.checked; });
-      atualizar();
-    });
-    itens.forEach(function (item) { item.addEventListener('change', atualizar); });
-    // Exposta pro polling (abaixo) conseguir religar uma linha nova no
-    // "selecionar todos" e recalcular o total sem duplicar essa lógica.
-    window.religarSelecaoPedido = function (checkbox) {
-      checkbox.addEventListener('change', atualizar);
-      atualizar();
-    };
-  })();
-
-  // Confirmar/cancelar trocam o selo de status e os botões da linha;
-  // apagar tira a linha da tabela -- sem isso a tela só refletia a mutação
-  // depois de um reload inteiro da página.
-  document.addEventListener('admin:sucesso', function (evt) {
     var pillClasses = { confirmado: 'admin-pill--ok', pendente: 'admin-pill--warn', cancelado: 'admin-pill--bad' };
-    evt.detail.dados.aplicados.forEach(function (item) {
-      var checkbox = document.querySelector('.pedidos-check-item[value="' + item.id + '"]');
-      if (!checkbox) { return; }
-      var linha = checkbox.closest('tr');
-      if (!item.status) { linha.remove(); return; }
-
-      var pill = linha.querySelector('.admin-pill');
-      pill.className = 'admin-pill ' + (pillClasses[item.status] || 'admin-pill--neutral');
-      pill.textContent = item.status;
-
-      var celulaAcoes = linha.querySelector('td:last-child');
-      if (item.status === 'confirmado') {
-        celulaAcoes.innerHTML =
-          '<button type="submit" formaction="/admin/pedidos/' + item.id + '/cancelar" class="admin-btn-outline">Cancelar</button>';
-      } else if (item.status === 'cancelado') {
-        celulaAcoes.innerHTML =
-          '<button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById(\'pedidos-lote-form\'), \'/admin/pedidos/' + item.id + '/apagar\', \'Apagar esse pedido cancelado? Não tem como desfazer.\', true)">Apagar</button>';
-      }
-    });
-  });
-
-  // Polling suave (10s) -- pedido novo de outro cliente aparece sozinho no
-  // topo da tabela, com uma animação, sem recarregar a página inteira nem
-  // mexer no que já estava na tela (achado real, pedido do usuário: não
-  // queria o reload cheio de antes, só que o item novo "surgisse" com uma
-  // transição em vez de aparecer do nada).
-  (function () {
     var tbody = document.querySelector('#admin-pedidos-table tbody');
+    var lista = window.ligarListaAdmin({
+      item: '.pedidos-check-item', linhas: '#admin-pedidos-table tbody tr',
+      checkAll: 'pedidos-check-all', bar: 'pedidos-bulk-bar', contagem: 'pedidos-bulk-count',
+      busca: 'admin-pedidos-search'
+    });
+
+    var MSG_CONFIRMAR = 'Confirmar o pagamento deste pedido? O cliente recebe o ingresso por e-mail.';
+    var MSG_CANCELAR = 'Cancelar este pedido? A vaga é liberada.';
+    var MSG_CANCELAR_PAGO = 'Cancelar este pedido JÁ PAGO? A vaga é liberada e o dinheiro precisa ser devolvido por fora.';
+
+    function botao(acao, id, rotulo, classe, mensagem, perigoso) {
+      return '<button type="submit" formaction="/admin/pedidos/' + id + '/' + acao + '" class="' + classe + '"' +
+        ' data-confirmar="' + mensagem + '"' + (perigoso ? ' data-perigoso' : '') + '>' + rotulo + '</button>';
+    }
+
+    function acoesPedido(id, status) {
+      if (status === 'pendente') {
+        return botao('confirmar', id, 'Confirmar Pix', 'admin-btn-primary', MSG_CONFIRMAR, false) + ' ' +
+          botao('cancelar', id, 'Cancelar', 'admin-btn-outline', MSG_CANCELAR, false);
+      }
+      if (status === 'confirmado') {
+        return botao('cancelar', id, 'Cancelar', 'admin-btn-outline', MSG_CANCELAR_PAGO, true);
+      }
+      if (status === 'cancelado') {
+        return '<button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById(\'pedidos-lote-form\'), \'/admin/pedidos/' + id + '/apagar\', \'Apagar esse pedido cancelado? Não tem como desfazer.\', true)">Apagar</button>';
+      }
+      return '';
+    }
+
+    // Troca o selo de STATUS (não o primeiro .admin-pill da linha: numa cortesia o
+    // primeiro é o selo "Cortesia") e os botões da linha.
+    function aplicarStatus(linha, id, status) {
+      var pill = linha.querySelector('td[data-label="Status"] .admin-pill');
+      if (pill) {
+        pill.className = 'admin-pill ' + (pillClasses[status] || 'admin-pill--neutral');
+        pill.textContent = status;
+      }
+      var celula = linha.querySelector('td[data-label="Ações"]') || linha.querySelector('td:last-child');
+      if (celula) { celula.innerHTML = acoesPedido(id, status); }
+    }
+
+    function linhaDoPedido(id) {
+      var checkbox = document.querySelector('.pedidos-check-item[value="' + id + '"]');
+      return checkbox ? checkbox.closest('tr') : null;
+    }
+
+    // Confirmar/cancelar trocam o selo e os botões da linha; apagar tira a linha.
+    document.addEventListener('admin:sucesso', function (evt) {
+      evt.detail.dados.aplicados.forEach(function (item) {
+        var linha = linhaDoPedido(item.id);
+        if (!linha) { return; }
+        if (!item.status) { linha.remove(); return; }
+        aplicarStatus(linha, item.id, item.status);
+      });
+      lista.atualizar();
+    });
+
     var idsConhecidos = new Set(
       Array.prototype.map.call(document.querySelectorAll('.pedidos-check-item'), function (cb) {
         return parseInt(cb.value, 10);
       })
     );
-    var pillClasses = { confirmado: 'admin-pill--ok', pendente: 'admin-pill--warn', cancelado: 'admin-pill--bad' };
 
     function inserirNovoPedido(item) {
-      if (!tbody) { location.reload(); return; } // tabela vazia antes (sem nenhum pedido) -- não dá pra inserir linha sem recarregar essa vez
+      if (!tbody) { location.reload(); return; } // tabela vazia antes: não dá pra inserir linha sem recarregar essa vez
       var esc = window.escaparHtmlAdmin;
       var extra = item.acompanhante_nome ? '<span class="a-order__extra">+ ' + esc(item.acompanhante_nome) + '</span>' : '';
       var compradoPor = item.slot === 2 ? '<span class="a-order__extra">Comprado por ' + esc(item.comprador_nome) + '</span>' : '';
       var cortesiaTag = item.cortesia ? '<span class="admin-pill admin-pill--accent">Cortesia</span>' : '';
-      var acoes = '';
-      if (item.status === 'pendente') {
-        acoes =
-          '<button type="submit" formaction="/admin/pedidos/' + item.id + '/confirmar" class="admin-btn-primary">Confirmar Pix</button> ' +
-          '<button type="submit" formaction="/admin/pedidos/' + item.id + '/cancelar" class="admin-btn-outline">Cancelar</button>';
-      } else if (item.status === 'confirmado') {
-        acoes = '<button type="submit" formaction="/admin/pedidos/' + item.id + '/cancelar" class="admin-btn-outline">Cancelar</button>';
-      } else if (item.status === 'cancelado') {
-        acoes =
-          '<button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById(\'pedidos-lote-form\'), \'/admin/pedidos/' + item.id + '/apagar\', \'Apagar esse pedido cancelado? Não tem como desfazer.\', true)">Apagar</button>';
-      }
       var tr = document.createElement('tr');
       tr.className = 'a-tr a-item-novo';
       tr.innerHTML =
@@ -361,9 +411,9 @@ if (paginaAdmin === 'pedidos') {
         '<td data-label="Qtd.">' + item.quantidade + '×</td>' +
         '<td class="a-order__value" data-label="Valor">R$ ' + item.valor + '</td>' +
         '<td data-label="Status"><span class="admin-pill ' + (pillClasses[item.status] || 'admin-pill--neutral') + '">' + esc(item.status) + '</span></td>' +
-        '<td data-label="Ações">' + acoes + '</td>';
+        '<td data-label="Ações">' + acoesPedido(item.id, item.status) + '</td>';
       tbody.insertBefore(tr, tbody.firstChild);
-      if (window.religarSelecaoPedido) { window.religarSelecaoPedido(tr.querySelector('.pedidos-check-item')); }
+      lista.filtrar();  // a linha nova respeita a busca que está digitada
     }
 
     window.iniciarPollingAdmin({
@@ -371,74 +421,59 @@ if (paginaAdmin === 'pedidos') {
       intervaloMs: 10000,
       idsConhecidos: idsConhecidos,
       inserirNovo: inserirNovoPedido,
+      atualizarExistente: function (item) {
+        var linha = linhaDoPedido(item.id);
+        var pill = linha && linha.querySelector('td[data-label="Status"] .admin-pill');
+        if (pill && pill.textContent.trim() !== item.status) { aplicarStatus(linha, item.id, item.status); }
+      },
+      removerAusentes: function (id) {
+        var linha = linhaDoPedido(id);
+        if (linha) { linha.remove(); }
+      },
+      depois: function () { lista.atualizar(); },
     });
   })();
 }
 
-// admin/cadastros.html -- seleção em lote, reação a admin:sucesso e
-// polling de cadastros pendentes novos.
+// admin/cadastros.html -- seleção em lote, reação a admin:sucesso e polling de
+// cadastros pendentes (novos, e os que outro admin já aprovou/recusou).
 if (paginaAdmin === 'cadastros') {
   (function () {
-    var checkAll = document.getElementById('cadastros-check-all');
-    var itens = document.querySelectorAll('.cadastros-check-item');
-    var bar = document.getElementById('cadastros-bulk-bar');
-    var contagem = document.getElementById('cadastros-bulk-count');
-    if (!checkAll || !itens.length) { return; }
-
-    function atualizar() {
-      // Total ao vivo, não itens.length (capturado uma vez no load) -- depois
-      // que confirmar/recusar remove uma linha via admin:sucesso, o total
-      // real de caixinhas cai, mas itens.length continua com a antiga.
-      var total = document.querySelectorAll('.cadastros-check-item').length;
-      var marcados = document.querySelectorAll('.cadastros-check-item:checked').length;
-      bar.classList.toggle('admin-bulk-bar--visivel', marcados > 0);
-      contagem.textContent = marcados + ' selecionado(s)';
-      checkAll.checked = total > 0 && marcados === total;
-    }
-    checkAll.addEventListener('change', function () {
-      itens.forEach(function (item) { item.checked = checkAll.checked; });
-      atualizar();
-    });
-    itens.forEach(function (item) { item.addEventListener('change', atualizar); });
-
-    window.religarSelecaoCadastro = function (checkbox) {
-      checkbox.addEventListener('change', atualizar);
-      atualizar();
-    };
-  })();
-
-  // Confirmar e recusar sempre tiram o cadastro da lista de pendentes.
-  document.addEventListener('admin:sucesso', function (evt) {
-    evt.detail.dados.aplicados.forEach(function (item) {
-      var checkbox = document.querySelector('.cadastros-check-item[value="' + item.id + '"]');
-      if (checkbox) { checkbox.closest('tr').remove(); }
-    });
-  });
-
-  (function () {
     var tbody = document.querySelector('#admin-cadastros-table tbody');
+    var lista = window.ligarListaAdmin({
+      item: '.cadastros-check-item', linhas: '#admin-cadastros-table tbody tr',
+      checkAll: 'cadastros-check-all', bar: 'cadastros-bulk-bar', contagem: 'cadastros-bulk-count'
+    });
+
+    function linhaDoCadastro(id) {
+      var checkbox = document.querySelector('.cadastros-check-item[value="' + id + '"]');
+      return checkbox ? checkbox.closest('tr') : null;
+    }
+
+    // Confirmar e recusar sempre tiram o cadastro da lista de pendentes.
+    document.addEventListener('admin:sucesso', function (evt) {
+      evt.detail.dados.aplicados.forEach(function (item) {
+        var linha = linhaDoCadastro(item.id);
+        if (linha) { linha.remove(); }
+      });
+      lista.atualizar();
+    });
+
     var idsConhecidos = new Set(
       Array.prototype.map.call(document.querySelectorAll('.cadastros-check-item'), function (cb) {
         return parseInt(cb.value, 10);
       })
     );
 
-    function iniciais(nome) {
-      var partes = String(nome || '').split(' ');
-      var s = (partes[0] ? partes[0][0] : '') + (partes.length > 1 && partes[1] ? partes[1][0] : '');
-      return s.toUpperCase();
-    }
-
     function inserirNovoCadastro(item) {
       if (!tbody) { location.reload(); return; }
       var esc = window.escaparHtmlAdmin;
-      var vazio = document.querySelector('.a-empty');
-      if (vazio) { location.reload(); return; }
+      if (document.querySelector('.a-empty')) { location.reload(); return; }
       var tr = document.createElement('tr');
       tr.className = 'a-tr a-tr--cadastros a-item-novo';
       tr.innerHTML =
         '<td class="admin-table__check-col"><input type="checkbox" name="ids" value="' + item.id + '" class="cadastros-check-item" aria-label="Selecionar ' + esc(item.nome) + '"></td>' +
-        '<td class="a-order__namecell" data-label="Nome"><span class="avatar">' + esc(iniciais(item.nome)) + '</span><span class="a-order__name">' + esc(item.nome) + '</span></td>' +
+        '<td class="a-order__namecell" data-label="Nome"><span class="avatar">' + esc(iniciaisDe(item.nome)) + '</span><span class="a-order__name">' + esc(item.nome) + '</span></td>' +
         '<td class="a-order__email" data-label="E-mail">' + esc(item.email) + '</td>' +
         '<td class="a-order__extra" data-label="Cadastrado em">' + esc(item.data) + '</td>' +
         '<td data-label="Ações">' +
@@ -446,7 +481,7 @@ if (paginaAdmin === 'cadastros') {
         '<button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById(\'cadastros-lote-form\'), \'/admin/cadastros/' + item.id + '/recusar\', \'Recusar e apagar esse cadastro?\', true)">Recusar</button>' +
         '</td>';
       tbody.insertBefore(tr, tbody.firstChild);
-      if (window.religarSelecaoCadastro) { window.religarSelecaoCadastro(tr.querySelector('.cadastros-check-item')); }
+      lista.atualizar();
     }
 
     window.iniciarPollingAdmin({
@@ -454,82 +489,51 @@ if (paginaAdmin === 'cadastros') {
       intervaloMs: 10000,
       idsConhecidos: idsConhecidos,
       inserirNovo: inserirNovoCadastro,
+      removerAusentes: function (id) {
+        var linha = linhaDoCadastro(id);
+        if (linha) { linha.remove(); }
+      },
+      depois: function () { lista.atualizar(); },
     });
   })();
 }
 
 // admin/hierarquia.html -- busca, seleção em lote de clientes, reação a
-// admin:sucesso (promover/rebaixar/remover) e polling de clientes novos.
+// admin:sucesso (promover/rebaixar/remover) e polling de clientes.
 if (paginaAdmin === 'hierarquia') {
   (function () {
-    var input = document.getElementById('admin-hierarquia-search');
-    var rows = document.querySelectorAll('.admin-group__row');
-    if (!input || !rows.length) { return; }
-    input.addEventListener('input', function () {
-      var q = input.value.trim().toLowerCase();
-      rows.forEach(function (row) {
-        row.style.display = (!q || row.textContent.toLowerCase().includes(q)) ? '' : 'none';
-      });
+    var lista = window.ligarListaAdmin({
+      item: '.clientes-check-item', linhas: '.admin-group__row',
+      checkAll: 'clientes-check-all', bar: 'clientes-bulk-bar', contagem: 'clientes-bulk-count',
+      busca: 'admin-hierarquia-search'
     });
-  })();
 
-  (function () {
-    var checkAll = document.getElementById('clientes-check-all');
-    var itens = document.querySelectorAll('.clientes-check-item');
-    var bar = document.getElementById('clientes-bulk-bar');
-    var contagem = document.getElementById('clientes-bulk-count');
-    if (!checkAll || !itens.length) { return; }
-
-    function atualizar() {
-      // Total ao vivo, não itens.length (capturado uma vez no load) -- depois
-      // que promover/remover tira uma linha via admin:sucesso, o total real
-      // de caixinhas cai, mas itens.length continua com a antiga.
-      var total = document.querySelectorAll('.clientes-check-item').length;
-      var marcados = document.querySelectorAll('.clientes-check-item:checked').length;
-      bar.classList.toggle('admin-bulk-bar--visivel', marcados > 0);
-      contagem.textContent = marcados + ' selecionado(s)';
-      checkAll.checked = total > 0 && marcados === total;
+    function linhaDaPessoa(id) {
+      return document.querySelector('.admin-group__row[data-row-id="' + id + '"]');
     }
-    checkAll.addEventListener('change', function () {
-      itens.forEach(function (item) { item.checked = checkAll.checked; });
-      atualizar();
+
+    // Promover/rebaixar/remover sempre tiram a pessoa do grupo em que ela
+    // estava (cliente promovido some da lista de Clientes, admin rebaixado
+    // some da lista de Administradores) -- por isso um único handler genérico
+    // (tirar a linha da tela) cobre as 5 rotas de mutação da Hierarquia, single
+    // e em lote. A pessoa aparece no grupo novo no próximo refresh da página.
+    document.addEventListener('admin:sucesso', function (evt) {
+      evt.detail.dados.aplicados.forEach(function (item) {
+        var linha = linhaDaPessoa(item.id);
+        if (linha) { linha.remove(); }
+      });
+      lista.atualizar();
     });
-    itens.forEach(function (item) { item.addEventListener('change', atualizar); });
 
-    window.religarSelecaoCliente = function (checkbox) {
-      checkbox.addEventListener('change', atualizar);
-      atualizar();
-    };
-  })();
-
-  // Promover/rebaixar/remover sempre tiram a pessoa do grupo em que ela
-  // estava (cliente promovido some da lista de Clientes, admin rebaixado
-  // some da lista de Administradores) -- por isso um único handler genérico
-  // (tirar a linha da tela) cobre as 5 rotas de mutação da Hierarquia, single
-  // e em lote. A pessoa aparece no grupo novo no próximo refresh da página.
-  document.addEventListener('admin:sucesso', function (evt) {
-    evt.detail.dados.aplicados.forEach(function (item) {
-      var linha = document.querySelector('.admin-group__row[data-row-id="' + item.id + '"]');
-      if (linha) { linha.remove(); }
-    });
-  });
-
-  (function () {
-    var lista = document.querySelector('#clientes-lote-form .admin-group__list');
+    var listaEl = document.querySelector('#clientes-lote-form .admin-group__list');
     var idsConhecidos = new Set(
       Array.prototype.map.call(document.querySelectorAll('.clientes-check-item'), function (cb) {
         return parseInt(cb.value, 10);
       })
     );
 
-    function iniciais(nome) {
-      var partes = String(nome || '').split(' ');
-      var s = (partes[0] ? partes[0][0] : '') + (partes.length > 1 && partes[1] ? partes[1][0] : '');
-      return s.toUpperCase();
-    }
-
     function inserirNovoCliente(item) {
-      if (!lista) { location.reload(); return; }
+      if (!listaEl) { location.reload(); return; }
       var esc = window.escaparHtmlAdmin;
       var div = document.createElement('div');
       div.className = 'admin-group__row a-item-novo';
@@ -537,15 +541,15 @@ if (paginaAdmin === 'hierarquia') {
       div.innerHTML =
         '<div class="admin-group__row-inner">' +
         '<input type="checkbox" name="ids" value="' + item.id + '" class="clientes-check-item" aria-label="Selecionar ' + esc(item.nome) + '">' +
-        '<span class="avatar">' + esc(iniciais(item.nome)) + '</span>' +
+        '<span class="avatar">' + esc(iniciaisDe(item.nome)) + '</span>' +
         '<span class="admin-group__info"><span class="admin-group__name">' + esc(item.nome) + '</span><span class="admin-group__email">' + esc(item.email) + '</span></span>' +
         '<span class="admin-group__action admin-group__action--duplo">' +
-        '<button type="submit" formaction="/admin/hierarquia/' + item.id + '/promover" class="admin-btn-primary">Promover a admin</button>' +
+        '<button type="submit" formaction="/admin/hierarquia/' + item.id + '/promover" class="admin-btn-primary" data-confirmar="Promover esta pessoa a ADMIN? Ela passa a ver pedidos, cadastros e e-mail em massa." data-perigoso>Promover a admin</button>' +
         '<button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById(\'clientes-lote-form\'), \'/admin/hierarquia/' + item.id + '/remover\', \'Apagar esse cliente? Pedidos pendentes ou cancelados dele também são apagados; quem tem pedido confirmado não pode ser apagado. Não tem como desfazer.\', true)">Apagar</button>' +
         '</span>' +
         '</div>';
-      lista.insertBefore(div, lista.firstChild);
-      if (window.religarSelecaoCliente) { window.religarSelecaoCliente(div.querySelector('.clientes-check-item')); }
+      listaEl.insertBefore(div, listaEl.firstChild);
+      lista.filtrar();
     }
 
     window.iniciarPollingAdmin({
@@ -553,6 +557,11 @@ if (paginaAdmin === 'hierarquia') {
       intervaloMs: 10000,
       idsConhecidos: idsConhecidos,
       inserirNovo: inserirNovoCliente,
+      removerAusentes: function (id) {
+        var linha = linhaDaPessoa(id);
+        if (linha) { linha.remove(); }
+      },
+      depois: function () { lista.atualizar(); },
     });
   })();
 }

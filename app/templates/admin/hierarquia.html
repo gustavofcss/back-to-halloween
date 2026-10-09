@@ -56,7 +56,7 @@
         <span class="admin-group__action">
           {% if eu and u.id_usuario != eu.id_usuario %}
           <form method="post" action="/admin/hierarquia/{{ u.id_usuario }}/rebaixar" class="admin-ajax-form">
-            <button type="submit" class="admin-btn-outline">Rebaixar pra cliente</button>
+            <button type="submit" class="admin-btn-outline" data-confirmar="Rebaixar esta pessoa para cliente? Ela perde o acesso ao painel.">Rebaixar pra cliente</button>
           </form>
           {% else %}
           <span class="help-text no-margin">você</span>
@@ -85,7 +85,7 @@
   <form method="post" id="clientes-lote-form" class="admin-ajax-form">
     <div class="admin-bulk-bar" id="clientes-bulk-bar">
       <span class="admin-bulk-bar__count" id="clientes-bulk-count">0 selecionado(s)</span>
-      <button type="submit" formaction="/admin/hierarquia/promover-lote" class="admin-btn-primary">Promover selecionados</button>
+      <button type="submit" formaction="/admin/hierarquia/promover-lote" class="admin-btn-primary" data-confirmar="Promover {n} pessoa(s) a ADMIN? Elas passam a ver pedidos, cadastros e e-mail em massa." data-perigoso>Promover selecionados</button>
       <button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/remover-lote', 'Apagar os clientes selecionados? Pedidos pendentes ou cancelados deles também são apagados; quem tem pedido confirmado não é apagado. Não tem como desfazer.', true)">Apagar selecionados</button>
     </div>
     <div class="admin-group__list">
@@ -99,7 +99,7 @@
             <span class="admin-group__email">{{ u.email }}</span>
           </span>
           <span class="admin-group__action admin-group__action--duplo">
-            <button type="submit" formaction="/admin/hierarquia/{{ u.id_usuario }}/promover" class="admin-btn-primary">Promover a admin</button>
+            <button type="submit" formaction="/admin/hierarquia/{{ u.id_usuario }}/promover" class="admin-btn-primary" data-confirmar="Promover esta pessoa a ADMIN? Ela passa a ver pedidos, cadastros e e-mail em massa." data-perigoso>Promover a admin</button>
             <button type="button" class="admin-btn-outline is-danger" onclick="return confirmarAcaoLote(document.getElementById('clientes-lote-form'), '/admin/hierarquia/{{ u.id_usuario }}/remover', 'Apagar esse cliente? Pedidos pendentes ou cancelados dele também são apagados; quem tem pedido confirmado não pode ser apagado. Não tem como desfazer.', true)">Apagar</button>
           </span>
         </div>

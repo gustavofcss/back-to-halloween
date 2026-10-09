@@ -15,7 +15,7 @@ from flask import Blueprint, abort, jsonify, redirect, render_template, request,
 import config
 import db
 from auth import EMAIL_RE, current_user, login_required
-from email_utils import avisar_admins_pedido_novo, enviar_confirmacao_pedido
+from email_utils import avisar_admins_pedido_novo, enviar_confirmacao_pedido_em_segundo_plano
 from pix_copia_cola import gerar_copia_cola, gerar_qr_base64
 
 pedidos_bp = Blueprint("pedidos", __name__)
@@ -99,12 +99,25 @@ def _consultar_pagamento(mp_payment_id: str) -> dict:
 # cada um) o servidor fazia 1 chamada à API do Mercado Pago por cliente a cada
 # ciclo, e com poucos workers isso travava o site. A janela é arredondada pro
 # minuto (a busca começa no INÍCIO daquele minuto, então cobre qualquer pedido
-# criado nele) e o resultado vale por poucos segundos.
+# criado nele) e o resultado vale por poucos segundos. O cache SÓ serve pra
+# confirmar: quem vai EXPIRAR um pedido consulta sem cache (usar_cache=False),
+# senão um Pix aprovado há 1s podia ficar fora de uma lista de 3s de idade e o
+# pedido pago ser cancelado.
 _CACHE_BUSCA_PIX: dict = {}
 _CACHE_BUSCA_TTL = 3.0
+# Depois de uma falha a busca fica em pausa por alguns segundos: com o Mercado Pago
+# lento, cada requisição esperava o timeout inteiro, e o gunicorn mata a requisição
+# aos 30s (o site todo ficava preso nos 8 threads).
+_busca_falhou_em = -1e9
+_PAUSA_APOS_FALHA = 10.0
+_TIMEOUT_BUSCA = 6
+# A API devolve 30 resultados por página se não pedir `limit`; num pico de vendas o
+# Pix mais antigo (justamente o do pedido perto de expirar) caía fora da 1ª página.
+_LIMITE_PAGINA = 100
+_MAX_PAGINAS = 3
 
 
-def _buscar_pagamentos_pix_aprovados(desde: datetime) -> list[dict]:
+def _buscar_pagamentos_pix_aprovados(desde: datetime, usar_cache: bool = True) -> list[dict]:
     """Consulta a API de Pagamentos (não a de relatório de liquidação --
     essa só cobre reserva de venda e nunca mostrou um Pix pago direto na
     chave, mesmo horas depois, achado real testado com dinheiro de
@@ -112,11 +125,15 @@ def _buscar_pagamentos_pix_aprovados(desde: datetime) -> list[dict]:
     desalinhamento de relógio entre nosso servidor e o Mercado Pago -- a
     filtragem de verdade (achar o pedido certo) é por valor + reivindicação
     única em `_tentar_conciliar_pix_direto`, não por essa janela sozinha."""
+    global _busca_falhou_em
     chave = desde.replace(second=0, microsecond=0)
     agora = time.monotonic()
-    em_cache = _CACHE_BUSCA_PIX.get(chave)
-    if em_cache and agora - em_cache[0] < _CACHE_BUSCA_TTL:
-        return em_cache[1]
+    if agora - _busca_falhou_em < _PAUSA_APOS_FALHA:
+        raise RuntimeError("busca no Mercado Pago em pausa depois de uma falha recente")
+    if usar_cache:
+        em_cache = _CACHE_BUSCA_PIX.get(chave)
+        if em_cache and agora - em_cache[0] < _CACHE_BUSCA_TTL:
+            return em_cache[1]
 
     params = {
         "begin_date": (chave - timedelta(seconds=30)).strftime("%Y-%m-%dT%H:%M:%S.000-00:00"),
@@ -124,15 +141,29 @@ def _buscar_pagamentos_pix_aprovados(desde: datetime) -> list[dict]:
         "range": "date_approved",
         "sort": "date_approved",
         "criteria": "desc",
+        "status": "approved",
+        "payment_method_id": "pix",
+        "limit": _LIMITE_PAGINA,
     }
-    resp = requests.get(
-        "https://api.mercadopago.com/v1/payments/search",
-        headers={"Authorization": f"Bearer {config.MERCADOPAGO_ACCESS_TOKEN}"},
-        params=params,
-        timeout=15,
-    )
-    resp.raise_for_status()
-    resultados = resp.json().get("results", [])
+    resultados: list[dict] = []
+    try:
+        for pagina in range(_MAX_PAGINAS):
+            resp = requests.get(
+                "https://api.mercadopago.com/v1/payments/search",
+                headers={"Authorization": f"Bearer {config.MERCADOPAGO_ACCESS_TOKEN}"},
+                params={**params, "offset": pagina * _LIMITE_PAGINA},
+                timeout=_TIMEOUT_BUSCA,
+            )
+            resp.raise_for_status()
+            corpo = resp.json()
+            lote = corpo.get("results", [])
+            resultados.extend(lote)
+            total = (corpo.get("paging") or {}).get("total", 0)
+            if len(lote) < _LIMITE_PAGINA or len(resultados) >= total:
+                break
+    except Exception:
+        _busca_falhou_em = time.monotonic()
+        raise
     if len(_CACHE_BUSCA_PIX) > 20:
         _CACHE_BUSCA_PIX.clear()
     _CACHE_BUSCA_PIX[chave] = (agora, resultados)
@@ -152,7 +183,7 @@ def _data_aprovacao(pagamento: dict) -> datetime | None:
     return data if data.tzinfo else data.replace(tzinfo=timezone.utc)
 
 
-def _tentar_conciliar_pix_direto(cur, pedido: dict, usuario: dict) -> str:
+def _tentar_conciliar_pix_direto(cur, pedido: dict, usuario: dict, usar_cache: bool = True) -> str:
     """Pix pago DIRETO na chave (config.PIX_KEYS, sem passar pela API de
     Checkout -- evita a taxa de ~1%) não tem um mp_payment_id conhecido de
     antemão, porque a gente nunca chamou o Mercado Pago pra criar nada; o
@@ -177,7 +208,7 @@ def _tentar_conciliar_pix_direto(cur, pedido: dict, usuario: dict) -> str:
     ja_usados = {r["mp_payment_id"] for r in cur.fetchall()}
 
     try:
-        candidatos = _buscar_pagamentos_pix_aprovados(pedido["data_pedido"])
+        candidatos = _buscar_pagamentos_pix_aprovados(pedido["data_pedido"], usar_cache=usar_cache)
     except Exception as erro:
         logger.warning("Falha ao buscar pagamentos Pix no Mercado Pago", exc_info=True)
         raise PagamentoIndisponivel from erro
@@ -217,10 +248,8 @@ def _tentar_conciliar_pix_direto(cur, pedido: dict, usuario: dict) -> str:
             continue
 
         if cur.rowcount > 0:
-            try:
-                enviar_confirmacao_pedido(usuario["email"], usuario["nome"], pedido)
-            except Exception:
-                logger.warning("Falha ao enviar e-mail de confirmação de pedido", exc_info=True)
+            # em thread: o envio (até 10s) segurava a conexão e a linha do pedido
+            enviar_confirmacao_pedido_em_segundo_plano(usuario["email"], usuario["nome"], pedido)
             return "confirmado"
 
     return pedido["status_pedido"]
@@ -260,11 +289,14 @@ def _ingressos_na_conta(pedidos_ativos: list) -> int:
     return sum(int(p["quantidade"]) for p in pedidos_ativos)
 
 
-def _pedidos_ativos(cur, id_usuario: int, id_evento: int) -> list:
+def _pedidos_ativos(cur, id_usuario: int) -> list:
+    """Pedidos ativos da conta em TODOS os lotes. Cada lote novo é uma linha em
+    `evento`, mas a festa é a mesma: filtrando por lote, quem já tinha comprado 2
+    ingressos voltava a poder comprar mais 2 assim que o admin abria o lote 2."""
     cur.execute(
-        "SELECT * FROM pedido WHERE id_usuario = %s AND id_evento = %s "
+        "SELECT * FROM pedido WHERE id_usuario = %s "
         "AND status_pedido != 'cancelado' AND NOT cortesia ORDER BY slot",
-        (id_usuario, id_evento),
+        (id_usuario,),
     )
     return cur.fetchall()
 
@@ -296,11 +328,17 @@ def _titular_do_pedido(pedido: dict, nome_conta: str, email_conta: str) -> dict:
     }
 
 
+def _chave_pix_do_valor(valor) -> str | None:
+    """Chave Pix cadastrada pro valor, ou None. Só existem chaves pros valores de
+    config.PIX_KEYS: um lote com outro preço cria pedidos que ninguém consegue pagar."""
+    return config.PIX_KEYS.get(round(float(valor), 2)) or None
+
+
 def _chave_pix_do_pedido(pedido: dict) -> str | None:
     """Uma chave Pix DIFERENTE por valor (config.PIX_KEYS) -- mesmo padrão
     de PIX_KEYS em config.py. `round(...)` porque
     valor vem do Postgres como Decimal, e a chave do dict é float."""
-    return config.PIX_KEYS.get(round(float(pedido["valor"]), 2))
+    return _chave_pix_do_valor(pedido["valor"])
 
 
 def _confirmar_se_aprovado(cur, pedido: dict, usuario: dict, pagamento_mp: dict) -> str:
@@ -326,14 +364,11 @@ def _confirmar_se_aprovado(cur, pedido: dict, usuario: dict, pagamento_mp: dict)
         (pedido["id_pedido"],),
     )
     if cur.rowcount > 0:
-        try:
-            enviar_confirmacao_pedido(usuario["email"], usuario["nome"], pedido)
-        except Exception:
-            logger.warning("Falha ao enviar e-mail de confirmação de pedido", exc_info=True)
+        enviar_confirmacao_pedido_em_segundo_plano(usuario["email"], usuario["nome"], pedido)
     return "confirmado"
 
 
-def _verificar_e_confirmar_pagamento(cur, pedido: dict, usuario: dict) -> str:
+def _verificar_e_confirmar_pagamento(cur, pedido: dict, usuario: dict, usar_cache: bool = True) -> str:
     """Confirma o pagamento de verdade (não confia num clique) -- usado
     tanto pelo botão "Já paguei, confirmar" quanto pelo polling automático
     da tela de pagamento. Dois caminhos: se o pedido JÁ tem um
@@ -347,7 +382,7 @@ def _verificar_e_confirmar_pagamento(cur, pedido: dict, usuario: dict) -> str:
         return status_atual
 
     if not pedido["mp_payment_id"]:
-        return _tentar_conciliar_pix_direto(cur, pedido, usuario)
+        return _tentar_conciliar_pix_direto(cur, pedido, usuario, usar_cache=usar_cache)
 
     try:
         pagamento_mp = _consultar_pagamento(pedido["mp_payment_id"])
@@ -386,15 +421,17 @@ def _verificar_com_expiracao(cur, pedido: dict, titular: dict) -> str:
     que podem encerrar o ciclo de vida do pedido pendente (GET da tela de
     pagamento, "Já paguei" e o polling automático) -- nenhuma marca como
     expirado sem reconsultar a API primeiro."""
+    # Pedido já vencido: a consulta que decide EXPIRAR não pode vir do cache.
+    vencido = bool(config.MERCADOPAGO_ACCESS_TOKEN) and _pedido_expirado(pedido)
     try:
-        status_atual = _verificar_e_confirmar_pagamento(cur, pedido, titular)
+        status_atual = _verificar_e_confirmar_pagamento(cur, pedido, titular, usar_cache=not vencido)
     except PagamentoIndisponivel:
         # Sem resposta do Mercado Pago não dá pra afirmar que ninguém pagou:
         # deixa o pedido como está e tenta de novo na próxima consulta. Antes a
         # falha caía como "status pendente" e o pedido expirava mesmo assim --
         # um timeout na hora errada cancelava um Pix que podia estar pago.
         return pedido["status_pedido"]
-    if status_atual != "confirmado" and config.MERCADOPAGO_ACCESS_TOKEN and _pedido_expirado(pedido):
+    if status_atual != "confirmado" and vencido:
         status_atual = _expirar_pedido(cur, pedido)
     return status_atual
 
@@ -406,7 +443,7 @@ _INTERVALO_EXPIRACAO = 15.0
 _ultima_expiracao = 0.0
 
 
-def expirar_pedidos_vencidos(limite: int = 20) -> None:
+def expirar_pedidos_vencidos(limite: int = 5) -> None:
     """Expira os pedidos pendentes que passaram da janela de pagamento mesmo que
     o dono nunca mais tenha aberto a tela -- sem isso, quem criava o pedido e
     fechava a aba segurava a vaga pra sempre (a expiração só rodava quando o
@@ -494,7 +531,7 @@ def _comprar_impl(usuario: dict):
             # comprou pode comprar mais 1 ingresso, mas só se for pra alguém
             # diferente (nome/e-mail/RG/WhatsApp não podem ser os mesmos já
             # usados pela conta) e sem passar do total (ver _proximo_slot).
-            existentes = _pedidos_ativos(cur, usuario["id_usuario"], evento["id_evento"])
+            existentes = _pedidos_ativos(cur, usuario["id_usuario"])
             proximo = _proximo_slot(existentes, evento)
             if not proximo:
                 return render_template("comprar.html", limite_atingido=True)
@@ -590,6 +627,12 @@ def _comprar_impl(usuario: dict):
                     or not acompanhante_whatsapp
                 ):
                     erro = "Preencha nome completo (nome e sobrenome), e-mail, RG (só números) e WhatsApp (só números) válidos do acompanhante."
+
+            if not erro and not _chave_pix_do_valor(_valor_do_pedido(evento, slot, quantidade)):
+                # Sem chave Pix pro valor o pedido nasceria impagável e seguraria a vaga
+                # até expirar (o admin cadastrou um preço que não está em config.PIX_KEYS).
+                logger.error("Sem chave Pix pro valor %s: compra recusada", _valor_do_pedido(evento, slot, quantidade))
+                erro = "O pagamento por Pix para esse valor ainda não está disponível. Fale com a organização."
 
             if erro:
                 return render_template(
@@ -797,7 +840,7 @@ def meus_pedidos():
                 SELECT p.*, e.numero_lote, e.nome_evento
                 FROM pedido p
                 JOIN evento e ON e.id_evento = p.id_evento
-                WHERE p.id_usuario = %s
+                WHERE p.id_usuario = %s AND NOT p.cortesia
                 ORDER BY p.data_pedido DESC
                 """,
                 (usuario["id_usuario"],),
@@ -834,7 +877,7 @@ def meus_pedidos():
             pode_comprar_mais = 0
             evento = _evento_ativo(cur)
             if evento:
-                existentes = _pedidos_ativos(cur, usuario["id_usuario"], evento["id_evento"])
+                existentes = _pedidos_ativos(cur, usuario["id_usuario"])
                 proximo = _proximo_slot(existentes, evento)
                 if proximo:
                     vagas_restantes = evento["capacidade_maxima"] - _ingressos_vendidos_total(cur)

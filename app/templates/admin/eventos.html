@@ -78,8 +78,11 @@
   <p class="help-text no-margin">
     É sempre o MESMO evento{% if ultimo %} ({{ ultimo.nome_evento }}, {{ ultimo.data_evento.strftime('%d/%m/%Y') if ultimo.data_evento else 'data a definir' }}{% if ultimo.hora_evento %} às {{ ultimo.hora_evento.strftime('%H:%M') }}{% endif %}){% endif %} — aqui
     você só cadastra o lote {{ proximo_lote }}, com um novo preço (ex.: 1º
-    lote R$ 30, depois 2º lote R$ 40). O lote mais recente cadastrado é o
-    que fica valendo pra quem for comprar ingresso agora.
+    lote R$ 30, depois 2º lote R$ 50). O lote mais recente cadastrado é o
+    que fica valendo pra quem for comprar ingresso agora. <strong>Só valem
+    preços que têm chave Pix cadastrada</strong> (hoje: R$ 30, R$ 50 e R$ 60,
+    contando o preço de 1 e de 2 ingressos); com outro valor ninguém consegue
+    pagar.
   </p>
 
   <form method="post" action="/admin/eventos" class="stack-14">

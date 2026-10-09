@@ -26,8 +26,21 @@ import config
 import db
 from auth import EMAIL_RE, admin_required, current_user
 from formatacao import data_hora_br
-from email_utils import enviar_cadastro_aprovado, enviar_confirmacao_pedido, enviar_email_em_massa_em_segundo_plano
-from pedidos import _evento_ativo, _validar_rg, _validar_whatsapp, expirar_pedidos_vencidos
+from email_utils import (
+    enviar_cadastro_aprovado,
+    enviar_cadastro_aprovado_em_segundo_plano,
+    enviar_confirmacao_pedido,
+    enviar_confirmacao_pedido_em_segundo_plano,
+    enviar_email_em_massa_em_segundo_plano,
+)
+from pedidos import (
+    _chave_pix_do_valor,
+    _evento_ativo,
+    _ingressos_vendidos_total,
+    _validar_rg,
+    _validar_whatsapp,
+    expirar_pedidos_vencidos,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -230,7 +243,9 @@ def _totais_pedidos(cur) -> dict:
         "valor_total": f"{agregados['valor_total']:.2f}",
         "confirmados": agregados["confirmados"],
         "ingressos_confirmados": agregados["ingressos_confirmados"],
-        "pendentes": agregados["pendentes"],
+        # nome próprio: "pendentes" é o dos CADASTROS (selo do menu); usar o mesmo aqui
+        # sobrescrevia o selo "Cadastros" com o número de Pix pendentes
+        "pedidos_pendentes": agregados["pendentes"],
     }
 
 
@@ -352,6 +367,11 @@ def pedidos_cortesia():
                 flash("Nenhum evento ativo -- cadastre um lote primeiro.")
                 return redirect(url_for("admin.pedidos"))
 
+            # Mesma trava do /comprar: cortesia concorrente com uma compra podia passar
+            # da capacidade sem ninguém ver. Passar de propósito é permitido, mas avisa.
+            cur.execute("SELECT 1 FROM evento WHERE id_evento = %s FOR UPDATE", (evento["id_evento"],))
+            passou_da_capacidade = _ingressos_vendidos_total(cur) + 1 > evento["capacidade_maxima"]
+
             cur.execute(
                 """
                 INSERT INTO pedido (
@@ -366,11 +386,15 @@ def pedidos_cortesia():
             id_pedido = cur.fetchone()["id_pedido"]
 
     try:
-        enviar_confirmacao_pedido(email, nome, {"id_pedido": id_pedido, "valor": "0.00", "quantidade": 1})
+        enviar_confirmacao_pedido(
+            email, nome, {"id_pedido": id_pedido, "valor": "0.00", "quantidade": 1, "rg": rg, "cortesia": True}
+        )
     except Exception:
         logger.warning("Falha ao enviar e-mail de ingresso cortesia", exc_info=True)
 
     flash(f"Ingresso cortesia #{id_pedido} criado pra {nome}.")
+    if passou_da_capacidade:
+        flash("Atenção: a capacidade do evento já estava completa; esta cortesia passa do limite de vagas.")
     return redirect(url_for("admin.pedidos"))
 
 
@@ -543,11 +567,20 @@ def pedido_confirmar(id_pedido: int):
             # RETURNING: sem a guarda aqui, dois admins confirmando o mesmo
             # pedido ao mesmo tempo fariam os dois UPDATEs "sem condição"
             # rodarem e os dois mandarem e-mail de confirmação duplicado.
-            cur.execute(
-                "UPDATE pedido SET status_pedido = 'confirmado' "
-                "WHERE id_pedido = %s AND status_pedido != 'confirmado'",
-                (id_pedido,),
-            )
+            try:
+                cur.execute(
+                    "UPDATE pedido SET status_pedido = 'confirmado' "
+                    "WHERE id_pedido = %s AND status_pedido != 'confirmado'",
+                    (id_pedido,),
+                )
+            except psycopg2.errors.UniqueViolation:
+                # Pedido cancelado cuja conta já comprou de novo no mesmo lugar (slot):
+                # reativá-lo violaria o índice único. Antes virava "Erro interno".
+                conn.rollback()
+                return _json_ok(
+                    ignorados=[{"id": id_pedido, "motivo": "Esse cliente já tem outro pedido ativo no mesmo lugar: cancele o outro antes."}],
+                    totais=_totais_pedidos(cur),
+                )
             mudou = cur.rowcount > 0
             totais = _totais_pedidos(cur)
 
@@ -599,6 +632,7 @@ def pedidos_confirmar_lote():
 
     encontrados: dict[int, dict] = {}
     elegiveis: list[dict] = []
+    conflitos: set[int] = set()
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             if ids:
@@ -615,20 +649,27 @@ def pedidos_confirmar_lote():
                 )
                 encontrados = {p["id_pedido"]: p for p in cur.fetchall()}
                 elegiveis = [p for p in encontrados.values() if p["status_pedido"] != "confirmado"]
-                if elegiveis:
-                    cur.execute(
-                        "UPDATE pedido SET status_pedido = 'confirmado' "
-                        "WHERE id_pedido = ANY(%s) AND status_pedido != 'confirmado' "
-                        "RETURNING id_pedido",
-                        ([p["id_pedido"] for p in elegiveis],),
-                    )
-                    # Confere quem foi REALMENTE atualizado -- não quem tinha
-                    # sido considerado elegível no SELECT de alguns instantes
-                    # atrás. Sem isso, um pedido cancelado/confirmado por
-                    # outro admin bem no meio dessa janela entraria em
-                    # "aplicados" e receberia e-mail mesmo sem ter mudado.
-                    confirmados_ids = {r["id_pedido"] for r in cur.fetchall()}
-                    elegiveis = [p for p in elegiveis if p["id_pedido"] in confirmados_ids]
+                # Um por vez, cada um com SAVEPOINT: um pedido cancelado cujo lugar já foi
+                # recomprado viola o índice único, e num UPDATE só isso desfazia a
+                # confirmação de TODOS os selecionados.
+                confirmados_ids: set[int] = set()
+                for p in elegiveis:
+                    cur.execute("SAVEPOINT confirmar_um")
+                    try:
+                        # RETURNING + guarda no WHERE: confere quem foi REALMENTE atualizado
+                        # (outro admin pode ter confirmado/cancelado no meio da janela)
+                        cur.execute(
+                            "UPDATE pedido SET status_pedido = 'confirmado' "
+                            "WHERE id_pedido = %s AND status_pedido != 'confirmado' RETURNING id_pedido",
+                            (p["id_pedido"],),
+                        )
+                        if cur.fetchone():
+                            confirmados_ids.add(p["id_pedido"])
+                    except psycopg2.errors.UniqueViolation:
+                        cur.execute("ROLLBACK TO SAVEPOINT confirmar_um")
+                        conflitos.add(p["id_pedido"])
+                    cur.execute("RELEASE SAVEPOINT confirmar_um")
+                elegiveis = [p for p in elegiveis if p["id_pedido"] in confirmados_ids]
             totais = _totais_pedidos(cur)
 
     elegiveis_ids = {p["id_pedido"] for p in elegiveis}
@@ -636,23 +677,19 @@ def pedidos_confirmar_lote():
     for id_pedido in ids:
         if id_pedido in elegiveis_ids:
             aplicados.append({"id": id_pedido, "status": "confirmado"})
+        elif id_pedido in conflitos:
+            ignorados.append({"id": id_pedido, "motivo": "O cliente já tem outro pedido ativo no mesmo lugar."})
         elif id_pedido in encontrados:
             ignorados.append({"id": id_pedido, "motivo": "Já estava confirmado."})
         else:
             ignorados.append({"id": id_pedido, "motivo": "Pedido não encontrado."})
 
-    aviso = None
-    falhou_email = False
+    # Em thread: eram até 10s por e-mail DENTRO da requisição, e passava dos 30s do
+    # gunicorn com 20+ pedidos (o worker morria no meio e sobravam e-mails sem sair).
     for pedido in elegiveis:
-        try:
-            enviar_confirmacao_pedido(pedido["email"], pedido["nome"], pedido)
-        except Exception:
-            logger.warning("Falha ao enviar e-mail de confirmação de pedido (lote)", exc_info=True)
-            falhou_email = True
-    if falhou_email:
-        aviso = "Pedidos confirmados, mas não consegui enviar e-mail pra algum cliente. Avise manualmente."
+        enviar_confirmacao_pedido_em_segundo_plano(pedido["email"], pedido["nome"], pedido)
 
-    return _json_ok(aplicados=aplicados, ignorados=ignorados, totais=totais, aviso=aviso)
+    return _json_ok(aplicados=aplicados, ignorados=ignorados, totais=totais)
 
 
 @admin_bp.route("/pedidos/cancelar-lote", methods=["POST"])
@@ -1059,18 +1096,10 @@ def cadastros_confirmar_lote():
     aplicados = [{"id": i} for i in ids if i in elegiveis_set]
     ignorados = [{"id": i, "motivo": "Não encontrado ou já confirmado."} for i in ids if i not in elegiveis_set]
 
-    aviso = None
-    falhou_email = False
     for usuario in elegiveis:
-        try:
-            enviar_cadastro_aprovado(usuario["email"], usuario["nome"])
-        except Exception:
-            logger.warning("Falha ao enviar e-mail de cadastro aprovado (lote)", exc_info=True)
-            falhou_email = True
-    if falhou_email:
-        aviso = "Cadastros confirmados, mas não consegui enviar e-mail pra algum cliente. Avise manualmente."
+        enviar_cadastro_aprovado_em_segundo_plano(usuario["email"], usuario["nome"])
 
-    return _json_ok(aplicados=aplicados, ignorados=ignorados, totais=totais, aviso=aviso)
+    return _json_ok(aplicados=aplicados, ignorados=ignorados, totais=totais)
 
 
 @admin_bp.route("/cadastros/recusar-lote", methods=["POST"])
@@ -1280,6 +1309,19 @@ def eventos():
                         promo_casadinha,
                     ),
                 )
+        # Só existem chaves Pix para os valores de config.PIX_KEYS: um preço fora da lista
+        # cria pedidos que ninguém consegue pagar (a venda para sem nenhum aviso).
+        sem_chave = [
+            f"R$ {valor_entrada * q:.2f} ({q} ingresso{'s' if q > 1 else ''})"
+            for q in (1, 2)
+            if not _chave_pix_do_valor(valor_entrada * q)
+        ]
+        if sem_chave:
+            valores = ", ".join(f"R$ {v:.0f}" for v in sorted(config.PIX_KEYS))
+            flash(
+                "Lote cadastrado, mas NÃO há chave Pix para " + " e ".join(sem_chave) + ": ninguém consegue pagar esse valor. "
+                f"Só existem chaves para {valores} (config.PIX_KEYS) -- use um desses preços ou cadastre a chave nova."
+            )
         return redirect(url_for("admin.eventos"))
 
     with db.get_conn() as conn:

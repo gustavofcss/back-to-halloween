@@ -16,7 +16,7 @@
 <form method="post" id="cadastros-lote-form" class="admin-ajax-form">
   <div class="admin-bulk-bar" id="cadastros-bulk-bar">
     <span class="admin-bulk-bar__count" id="cadastros-bulk-count">0 selecionado(s)</span>
-    <button type="submit" formaction="/admin/cadastros/confirmar-lote" class="admin-btn-primary">Confirmar selecionados</button>
+    <button type="submit" formaction="/admin/cadastros/confirmar-lote" class="admin-btn-primary" data-confirmar="Aprovar {n} cadastro(s)? Essas pessoas passam a poder comprar ingresso.">Confirmar selecionados</button>
     <button type="button" class="admin-btn-outline" onclick="return confirmarAcaoLote(document.getElementById('cadastros-lote-form'), '/admin/cadastros/recusar-lote', 'Recusar e apagar os cadastros selecionados?', true)">Recusar selecionados</button>
   </div>
   <div class="a-table-wrap">
