@@ -399,6 +399,13 @@ def _verificar_com_expiracao(cur, pedido: dict, titular: dict) -> str:
     return status_atual
 
 
+# A expiração roda nas telas de pedidos do admin (com polling de 10s por aba) e em
+# /comprar: no máximo uma vez a cada 15s por processo, pra não gastar uma ida ao
+# banco em toda requisição só pra descobrir que não há nada vencido.
+_INTERVALO_EXPIRACAO = 15.0
+_ultima_expiracao = 0.0
+
+
 def expirar_pedidos_vencidos(limite: int = 20) -> None:
     """Expira os pedidos pendentes que passaram da janela de pagamento mesmo que
     o dono nunca mais tenha aberto a tela -- sem isso, quem criava o pedido e
@@ -408,8 +415,13 @@ def expirar_pedidos_vencidos(limite: int = 20) -> None:
     pedido que acabou de ser pago). Cada pedido numa transação própria, pra uma
     falha (ou o rollback da trava de pagamento duplicado) não desfazer os
     outros. Só atua com o Mercado Pago configurado, como o resto da expiração."""
+    global _ultima_expiracao
     if not config.MERCADOPAGO_ACCESS_TOKEN:
         return
+    agora = time.monotonic()
+    if agora - _ultima_expiracao < _INTERVALO_EXPIRACAO:
+        return
+    _ultima_expiracao = agora
     try:
         with db.get_conn() as conn:
             with conn.cursor() as cur:

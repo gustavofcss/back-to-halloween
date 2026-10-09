@@ -171,52 +171,49 @@ def _injetar_contadores_nav():
     # COUNT(*) baratos (tabelas pequenas, um evento de festa só) resolvem sem
     # duplicar as queries mais pesadas que cada página já faz pra montar sua
     # própria lista.
+    # Tudo numa consulta só (eram 7 idas ao banco em TODA página do admin).
     with db.get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) AS n FROM pedido")
-            total_pedidos = cur.fetchone()["n"]
             cur.execute(
-                "SELECT COUNT(*) AS n FROM login_usuario "
-                "WHERE email_confirmado = FALSE AND email_verificado = TRUE"
+                """
+                SELECT
+                  (SELECT COUNT(*) FROM pedido) AS pedidos,
+                  (SELECT COUNT(*) FROM login_usuario
+                     WHERE email_confirmado = FALSE AND email_verificado = TRUE) AS cadastros,
+                  (SELECT COUNT(*) FROM login_usuario u
+                     JOIN hierarquia h ON h.id_usuario = u.id_usuario
+                     WHERE u.email_confirmado = TRUE) AS hierarquia,
+                  (SELECT COUNT(*) FROM despesa_material) AS material,
+                  (SELECT COUNT(*) FROM evento) AS eventos,
+                  (SELECT COALESCE(SUM(quantidade), 0) FROM pedido
+                     WHERE status_pedido != 'cancelado') AS vendidos,
+                  COALESCE((SELECT capacidade_maxima FROM evento ORDER BY data_cadastro DESC LIMIT 1), 60)
+                     AS capacidade
+                """
             )
-            total_cadastros = cur.fetchone()["n"]
-            cur.execute(
-                "SELECT COUNT(*) AS n FROM login_usuario u "
-                "JOIN hierarquia h ON h.id_usuario = u.id_usuario "
-                "WHERE u.email_confirmado = TRUE"
-            )
-            total_hierarquia = cur.fetchone()["n"]
-            cur.execute("SELECT COUNT(*) AS n FROM despesa_material")
-            total_material = cur.fetchone()["n"]
-            cur.execute("SELECT COUNT(*) AS n FROM evento")
-            total_eventos = cur.fetchone()["n"]
-            # Card do evento na sidebar (ver HANDOFF-ADMIN-HEADER-VAGAS.md)
-            # aparece em toda página do admin, não só em pedidos -- reaproveita
-            # a mesma _totais_pedidos que a rota pedidos já usa, sem query nova.
-            totais_pedidos = _totais_pedidos(cur)
+            n = cur.fetchone()
     return {
         "nav_counts": {
-            "pedidos": total_pedidos,
-            "cadastros": total_cadastros,
-            "hierarquia": total_hierarquia,
-            "material": total_material,
-            "eventos": total_eventos,
+            "pedidos": n["pedidos"],
+            "cadastros": n["cadastros"],
+            "hierarquia": n["hierarquia"],
+            "material": n["material"],
+            "eventos": n["eventos"],
         },
-        "sidebar_vendidos": totais_pedidos["ingressos_vendidos_total"],
-        "sidebar_capacidade": totais_pedidos["capacidade_maxima"],
+        # card do evento na sidebar (aparece em toda página do admin)
+        "sidebar_vendidos": n["vendidos"],
+        "sidebar_capacidade": n["capacidade"],
     }
 
 
 # -------------------- totais recalculados após cada mutação --------------------
 
 def _totais_pedidos(cur) -> dict:
-    cur.execute("SELECT capacidade_maxima FROM evento ORDER BY data_cadastro DESC LIMIT 1")
-    evento_atual = cur.fetchone()
-    capacidade_maxima = evento_atual["capacidade_maxima"] if evento_atual else 60
-
     cur.execute(
         """
-        SELECT COUNT(*) AS total,
+        SELECT COALESCE((SELECT capacidade_maxima FROM evento ORDER BY data_cadastro DESC LIMIT 1), 60)
+                   AS capacidade_maxima,
+               COUNT(*) AS total,
                COALESCE(SUM(quantidade) FILTER (WHERE status_pedido != 'cancelado'), 0) AS ingressos_vendidos,
                COALESCE(SUM(valor) FILTER (WHERE status_pedido != 'cancelado'), 0) AS valor_total,
                COUNT(*) FILTER (WHERE status_pedido = 'confirmado') AS confirmados,
@@ -227,7 +224,7 @@ def _totais_pedidos(cur) -> dict:
     )
     agregados = cur.fetchone()
     return {
-        "capacidade_maxima": capacidade_maxima,
+        "capacidade_maxima": agregados["capacidade_maxima"],
         "ingressos_vendidos_total": agregados["ingressos_vendidos"],
         "total_pedidos": agregados["total"],
         "valor_total": f"{agregados['valor_total']:.2f}",

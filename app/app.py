@@ -4,7 +4,9 @@ outro projeto/credencial de trabalho.
 """
 from __future__ import annotations
 
+import hashlib
 import mimetypes
+import os
 from datetime import timedelta
 from urllib.parse import urlsplit
 
@@ -38,6 +40,27 @@ app.register_blueprint(pedidos_bp)
 app.register_blueprint(admin_bp)
 
 
+class _TemPedido:
+    """Vale `True` se a conta tem algum pedido não cancelado. A consulta só roda
+    quando um template de fato usa o valor (convite e compra): as páginas do
+    admin, o login e o resto não pagam essa ida ao banco."""
+
+    def __init__(self, id_usuario: int):
+        self._id_usuario = id_usuario
+        self._valor: bool | None = None
+
+    def __bool__(self) -> bool:
+        if self._valor is None:
+            with db.get_conn() as conn:
+                with conn.cursor() as cur:
+                    cur.execute(
+                        "SELECT 1 FROM pedido WHERE id_usuario = %s AND status_pedido != 'cancelado' LIMIT 1",
+                        (self._id_usuario,),
+                    )
+                    self._valor = cur.fetchone() is not None
+        return self._valor
+
+
 @app.before_request
 def _bloquear_post_de_outro_site():
     """Defesa contra CSRF: um site de fora não consegue fazer o navegador do
@@ -51,13 +74,38 @@ def _bloquear_post_de_outro_site():
             abort(403)
 
 
+_versoes_estaticos: dict[str, str] = {}
+
+
+@app.url_defaults
+def _versao_do_estatico(endpoint, values):
+    """url_for('static', ...) ganha ?v=<hash do conteúdo>. Assim o navegador pode
+    guardar CSS/JS/imagens por 1 ano (ver _cache_longo_dos_estaticos) e, quando o
+    arquivo muda, a URL muda junto. Antes eles vinham com `no-cache`: toda troca
+    de página revalidava o CSS (que trava a renderização) e o JS, e cada
+    revalidação custava de 0,5 a 1 s de ida e volta até o servidor."""
+    if endpoint != "static" or "v" in values:
+        return
+    nome = values.get("filename")
+    if not nome:
+        return
+    versao = _versoes_estaticos.get(nome)
+    if versao is None:
+        try:
+            with open(os.path.join(app.static_folder, nome), "rb") as f:
+                versao = hashlib.md5(f.read()).hexdigest()[:10]
+        except OSError:
+            return
+        _versoes_estaticos[nome] = versao
+    values["v"] = versao
+
+
 @app.after_request
-def _cache_longo_das_fontes(resposta):
-    """Os arquivos de static/fonts têm nome fixo e o conteúdo nunca muda: o
-    navegador guarda por 1 ano sem revalidar (antes cada página fazia uma
-    requisição 304 por fonte). Se um dia trocar o ARQUIVO de uma fonte, troque
-    também o NOME dele, senão quem já visitou continua com a antiga."""
-    if request.path.startswith("/static/fonts/"):
+def _cache_longo_dos_estaticos(resposta):
+    """Estático com ?v= (a URL muda quando o conteúdo muda) e as fontes (nome fixo,
+    conteúdo que nunca muda) ficam 1 ano no cache do navegador. Se um dia trocar
+    o ARQUIVO de uma fonte, troque também o NOME dele."""
+    if request.path.startswith("/static/") and ("v" in request.args or request.path.startswith("/static/fonts/")):
         resposta.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     return resposta
 
@@ -71,16 +119,7 @@ def inject_usuario():
     # continuava mudo e o "Sair" nunca aparecia -- parecia que o login não
     # tinha feito nada). Injetar aqui, uma vez, cobre TODAS as rotas/telas.
     usuario = current_user()
-    tem_pedido = False
-    if usuario:
-        with db.get_conn() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    "SELECT 1 FROM pedido WHERE id_usuario = %s AND status_pedido != 'cancelado' LIMIT 1",
-                    (usuario["id_usuario"],),
-                )
-                tem_pedido = cur.fetchone() is not None
-    return {"usuario": usuario, "tem_pedido": tem_pedido}
+    return {"usuario": usuario, "tem_pedido": _TemPedido(usuario["id_usuario"]) if usuario else False}
 
 
 _DIAS_SEMANA = ["Segunda", "Terça", "Quarta", "Quinta", "Sexta", "Sábado", "Domingo"]

@@ -14,6 +14,7 @@ from flask import (
     Blueprint,
     abort,
     flash,
+    g,
     redirect,
     render_template,
     request,
@@ -81,6 +82,11 @@ def current_user() -> dict | None:
     user_id = session.get("user_id")
     if not user_id:
         return None
+    # Uma consulta por requisição: admin_required, a rota e o context processor
+    # (app.py) chamavam isso, e cada chamada ia ao banco.
+    guardado = getattr(g, "_usuario_atual", None)
+    if guardado is not None and guardado[0] == user_id:
+        return guardado[1]
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -92,7 +98,9 @@ def current_user() -> dict | None:
                 """,
                 (user_id,),
             )
-            return cur.fetchone()
+            usuario = cur.fetchone()
+    g._usuario_atual = (user_id, usuario)
+    return usuario
 
 
 def _next_seguro(next_url: str | None) -> str | None:
