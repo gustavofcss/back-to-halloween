@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Calma aí — Back to Halloween{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ url_for('static', filename='css/vhs.css') }}">{% endblock %}
+{% block content %}
+<div class="vhs">
+  <div class="vhs__osd"><span>❚❚ PAUSE</span><span>CH 03</span></div>
+  <div class="vhs__wrap center">
+    <h1 class="title">Calma aí</h1>
+    <p class="type" style="margin:0">Muitas tentativas em pouco tempo. Espere cerca de 1 minuto e tente de novo.</p>
+    <a href="/login" class="btn btn-ghost" style="align-self:center">◀◀ VOLTAR PRO LOGIN</a>
+  </div>
+</div>
+{% endblock %}

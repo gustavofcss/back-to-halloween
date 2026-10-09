@@ -9,6 +9,7 @@ import secrets
 from datetime import datetime, timezone
 from functools import wraps
 
+from authlib.integrations.base_client.errors import OAuthError
 from authlib.integrations.flask_client import OAuth
 from flask import (
     Blueprint,
@@ -25,6 +26,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 
 import config
 import db
+from limitador import limitar
 from email_utils import avisar_admins_cadastro_pendente, enviar_codigo_recuperacao, enviar_codigo_verificacao_email
 
 auth_bp = Blueprint("auth", __name__)
@@ -48,6 +50,14 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _MAX_TENTATIVAS_CODIGO = 5
 
 
+def _hash_do_codigo(codigo: str) -> str:
+    """Hash do código de 6 dígitos. O scrypt padrão (N=32768) custa ~190 ms e 32 MiB
+    por chamada, e um código de 6 dígitos que vale 15 min não ganha nada com isso:
+    N=2048 custa ~2 ms. O formato do hash carrega os parâmetros, então códigos já
+    emitidos (com o custo antigo) continuam sendo conferidos normalmente."""
+    return generate_password_hash(codigo, method="scrypt:2048:8:1")
+
+
 def _codigo_bem_formado(codigo: str) -> bool:
     """6 dígitos ASCII. Só um código DIGITADO por inteiro conta como tentativa
     errada: um envio vazio ou pela metade (o <input hidden required> não é
@@ -58,7 +68,10 @@ def _codigo_bem_formado(codigo: str) -> bool:
 def login_required(view_func):
     @wraps(view_func)
     def wrapped(*args, **kwargs):
-        if not session.get("user_id"):
+        # Conta apagada pelo admin (ou sessão revogada) com o cookie ainda válido: era
+        # `usuario["id_usuario"]` em None e erro 500; agora volta pro login.
+        if not session.get("user_id") or current_user() is None:
+            session.clear()
             return redirect(url_for("auth.login", next=request.path))
         return view_func(*args, **kwargs)
 
@@ -71,7 +84,10 @@ def admin_required(view_func):
         if not session.get("user_id"):
             return redirect(url_for("auth.login", next=request.path))
         user = current_user()
-        if not user or user["hierarquia"] not in ("adm", "superadm"):
+        if user is None:
+            session.clear()
+            return redirect(url_for("auth.login", next=request.path))
+        if user["hierarquia"] not in ("adm", "superadm"):
             abort(403)
         return view_func(*args, **kwargs)
 
@@ -91,7 +107,7 @@ def current_user() -> dict | None:
         with conn.cursor() as cur:
             cur.execute(
                 """
-                SELECT u.id_usuario, u.nome, u.email, h.hierarquia
+                SELECT u.id_usuario, u.nome, u.email, u.data_atualizacao, h.hierarquia
                 FROM login_usuario u
                 JOIN hierarquia h ON h.id_usuario = u.id_usuario
                 WHERE u.id_usuario = %s
@@ -99,23 +115,48 @@ def current_user() -> dict | None:
                 (user_id,),
             )
             usuario = cur.fetchone()
+    versao = session.get("sv")
+    if usuario is not None and versao is not None and versao != _versao_da_sessao(usuario["data_atualizacao"]):
+        # A conta foi alterada depois deste login (senha redefinida): cookie antigo,
+        # inclusive um copiado ou roubado, deixa de valer.
+        usuario = None
+        session.clear()
     g._usuario_atual = (user_id, usuario)
     return usuario
+
+
+def _versao_da_sessao(data_atualizacao) -> int:
+    return int(data_atualizacao.timestamp()) if data_atualizacao else 0
+
+
+def _abrir_sessao(id_usuario: int) -> None:
+    """Abre a sessão (14 dias) guardando a "versão" da conta: trocar a senha muda
+    `data_atualizacao` e derruba as sessões abertas antes disso."""
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT data_atualizacao FROM login_usuario WHERE id_usuario = %s", (id_usuario,))
+            linha = cur.fetchone()
+    session.permanent = True
+    session["user_id"] = id_usuario
+    session["sv"] = _versao_da_sessao(linha["data_atualizacao"] if linha else None)
+
+
+_NEXT_SEGURO_RE = re.compile(r"/(?!/)[^\s\\\x00-\x1f\x7f]*")
 
 
 def _next_seguro(next_url: str | None) -> str | None:
     """`next_url` vem sem nenhuma validação de `request.form.get('next')`
     (form de /login) ou `request.args.get('next')` (query string de
     /auth/google, repassada via session) -- ambos controlados por quem
-    monta o link, não pelo servidor. Sem essa checagem, `/login?next=
-    https://evil.example/phish` (ou `//evil.example`, redirect
-    "protocol-relative") redireciona a vítima pra fora do site logo depois
-    de um login bem-sucedido (open redirect, achado real nesta revisão de
-    segurança) -- só aceita caminho interno, começando com uma única barra."""
+    monta o link, não pelo servidor. Só aceita caminho interno: uma barra, depois
+    qualquer coisa menos outra barra, espaço, barra invertida ou caractere de
+    controle em QUALQUER posição. Antes só olhava o começo: `/<TAB>/evil.example`
+    passava, o Werkzeug tirava o TAB ao montar o cabeçalho e o `Location` virava
+    `//evil.example` (open redirect); com \r\n derrubava o login com erro 500."""
     if not next_url:
         return None
     next_url = next_url.strip()
-    if not next_url.startswith("/") or next_url.startswith("//") or next_url.startswith("/\\"):
+    if len(next_url) > 300 or not _NEXT_SEGURO_RE.fullmatch(next_url):
         return None
     return next_url
 
@@ -159,6 +200,8 @@ def _destino_pos_login(id_usuario: int, next_url: str | None = None) -> str:
 
 
 @auth_bp.route("/signup", methods=["GET", "POST"])
+@limitar("signup", 5)
+@limitar("signup-hora", 30, 3600)
 def signup():
     if request.method == "GET":
         return render_template("signup.html")
@@ -186,7 +229,7 @@ def signup():
                 return render_template("signup.html"), 400
 
             codigo = f"{secrets.randbelow(1000000):06d}"
-            codigo_hash = generate_password_hash(codigo)
+            codigo_hash = _hash_do_codigo(codigo)
             senha_hash = generate_password_hash(senha)
             cur.execute(
                 """
@@ -214,6 +257,7 @@ def signup():
 
 
 @auth_bp.route("/confirmar-email", methods=["GET", "POST"])
+@limitar("codigo", 10)
 def confirmar_email():
     if request.method == "GET":
         email = (request.args.get("email") or "").strip().lower()
@@ -224,31 +268,35 @@ def confirmar_email():
 
     with db.get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id_usuario, nome, email_verificado, email_verificacao_codigo_hash, "
-                "email_verificacao_codigo_expira FROM login_usuario WHERE email = %s",
-                (email,),
-            )
-            usuario = cur.fetchone()
+            usuario = None
+            if _codigo_bem_formado(codigo):
+                # A tentativa é reservada ANTES de conferir o código, num UPDATE só: lendo
+                # o código e contando depois, requisições em paralelo (2 workers x 4
+                # threads) liam o mesmo contador e passavam ~8 palpites em vez de 5.
+                # Só código de 6 dígitos DIGITADO por inteiro conta como tentativa.
+                cur.execute(
+                    "UPDATE login_usuario SET email_verificacao_tentativas = email_verificacao_tentativas + 1 "
+                    "WHERE email = %s AND email_verificado = FALSE "
+                    "AND email_verificacao_codigo_hash IS NOT NULL AND email_verificacao_tentativas < %s "
+                    "RETURNING id_usuario, nome, email_verificacao_codigo_hash, "
+                    "email_verificacao_codigo_expira, email_verificacao_tentativas",
+                    (email, _MAX_TENTATIVAS_CODIGO),
+                )
+                usuario = cur.fetchone()
 
-            valido = (
+            valido = bool(
                 usuario
-                and not usuario["email_verificado"]
-                and usuario["email_verificacao_codigo_hash"]
                 and usuario["email_verificacao_codigo_expira"]
                 and usuario["email_verificacao_codigo_expira"] > datetime.now(timezone.utc)
                 and check_password_hash(usuario["email_verificacao_codigo_hash"], codigo)
             )
 
             if not valido:
-                if usuario and usuario["email_verificacao_codigo_hash"] and _codigo_bem_formado(codigo):
+                if usuario and usuario["email_verificacao_tentativas"] >= _MAX_TENTATIVAS_CODIGO:
+                    # esgotou as tentativas: o código deixa de existir (só pedindo outro)
                     cur.execute(
-                        "UPDATE login_usuario SET "
-                        "email_verificacao_tentativas = email_verificacao_tentativas + 1, "
-                        "email_verificacao_codigo_hash = CASE WHEN email_verificacao_tentativas + 1 >= %s "
-                        "THEN NULL ELSE email_verificacao_codigo_hash END "
-                        "WHERE id_usuario = %s",
-                        (_MAX_TENTATIVAS_CODIGO, usuario["id_usuario"]),
+                        "UPDATE login_usuario SET email_verificacao_codigo_hash = NULL WHERE id_usuario = %s",
+                        (usuario["id_usuario"],),
                     )
                 flash("Código inválido ou expirado.")
                 return render_template("verifique_email.html", email=email), 400
@@ -266,6 +314,8 @@ def confirmar_email():
 
 
 @auth_bp.route("/confirmar-email/reenviar", methods=["POST"])
+@limitar("reenviar", 5)
+@limitar("reenviar-hora", 30, 3600)
 def confirmar_email_reenviar():
     email = (request.form.get("email") or "").strip().lower()
     codigo = None
@@ -285,7 +335,7 @@ def confirmar_email_reenviar():
 
             if usuario and not usuario["recente"]:
                 codigo = f"{secrets.randbelow(1000000):06d}"
-                codigo_hash = generate_password_hash(codigo)
+                codigo_hash = _hash_do_codigo(codigo)
                 cur.execute(
                     "UPDATE login_usuario SET email_verificacao_codigo_hash = %s, "
                     "email_verificacao_tentativas = 0, "
@@ -310,6 +360,8 @@ def confirmar_email_reenviar():
 
 
 @auth_bp.route("/confirmar-email/mudar-email", methods=["POST"])
+@limitar("mudar-email", 5)
+@limitar("mudar-email-hora", 20, 3600)
 def confirmar_email_mudar():
     # "Errei o e-mail no cadastro" -- pedido explícito do usuário (a tela de
     # confirmação não tinha como corrigir isso, só dava pra voltar pro login
@@ -342,10 +394,9 @@ def confirmar_email_mudar():
                 return render_template("verifique_email.html", email=email_atual), 400
 
             codigo = f"{secrets.randbelow(1000000):06d}"
-            codigo_hash = generate_password_hash(codigo)
+            codigo_hash = _hash_do_codigo(codigo)
             cur.execute(
                 "UPDATE login_usuario SET email = %s, email_verificacao_codigo_hash = %s, "
-                "email_verificacao_tentativas = 0, "
                 "email_verificacao_codigo_expira = now() + interval '15 minutes', "
                 "data_atualizacao = now() WHERE id_usuario = %s",
                 (novo_email, codigo_hash, usuario["id_usuario"]),
@@ -362,6 +413,7 @@ def confirmar_email_mudar():
 
 
 @auth_bp.route("/login", methods=["GET", "POST"])
+@limitar("login", 10)
 def login():
     if request.method == "GET":
         return render_template("login.html")
@@ -396,13 +448,14 @@ def login():
         # "Verifique seu e-mail", mesma tela que aparece logo após cadastrar.
         return render_template("cadastro_pendente.html"), 401
 
-    session.permanent = True
-    session["user_id"] = usuario["id_usuario"]
+    _abrir_sessao(usuario["id_usuario"])
     destino = _destino_pos_login(usuario["id_usuario"], request.form.get("next"))
     return redirect(destino)
 
 
 @auth_bp.route("/esqueci-senha", methods=["GET", "POST"])
+@limitar("esqueci", 5)
+@limitar("esqueci-hora", 20, 3600)
 def esqueci_senha():
     if request.method == "GET":
         return render_template("esqueci_senha.html")
@@ -422,7 +475,7 @@ def esqueci_senha():
 
             if usuario and not usuario["recente"]:
                 codigo = f"{secrets.randbelow(1000000):06d}"
-                codigo_hash = generate_password_hash(codigo)
+                codigo_hash = _hash_do_codigo(codigo)
                 cur.execute(
                     "UPDATE login_usuario SET reset_codigo_hash = %s, reset_tentativas = 0, "
                     "reset_codigo_expira = now() + interval '15 minutes' "
@@ -441,6 +494,7 @@ def esqueci_senha():
 
 
 @auth_bp.route("/redefinir-senha", methods=["GET", "POST"])
+@limitar("codigo", 10)
 def redefinir_senha():
     if request.method == "GET":
         return render_template("redefinir_senha.html")
@@ -449,36 +503,39 @@ def redefinir_senha():
     codigo = request.form.get("codigo") or ""
     nova_senha = request.form.get("senha") or ""
 
+    # Senha inválida é avisada à parte e NÃO gasta tentativa do código (antes virava
+    # "Código inválido" mesmo com o código certo).
+    if not 6 <= len(nova_senha) <= 128:
+        flash("A senha nova precisa ter entre 6 e 128 caracteres.")
+        return render_template("redefinir_senha.html"), 400
+
     with db.get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                "SELECT id_usuario, reset_codigo_hash, reset_codigo_expira FROM login_usuario "
-                "WHERE email = %s",
-                (email,),
-            )
-            usuario = cur.fetchone()
+            usuario = None
+            if _codigo_bem_formado(codigo):
+                # Reserva a tentativa ANTES de conferir (ver confirmar_email).
+                cur.execute(
+                    "UPDATE login_usuario SET reset_tentativas = reset_tentativas + 1 "
+                    "WHERE email = %s AND reset_codigo_hash IS NOT NULL AND reset_tentativas < %s "
+                    "RETURNING id_usuario, reset_codigo_hash, reset_codigo_expira, reset_tentativas",
+                    (email, _MAX_TENTATIVAS_CODIGO),
+                )
+                usuario = cur.fetchone()
 
-            valido = (
+            valido = bool(
                 usuario
-                and usuario["reset_codigo_hash"]
                 and usuario["reset_codigo_expira"]
                 and usuario["reset_codigo_expira"] > datetime.now(timezone.utc)
                 and check_password_hash(usuario["reset_codigo_hash"], codigo)
             )
 
-            if not valido and usuario and usuario["reset_codigo_hash"] and _codigo_bem_formado(codigo):
-                cur.execute(
-                    "UPDATE login_usuario SET reset_tentativas = reset_tentativas + 1, "
-                    "reset_codigo_hash = CASE WHEN reset_tentativas + 1 >= %s "
-                    "THEN NULL ELSE reset_codigo_hash END "
-                    "WHERE id_usuario = %s",
-                    (_MAX_TENTATIVAS_CODIGO, usuario["id_usuario"]),
-                )
-
-            if not valido or len(nova_senha) < 6 or len(nova_senha) > 128:
+            if not valido:
+                if usuario and usuario["reset_tentativas"] >= _MAX_TENTATIVAS_CODIGO:
+                    cur.execute("UPDATE login_usuario SET reset_codigo_hash = NULL WHERE id_usuario = %s", (usuario["id_usuario"],))
                 flash("Código inválido ou expirado.")
                 return render_template("redefinir_senha.html"), 400
 
+            # data_atualizacao muda aqui: as sessões abertas antes disso deixam de valer
             cur.execute(
                 "UPDATE login_usuario SET senha_hash = %s, reset_tentativas = 0, reset_codigo_hash = NULL, "
                 "reset_codigo_expira = NULL, data_atualizacao = now() WHERE id_usuario = %s",
@@ -494,14 +551,19 @@ def auth_google():
     # Guarda pra onde o usuário ia (ex.: veio de /comprar via login_required)
     # -- sem isso, depois do login pelo Google ele sempre caía na tela
     # padrão em vez de continuar o que estava fazendo.
-    session["login_next"] = request.args.get("next")
+    session["login_next"] = _next_seguro(request.args.get("next"))
     redirect_uri = url_for("auth.auth_google_callback", _external=True)
     return oauth.google.authorize_redirect(redirect_uri)
 
 
 @auth_bp.route("/auth/google/callback")
 def auth_google_callback():
-    token = oauth.google.authorize_access_token()
+    try:
+        token = oauth.google.authorize_access_token()
+    except OAuthError:
+        # state expirado/ausente (voltar pelo botão do celular, abrir a URL direto...)
+        flash("Não deu pra concluir o login com o Google. Tente de novo.")
+        return redirect(url_for("auth.login"))
     userinfo = token["userinfo"]
     google_id = userinfo["sub"]
     email = userinfo["email"].strip().lower()
@@ -577,8 +639,7 @@ def auth_google_callback():
         session.pop("login_next", None)
         return render_template("cadastro_pendente.html"), 401
 
-    session.permanent = True
-    session["user_id"] = id_usuario
+    _abrir_sessao(id_usuario)
     destino = _destino_pos_login(id_usuario, session.pop("login_next", None))
     return redirect(destino)
 

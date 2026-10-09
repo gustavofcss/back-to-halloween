@@ -30,6 +30,10 @@ app.config.update(
     # Login vale por 14 dias (session.permanent em auth.py); sem isso o cookie
     # morria ao fechar o navegador e o admin no celular logava toda hora.
     PERMANENT_SESSION_LIFETIME=timedelta(days=14),
+    # Todo formulário/JSON do site é pequeno: sem teto, um POST anônimo de centenas de
+    # MB (o webhook do Mercado Pago não exige login) era lido inteiro na memória
+    # do worker (512 MB no plano gratuito).
+    MAX_CONTENT_LENGTH=1_000_000,
     # Secure só quando o site é https de verdade (em dev local é http).
     SESSION_COOKIE_SECURE=config.BASE_URL.startswith("https://"),
 )
@@ -98,6 +102,21 @@ def _versao_do_estatico(endpoint, values):
             return
         _versoes_estaticos[nome] = versao
     values["v"] = versao
+
+
+@app.after_request
+def _cabecalhos_de_seguranca(resposta):
+    """Endurecimento: impede o site de ser colocado num <iframe> de outro endereço
+    (clickjacking do admin), de ter o tipo de arquivo "adivinhado" e de vazar o
+    caminho completo no Referer. CSP completa exigiria tirar os <script>/onclick
+    inline, então só `frame-ancestors`."""
+    resposta.headers.setdefault("X-Content-Type-Options", "nosniff")
+    resposta.headers.setdefault("X-Frame-Options", "DENY")
+    resposta.headers.setdefault("Content-Security-Policy", "frame-ancestors 'none'")
+    resposta.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    if config.BASE_URL.startswith("https://"):
+        resposta.headers.setdefault("Strict-Transport-Security", "max-age=15552000")
+    return resposta
 
 
 @app.after_request
