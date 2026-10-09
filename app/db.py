@@ -29,7 +29,7 @@ logger = logging.getLogger(__name__)
 _MAX_CONEXOES = int(os.environ.get("DB_POOL_MAX", "5"))
 # O Supabase (e o Render) derrubam conexão parada. Se uma conexão ficou ociosa
 # mais que isso, testa antes de usar em vez de estourar no meio de uma página.
-_OCIOSA_MAX = 45.0
+_OCIOSA_MAX = 20.0
 # Com o pool cheio, espera uma conexão voltar (poucos ms) em vez de abrir uma
 # nova na hora, que é justamente o que custa ~0,7 s. Só estourando esse tempo
 # abre uma conexão avulsa.
@@ -98,12 +98,14 @@ def _emprestar():
                 return conn, True
             _ultimo_uso.pop(id(conn), None)
             pool_.putconn(conn, close=True)
+        # as 3 do pool estavam mortas: abre uma avulsa (não entra no pool), então
+        # a vaga do semáforo é devolvida já
         conn = psycopg2.connect(DATABASE_URL, **_opcoes())
     except BaseException:
         _vagas.release()
         raise
-    # as 3 do pool estavam mortas: esta é nova, mas ainda ocupa a vaga do pool
-    return conn, True
+    _vagas.release()
+    return conn, False
 
 
 def _devolver(conn, do_pool: bool) -> None:

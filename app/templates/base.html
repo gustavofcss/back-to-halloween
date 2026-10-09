@@ -10,9 +10,9 @@
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='assets/favicon.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
   {# As 3 fontes que aparecem na 1ª tela: carregam em paralelo com o CSS, sem esperar ele. #}
-  <link rel="preload" href="{{ url_for('static', filename='fonts/anton-400.woff2') }}" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="{{ url_for('static', filename='fonts/vt323-400.woff2') }}" as="font" type="font/woff2" crossorigin>
-  <link rel="preload" href="{{ url_for('static', filename='fonts/ibmplexmono-400.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ url_for('static', filename='fonts/anton-400.woff2', v=None) }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ url_for('static', filename='fonts/vt323-400.woff2', v=None) }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ url_for('static', filename='fonts/ibmplexmono-400.woff2', v=None) }}" as="font" type="font/woff2" crossorigin>
   {% block head %}{% endblock %}
 </head>
 <body>

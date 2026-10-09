@@ -124,7 +124,9 @@ def _cache_longo_dos_estaticos(resposta):
     """Estático com ?v= (a URL muda quando o conteúdo muda) e as fontes (nome fixo,
     conteúdo que nunca muda) ficam 1 ano no cache do navegador. Se um dia trocar
     o ARQUIVO de uma fonte, troque também o NOME dele."""
-    if request.path.startswith("/static/") and ("v" in request.args or request.path.startswith("/static/fonts/")):
+    if resposta.status_code in (200, 206, 304) and request.path.startswith("/static/") and (
+        "v" in request.args or request.path.startswith("/static/fonts/")
+    ):
         resposta.headers["Cache-Control"] = "public, max-age=31536000, immutable"
     return resposta
 

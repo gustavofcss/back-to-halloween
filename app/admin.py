@@ -20,6 +20,7 @@ from urllib.parse import urlsplit
 import psycopg2
 from openpyxl import Workbook
 from openpyxl.styles import Font
+from openpyxl.cell.cell import ILLEGAL_CHARACTERS_RE
 from flask import Blueprint, Response, abort, flash, jsonify, redirect, render_template, request, session, url_for
 
 import config
@@ -53,9 +54,12 @@ def _decimal_ou_none(texto, maximo: str = "100000") -> Decimal | None:
         valor = Decimal((texto or "").strip().replace(",", "."))
     except InvalidOperation:
         return None
-    if not valor.is_finite() or valor <= 0 or valor > Decimal(maximo):
+    if not valor.is_finite():
         return None
-    return valor.quantize(Decimal("0.01"))
+    valor = valor.quantize(Decimal("0.01"))
+    if valor <= 0 or valor > Decimal(maximo):
+        return None
+    return valor
 
 
 def _inteiro_ou_none(texto, minimo: int, maximo: int) -> int | None:
@@ -478,7 +482,7 @@ def pedidos_exportar():
             numero += 1
             linhas.append((numero, p["acompanhante_nome"], p["acompanhante_rg"] or ""))
     for n, nome, rg in linhas:
-        ws.append([n, nome, rg])
+        ws.append([n, ILLEGAL_CHARACTERS_RE.sub("", nome or ""), ILLEGAL_CHARACTERS_RE.sub("", rg or "")])
         for c in (ws.cell(ws.max_row, 2), ws.cell(ws.max_row, 3)):
             c.data_type = "s"
     ws.column_dimensions["A"].width = 12
@@ -883,14 +887,22 @@ def hierarquia_remover(id_usuario: int):
         return _json_err("Não é possível apagar a si mesmo.", "regra", 400)
     with db.get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute(
-                "DELETE FROM login_usuario WHERE id_usuario = %s AND id_usuario IN "
-                "(SELECT id_usuario FROM hierarquia WHERE hierarquia = 'cliente') "
-                "AND NOT EXISTS (SELECT 1 FROM pedido p WHERE p.id_usuario = login_usuario.id_usuario "
-                "AND p.status_pedido = 'confirmado')",
-                (id_usuario,),
-            )
-            apagou = cur.rowcount > 0
+            try:
+                cur.execute(
+                    "DELETE FROM login_usuario WHERE id_usuario = %s AND id_usuario IN "
+                    "(SELECT id_usuario FROM hierarquia WHERE hierarquia = 'cliente') "
+                    "AND NOT EXISTS (SELECT 1 FROM pedido p WHERE p.id_usuario = login_usuario.id_usuario "
+                    "AND p.status_pedido = 'confirmado')",
+                    (id_usuario,),
+                )
+                apagou = cur.rowcount > 0
+            except psycopg2.errors.ForeignKeyViolation:
+                conn.rollback()
+                return _json_err(
+                    "Essa pessoa tem pedidos ou registros vinculados; cancele os pedidos antes ou mantenha o cadastro.",
+                    "regra",
+                    400,
+                )
             totais = _totais_hierarquia(cur)
 
     if apagou:
@@ -952,15 +964,24 @@ def hierarquia_remover_lote():
                 # dizia "apagado". Usar as linhas que o próprio DELETE
                 # devolve garante que "aplicados" reflete o que aconteceu de
                 # verdade no banco.
-                cur.execute(
-                    "DELETE FROM login_usuario WHERE id_usuario = ANY(%s) AND id_usuario IN "
-                    "(SELECT id_usuario FROM hierarquia WHERE hierarquia = 'cliente') "
-                    "AND NOT EXISTS (SELECT 1 FROM pedido p WHERE p.id_usuario = login_usuario.id_usuario "
-                    "AND p.status_pedido = 'confirmado') "
-                    "RETURNING id_usuario",
-                    (candidatos,),
-                )
-                elegiveis_ids = [r["id_usuario"] for r in cur.fetchall()]
+                # SAVEPOINT por pessoa: uma com pedido/registro vinculado (FK) não
+                # derruba o lote inteiro.
+                for i in candidatos:
+                    cur.execute("SAVEPOINT apagar_um")
+                    try:
+                        cur.execute(
+                            "DELETE FROM login_usuario WHERE id_usuario = %s AND id_usuario IN "
+                            "(SELECT id_usuario FROM hierarquia WHERE hierarquia = 'cliente') "
+                            "AND NOT EXISTS (SELECT 1 FROM pedido p WHERE p.id_usuario = login_usuario.id_usuario "
+                            "AND p.status_pedido = 'confirmado')",
+                            (i,),
+                        )
+                        if cur.rowcount > 0:
+                            elegiveis_ids.append(i)
+                        cur.execute("RELEASE SAVEPOINT apagar_um")
+                    except psycopg2.errors.ForeignKeyViolation:
+                        cur.execute("ROLLBACK TO SAVEPOINT apagar_um")
+                        cur.execute("RELEASE SAVEPOINT apagar_um")
             totais = _totais_hierarquia(cur)
 
     elegiveis_set = set(elegiveis_ids)
@@ -1364,10 +1385,11 @@ def eventos():
 @admin_bp.route("/eventos/capacidade", methods=["POST"])
 @admin_required
 def eventos_capacidade():
-    capacidade_maxima = _inteiro_ou_none(request.form.get("capacidade_maxima") or "60", 1, 5000)
+    capacidade_maxima = _inteiro_ou_none(request.form.get("capacidade_maxima"), 1, 5000)
     if capacidade_maxima is None:
         flash("Informe uma capacidade entre 1 e 5000.")
         return redirect(url_for("admin.eventos"))
+    aviso = None
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute("SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1")
@@ -1377,6 +1399,13 @@ def eventos_capacidade():
                     "UPDATE evento SET capacidade_maxima = %s WHERE id_evento = %s",
                     (capacidade_maxima, ultimo["id_evento"]),
                 )
+                vendidos = _ingressos_vendidos_total(cur)
+                if capacidade_maxima < vendidos:
+                    aviso = (
+                        f"Atenção: a capacidade ({capacidade_maxima}) ficou menor que os "
+                        f"{vendidos} ingressos já vendidos ou reservados."
+                    )
+    flash(aviso or "Capacidade atualizada.")
     return redirect(url_for("admin.eventos"))
 
 
@@ -1410,6 +1439,7 @@ def eventos_nome_data():
                     "UPDATE evento SET nome_evento = %s, data_evento = %s, hora_evento = %s WHERE id_evento = %s",
                     (nome_evento, data_evento, hora_evento, ultimo["id_evento"]),
                 )
+    flash("Nome, data e hora atualizados.")
     return redirect(url_for("admin.eventos"))
 
 
@@ -1455,6 +1485,7 @@ def eventos_endereco():
                     "UPDATE evento SET endereco = %s, bairro = %s WHERE id_evento = %s",
                     (endereco, bairro, ultimo["id_evento"]),
                 )
+    flash("Endereço atualizado.")
     return redirect(url_for("admin.eventos"))
 
 
@@ -1472,8 +1503,27 @@ def eventos_apagar(id_evento: int):
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             try:
+                cur.execute(
+                    "SELECT id_evento, nome_evento, data_evento, hora_evento, endereco, bairro, "
+                    "capacidade_maxima, promo_casadinha FROM evento ORDER BY data_cadastro DESC LIMIT 1"
+                )
+                ativo = cur.fetchone()
                 cur.execute("DELETE FROM evento WHERE id_evento = %s", (id_evento,))
                 apagou = cur.rowcount > 0
+                if apagou and ativo and ativo["id_evento"] == id_evento:
+                    # O lote que vira o ativo herda os dados da festa (nome, data,
+                    # endereço, capacidade, promoção) do que acabou de sair; senão
+                    # o convite voltaria com dados velhos do lote antigo.
+                    cur.execute(
+                        "UPDATE evento SET nome_evento = %s, data_evento = %s, hora_evento = %s, "
+                        "endereco = %s, bairro = %s, capacidade_maxima = %s, promo_casadinha = %s "
+                        "WHERE id_evento = (SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1)",
+                        (
+                            ativo["nome_evento"], ativo["data_evento"], ativo["hora_evento"],
+                            ativo["endereco"], ativo["bairro"], ativo["capacidade_maxima"],
+                            ativo["promo_casadinha"],
+                        ),
+                    )
             except psycopg2.errors.ForeignKeyViolation:
                 # Precisa dar rollback ANTES de sair do `with db.get_conn()`
                 # -- sem isso, o commit automático dele na saída limpa

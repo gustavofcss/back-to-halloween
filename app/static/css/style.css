@@ -591,3 +591,5 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 @media (pointer:coarse){.input{font-size:16px}}
 /* anel de foco pra quem navega por teclado (os campos têm o próprio) */
 a:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ff2d45;outline-offset:2px}
+/* iPhone dá zoom em campo com fonte < 16px */
+@media (max-width:720px){.a-search{font-size:16px!important}}

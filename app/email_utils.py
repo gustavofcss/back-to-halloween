@@ -206,9 +206,14 @@ def enviar_cadastro_aprovado(destinatario: str, nome: str) -> None:
 
 
 def enviar_confirmacao_pedido(destinatario: str, nome: str, pedido) -> None:
+    abertura = (
+        "Seu ingresso de cortesia está garantido!"
+        if pedido.get("cortesia")
+        else "Seu pagamento foi confirmado!"
+    )
     corpo = (
         f"▶ Oi, {nome}!\n\n"
-        "Seu pagamento foi confirmado! O pedido a seguir já está garantido pro "
+        f"{abertura} O pedido a seguir já está garantido pro "
         "Back to Halloween:\n\n"
         f"Pedido #{pedido['id_pedido']} — {pedido['quantidade']} ingresso(s) — "
         f"R$ {pedido['valor']}\n\n"
@@ -221,7 +226,7 @@ def enviar_confirmacao_pedido(destinatario: str, nome: str, pedido) -> None:
     )
     corpo_html = _email_shell(
         _p(f"Oi, {_esc(nome)}!")
-        + _p("Seu pagamento foi confirmado! Seu ingresso pro Back to Halloween:")
+        + _p(f"{abertura} Seu ingresso pro Back to Halloween:")
         + _ticket_html(pedido, nome)
         + _p("Nos vemos na noite mais assustadora do ano!")
     )

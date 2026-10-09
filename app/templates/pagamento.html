@@ -108,20 +108,24 @@
     // partir de quando o PEDIDO foi criado (_segundos_restantes),
     // não do momento em que a página carregou, senão recarregar a
     // tela "resetava" o prazo pra mais 5 minutos de novo.
+    // Usa o relógio (Date.now) em vez de subtrair 1 por tick: aba em segundo
+    // plano ou celular bloqueado pausam o setInterval e a contagem ficava atrasada.
+    var fim = Date.now() + {{ segundos_restantes|default(0) }} * 1000;
     var restante = {{ segundos_restantes|default(0) }};
     var elTempo = document.getElementById('pay-expira-tempo');
     function mostrarTempo() {
       if (!elTempo) { return; }
+      restante = Math.max(0, Math.ceil((fim - Date.now()) / 1000));
       var m = Math.floor(restante / 60);
       var s = restante % 60;
       elTempo.textContent = '● EXPIRA EM ' + m + ':' + (s < 10 ? '0' : '') + s;
     }
     mostrarTempo();
     var timerVisual = setInterval(function () {
-      restante = Math.max(0, restante - 1);
       mostrarTempo();
       if (restante <= 0) { clearInterval(timerVisual); }
     }, 1000);
+    document.addEventListener('visibilitychange', mostrarTempo);
 
     var tentativas = 0;
     // +4 tentativas de folga (20s) além do tempo restante -- garante

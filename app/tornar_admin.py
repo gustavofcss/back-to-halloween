@@ -24,6 +24,9 @@ def tornar_admin(email: str) -> None:
                 "UPDATE hierarquia SET hierarquia = 'adm' WHERE id_usuario = %s",
                 (usuario["id_usuario"],),
             )
+            if cur.rowcount == 0:
+                print(f"O usuário {email} existe, mas não tem linha na tabela hierarquia; nada foi alterado.")
+                return
     print(f"Usuário {email} agora é admin.")
 
 
