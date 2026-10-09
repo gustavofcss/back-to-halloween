@@ -4,6 +4,7 @@ outro projeto/credencial de trabalho.
 """
 from __future__ import annotations
 
+import mimetypes
 from datetime import timedelta
 from urllib.parse import urlsplit
 
@@ -15,6 +16,9 @@ from formatacao import data_hora_br
 from admin import admin_bp
 from auth import auth_bp, current_user, oauth
 from pedidos import pedidos_bp
+
+# Nem todo sistema conhece .woff2 (no Windows sai application/octet-stream).
+mimetypes.add_type("font/woff2", ".woff2")
 
 app = Flask(__name__)
 app.secret_key = config.SECRET_KEY
@@ -45,6 +49,17 @@ def _bloquear_post_de_outro_site():
         origem = request.headers.get("Origin")
         if origem is not None and urlsplit(origem).netloc != request.host:
             abort(403)
+
+
+@app.after_request
+def _cache_longo_das_fontes(resposta):
+    """Os arquivos de static/fonts têm nome fixo e o conteúdo nunca muda: o
+    navegador guarda por 1 ano sem revalidar (antes cada página fazia uma
+    requisição 304 por fonte). Se um dia trocar o ARQUIVO de uma fonte, troque
+    também o NOME dele, senão quem já visitou continua com a antiga."""
+    if request.path.startswith("/static/fonts/"):
+        resposta.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+    return resposta
 
 
 @app.context_processor

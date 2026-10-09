@@ -9,9 +9,10 @@
   <meta name="description" content="{% block meta_description %}Back to Halloween: festa de Halloween só com convite. Ingresso por Pix.{% endblock %}">
   <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='assets/favicon.svg') }}">
   <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Anton&family=VT323&family=Special+Elite&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  {# As 3 fontes que aparecem na 1ª tela: carregam em paralelo com o CSS, sem esperar ele. #}
+  <link rel="preload" href="{{ url_for('static', filename='fonts/anton-400.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ url_for('static', filename='fonts/vt323-400.woff2') }}" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="{{ url_for('static', filename='fonts/ibmplexmono-400.woff2') }}" as="font" type="font/woff2" crossorigin>
   {% block head %}{% endblock %}
 </head>
 <body>
