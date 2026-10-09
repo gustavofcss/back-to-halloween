@@ -578,3 +578,8 @@ input[type=checkbox]{width:18px;height:18px;accent-color:var(--orange);cursor:po
 .is-atualizando .a-atualizar__icone{animation:girarAtualizar .8s linear infinite}
 @keyframes girarAtualizar{to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce){.is-atualizando .a-atualizar__icone{animation:none}}
+
+/* mesmo motivo do vhs.css: o admin também é usado no iPhone */
+@media (pointer:coarse){.input{font-size:16px}}
+/* anel de foco pra quem navega por teclado (os campos têm o próprio) */
+a:focus-visible,button:focus-visible,[tabindex]:focus-visible{outline:2px solid #ff2d45;outline-offset:2px}

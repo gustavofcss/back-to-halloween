@@ -35,7 +35,7 @@
       </div>
     {% else %}
       {% if mp_erro %}
-      <div class="alert">{{ mp_erro }}</div>
+      <div class="alert" role="alert">{{ mp_erro }}</div>
       {% endif %}
 
       <div class="pix">
@@ -71,12 +71,31 @@
     var btn = document.getElementById('btn-copiar-pix');
     var valor = document.getElementById('pix-copia-cola');
     if (!btn || !valor) { return; }
+    var textoOriginal = btn.textContent;
+    function avisar(copiou) {
+      btn.textContent = copiou ? 'COPIADO!' : 'SELECIONADO: COPIE';
+      setTimeout(function () { btn.textContent = textoOriginal; }, 2000);
+    }
+    // Plano B quando o navegador não deixa usar a área de transferência
+    // (página sem https, iOS antigo, modo restrito): seleciona o código pra
+    // pessoa copiar na mão -- antes o clique falhava calado.
+    function copiarSelecionando() {
+      var faixa = document.createRange();
+      faixa.selectNodeContents(valor);
+      var selecao = window.getSelection();
+      selecao.removeAllRanges();
+      selecao.addRange(faixa);
+      try { return document.execCommand('copy'); } catch (erro) { return false; }
+    }
     btn.addEventListener('click', function () {
-      navigator.clipboard.writeText(valor.textContent.trim()).then(function () {
-        var textoOriginal = btn.textContent;
-        btn.textContent = 'COPIADO!';
-        setTimeout(function () { btn.textContent = textoOriginal; }, 2000);
-      });
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(valor.textContent.trim()).then(
+          function () { avisar(true); },
+          function () { avisar(copiarSelecionando()); }
+        );
+      } else {
+        avisar(copiarSelecionando());
+      }
     });
   })();
 </script>

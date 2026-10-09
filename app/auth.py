@@ -47,6 +47,13 @@ EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _MAX_TENTATIVAS_CODIGO = 5
 
 
+def _codigo_bem_formado(codigo: str) -> bool:
+    """6 dígitos ASCII. Só um código DIGITADO por inteiro conta como tentativa
+    errada: um envio vazio ou pela metade (o <input hidden required> não é
+    validado pelo navegador) gastava as 5 tentativas sem ninguém ter chutado."""
+    return len(codigo) == 6 and codigo.isascii() and codigo.isdigit()
+
+
 def login_required(view_func):
     @wraps(view_func)
     def wrapped(*args, **kwargs):
@@ -226,7 +233,7 @@ def confirmar_email():
             )
 
             if not valido:
-                if usuario and usuario["email_verificacao_codigo_hash"]:
+                if usuario and usuario["email_verificacao_codigo_hash"] and _codigo_bem_formado(codigo):
                     cur.execute(
                         "UPDATE login_usuario SET "
                         "email_verificacao_tentativas = email_verificacao_tentativas + 1, "
@@ -451,7 +458,7 @@ def redefinir_senha():
                 and check_password_hash(usuario["reset_codigo_hash"], codigo)
             )
 
-            if not valido and usuario and usuario["reset_codigo_hash"]:
+            if not valido and usuario and usuario["reset_codigo_hash"] and _codigo_bem_formado(codigo):
                 cur.execute(
                     "UPDATE login_usuario SET reset_tentativas = reset_tentativas + 1, "
                     "reset_codigo_hash = CASE WHEN reset_tentativas + 1 >= %s "

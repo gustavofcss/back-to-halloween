@@ -164,6 +164,11 @@
     formPendente = null;
     actionPendente = null;
   });
+  // Esc fecha o modal de confirmação (teclado)
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && overlay.style.display === 'flex') { btnCancel.click(); }
+  });
+
   overlay.addEventListener('click', function (e) {
     if (e.target === overlay) {
       overlay.style.display = 'none';
@@ -212,7 +217,8 @@ window.iniciarPollingAdmin = function (opts) {
     var editando = ativo && ['INPUT', 'TEXTAREA', 'SELECT'].indexOf(ativo.tagName) !== -1;
     var overlayEl = document.getElementById('confirm-overlay');
     var modalAberto = overlayEl && overlayEl.style.display === 'flex';
-    if (editando || modalAberto) { return; }
+    // aba em segundo plano: não gasta requisição à toa (volta no próximo ciclo)
+    if (document.hidden || editando || modalAberto) { return; }
 
     fetch(opts.url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
       .then(function (resp) { return resp.ok ? resp.json() : null; })

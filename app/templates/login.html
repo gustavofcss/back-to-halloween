@@ -9,7 +9,6 @@
     <div class="card">
       <div class="card__play"><canvas data-static></canvas><span>▶ PLAY</span></div>
       <p class="lead">Acesse sua conta pra garantir seu ingresso.</p>
-      {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
       <form method="post" action="/login" style="display:flex;flex-direction:column;gap:14px">
         <input type="hidden" name="next" value="{{ request.args.get('next', '') }}">
         <label class="field" for="email">E-mail

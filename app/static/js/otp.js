@@ -1,3 +1,44 @@
+// Caixinhas do código de 6 dígitos (verifique_email.html e redefinir_senha.html).
+// Uma caixa por dígito; o <input type="hidden" id="codigo"> é o que o form manda.
+function ligarCaixasOtp(boxes, hidden) {
+  function sincronizar() {
+    hidden.value = boxes.map(function (b) { return b.value; }).join('');
+  }
+
+  // Espalha uma sequência de dígitos a partir da caixa i: colar, ou o
+  // autopreenchimento "one-time-code" do iOS/Android, que entrega o código
+  // inteiro de uma vez só.
+  function espalhar(i, digitos) {
+    digitos.split('').slice(0, boxes.length - i).forEach(function (d, j) { boxes[i + j].value = d; });
+    sincronizar();
+    boxes[Math.min(i + digitos.length, boxes.length - 1)].focus();
+  }
+
+  boxes.forEach(function (box, i) {
+    box.addEventListener('input', function (evt) {
+      var digitos = box.value.replace(/\D/g, '');
+      // Mais de um dígito de uma vez (e não uma tecla só) = autopreenchimento.
+      if (digitos.length > 1 && !(evt.data && evt.data.length === 1)) {
+        espalhar(i, digitos);
+        return;
+      }
+      box.value = digitos.slice(-1);  // digitar numa caixa cheia troca o dígito
+      sincronizar();
+      if (box.value && boxes[i + 1]) { boxes[i + 1].focus(); }
+    });
+    box.addEventListener('keydown', function (evt) {
+      if (evt.key === 'Backspace' && !box.value && boxes[i - 1]) { boxes[i - 1].focus(); }
+    });
+    box.addEventListener('paste', function (evt) {
+      var texto = (evt.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
+      if (!texto) { return; }
+      evt.preventDefault();
+      espalhar(i, texto);
+    });
+  });
+  return sincronizar;
+}
+
 // verifique_email.html -- caixinhas do código + "errei o e-mail". Guarda
 // em #form-mudar-email (só existe nessa página) pra não colidir com o
 // redefinir_senha.html, que também tem .otp-box/#codigo.
@@ -8,29 +49,19 @@
   var boxes = Array.prototype.slice.call(document.querySelectorAll('.otp-box'));
   var hidden = document.getElementById('codigo');
   if (boxes.length && hidden) {
-    function sincronizar() {
-      hidden.value = boxes.map(function (b) { return b.value; }).join('');
-    }
-
-    boxes.forEach(function (box, i) {
-      box.addEventListener('input', function () {
-        box.value = box.value.replace(/\D/g, '').slice(-1);
-        sincronizar();
-        if (box.value && boxes[i + 1]) { boxes[i + 1].focus(); }
-      });
-      box.addEventListener('keydown', function (evt) {
-        if (evt.key === 'Backspace' && !box.value && boxes[i - 1]) { boxes[i - 1].focus(); }
-      });
-      box.addEventListener('paste', function (evt) {
-        var texto = (evt.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
-        if (!texto) { return; }
+    ligarCaixasOtp(boxes, hidden);
+    // <input type="hidden" required> não é validado pelo navegador: sem isso
+    // dava pra enviar o código vazio ou pela metade, e o servidor contava
+    // como tentativa errada (são só 5 antes de invalidar o código).
+    if (hidden.form) {
+      hidden.form.addEventListener('submit', function (evt) {
+        if (hidden.value.length === boxes.length) { return; }
         evt.preventDefault();
-        texto.split('').slice(0, boxes.length - i).forEach(function (d, j) { boxes[i + j].value = d; });
-        sincronizar();
-        boxes[Math.min(i + texto.length, boxes.length - 1)].focus();
+        var vazia = boxes.filter(function (b) { return !b.value; })[0] || boxes[0];
+        vazia.focus();
       });
-    });
-    if (boxes[0]) { boxes[0].focus(); }
+    }
+    boxes[0].focus();
   }
 
   document.getElementById('btn-mudar-email').addEventListener('click', function () {
@@ -53,30 +84,8 @@
   var confirmar = document.getElementById('confirmar_senha');
   var aviso = document.getElementById('senha-erro');
 
-  // Caixinhas do código (uma por dígito) -- #codigo (hidden) é quem o
-  // form realmente manda, sincronizado a cada digitação.
   var otpBoxes = Array.prototype.slice.call(document.querySelectorAll('.otp-box'));
-  function sincronizarOtp() {
-    codigo.value = otpBoxes.map(function (b) { return b.value; }).join('');
-  }
-  otpBoxes.forEach(function (box, i) {
-    box.addEventListener('input', function () {
-      box.value = box.value.replace(/\D/g, '').slice(-1);
-      sincronizarOtp();
-      if (box.value && otpBoxes[i + 1]) { otpBoxes[i + 1].focus(); }
-    });
-    box.addEventListener('keydown', function (evt) {
-      if (evt.key === 'Backspace' && !box.value && otpBoxes[i - 1]) { otpBoxes[i - 1].focus(); }
-    });
-    box.addEventListener('paste', function (evt) {
-      var texto = (evt.clipboardData || window.clipboardData).getData('text').replace(/\D/g, '');
-      if (!texto) { return; }
-      evt.preventDefault();
-      texto.split('').slice(0, otpBoxes.length - i).forEach(function (d, j) { otpBoxes[i + j].value = d; });
-      sincronizarOtp();
-      otpBoxes[Math.min(i + texto.length, otpBoxes.length - 1)].focus();
-    });
-  });
+  ligarCaixasOtp(otpBoxes, codigo);
 
   document.getElementById('btn-continuar').addEventListener('click', function () {
     // required/pattern do e-mail ainda vale (reportValidity mostra o

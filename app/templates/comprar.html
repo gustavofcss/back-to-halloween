@@ -43,18 +43,18 @@
           </div>
         </div>
         <p class="lead">Esse é um pedido à parte, pra outra pessoa — preenche os dados de quem vai usar o ingresso, não os seus.</p>
-        {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
+        {% if erro %}<div class="alert" role="alert">{{ erro }}</div>{% endif %}
 
         <form method="post" action="/comprar" style="display:flex;flex-direction:column;gap:14px">
           <label class="field" for="titular_nome">Nome de quem vai usar
-            <input class="input" id="titular_nome" name="titular_nome" placeholder="Nome e sobrenome" pattern="\S+(\s+\S+)+" title="Nome e sobrenome" required>
+            <input class="input" id="titular_nome" name="titular_nome" autocomplete="off" placeholder="Nome e sobrenome" pattern="\S+(\s+\S+)+" title="Nome e sobrenome" required>
           </label>
           <label class="field" for="titular_email">E-mail de quem vai usar
-            <input class="input" id="titular_email" name="titular_email" type="email" placeholder="pessoa@email.com" required>
+            <input class="input" id="titular_email" name="titular_email" autocomplete="off" type="email" placeholder="pessoa@email.com" required>
           </label>
           <div class="row-2">
             <label class="field" for="rg">RG
-              <input class="input" id="rg" name="rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)" required>
+              <input class="input" id="rg" name="rg" placeholder="Só números" inputmode="text" autocapitalize="characters" autocomplete="off" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)" required>
             </label>
             <label class="field" for="whatsapp">WhatsApp
               <input class="input" id="whatsapp" name="whatsapp" placeholder="(DDD) número" inputmode="numeric" pattern="\(\d{2}\)\s\d{4,5}-\d{4}" maxlength="15" title="DDD + número (10 ou 11 dígitos)" required data-mask="whatsapp">
@@ -87,7 +87,7 @@
             <span class="price-tag__value" id="tag-value">R$ {{ evento.valor_entrada }}</span>
           </div>
         </div>
-        {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
+        {% if erro %}<div class="alert" role="alert">{{ erro }}</div>{% endif %}
 
         <form method="post" action="/comprar" id="comprar-form" style="display:flex;flex-direction:column;gap:14px"
               data-max="{{ max_permitido }}" data-preco="{{ evento.valor_entrada }}"
@@ -98,7 +98,7 @@
           </div>
           <div class="row-2">
             <label class="field" for="rg">RG
-              <input class="input" id="rg" name="rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)" required>
+              <input class="input" id="rg" name="rg" placeholder="Só números" inputmode="text" autocapitalize="characters" autocomplete="off" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)" required>
             </label>
             <label class="field" for="whatsapp">WhatsApp
               <input class="input" id="whatsapp" name="whatsapp" placeholder="(DDD) número" inputmode="numeric" pattern="\(\d{2}\)\s\d{4,5}-\d{4}" maxlength="15" title="DDD + número (10 ou 11 dígitos)" required data-mask="whatsapp">
@@ -127,14 +127,14 @@
             <span class="sub-label">ACOMPANHANTE · LADO B</span>
             <p class="muted" style="margin:0;font-size:12px;line-height:1.5">Pode ser pra outra pessoa: preenche os dados de quem vai usar o ingresso 2.</p>
             <label class="field" for="acompanhante_nome">Nome do acompanhante
-              <input class="input" id="acompanhante_nome" name="acompanhante_nome" placeholder="Nome e sobrenome" pattern="\S+(\s+\S+)+" title="Nome e sobrenome">
+              <input class="input" id="acompanhante_nome" name="acompanhante_nome" autocomplete="off" placeholder="Nome e sobrenome" pattern="\S+(\s+\S+)+" title="Nome e sobrenome">
             </label>
             <label class="field" for="acompanhante_email">E-mail do acompanhante
-              <input class="input" id="acompanhante_email" name="acompanhante_email" type="email" placeholder="acompanhante@email.com">
+              <input class="input" id="acompanhante_email" name="acompanhante_email" autocomplete="off" type="email" placeholder="acompanhante@email.com">
             </label>
             <div class="row-2">
               <label class="field" for="acompanhante_rg">RG
-                <input class="input" id="acompanhante_rg" name="acompanhante_rg" placeholder="Só números" inputmode="numeric" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)">
+                <input class="input" id="acompanhante_rg" name="acompanhante_rg" placeholder="Só números" inputmode="text" autocapitalize="characters" autocomplete="off" pattern="[0-9]{5,12}[Xx]?" maxlength="13" title="Só números (pode terminar em X em alguns estados)">
               </label>
               <label class="field" for="acompanhante_whatsapp">WhatsApp
                 <input class="input" id="acompanhante_whatsapp" name="acompanhante_whatsapp" placeholder="(DDD) número" inputmode="numeric" pattern="\(\d{2}\)\s\d{4,5}-\d{4}" maxlength="15" title="DDD + número (10 ou 11 dígitos)" data-mask="whatsapp">

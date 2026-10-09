@@ -8,7 +8,6 @@
     <div><div class="kicker">BACK TO HALLOWEEN</div><h1 class="neon">Criar conta</h1></div>
     <div class="card">
       <p class="lead">Cadastre-se pra garantir seu lugar na festa.</p>
-      {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
       <form method="post" action="/signup" id="signup-form" style="display:flex;flex-direction:column;gap:14px">
         <label class="field" for="nome">Nome completo
           <input class="input" id="nome" name="nome" type="text" placeholder="Seu nome completo" required autocomplete="name" pattern="\s*\S+(\s+\S+)+\s*" title="Digite nome e sobrenome">
@@ -24,7 +23,7 @@
             <input class="input" id="confirmar_senha" name="confirmar_senha" type="password" placeholder="Repita" required minlength="6" autocomplete="new-password">
           </label>
         </div>
-        <p class="hint-error" id="senha-erro" hidden>As senhas não coincidem.</p>
+        <p class="hint-error" id="senha-erro" role="alert" hidden>As senhas não coincidem.</p>
         <button type="submit" class="btn btn-primary btn-block btn-lg">● CRIAR CONTA</button>
       </form>
       <div class="divider">OU</div>

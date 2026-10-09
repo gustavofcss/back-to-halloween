@@ -27,12 +27,12 @@
             </label>
             <label class="field">Código de 6 dígitos
               <div class="otp">
-                <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 1">
-                <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2">
-                <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3">
-                <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 4">
-                <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 5">
-                <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 6">
+                <input class="otp-box" type="text" inputmode="numeric" autocomplete="one-time-code" aria-label="Dígito 1">
+                <input class="otp-box" type="text" inputmode="numeric" aria-label="Dígito 2">
+                <input class="otp-box" type="text" inputmode="numeric" aria-label="Dígito 3">
+                <input class="otp-box" type="text" inputmode="numeric" aria-label="Dígito 4">
+                <input class="otp-box" type="text" inputmode="numeric" aria-label="Dígito 5">
+                <input class="otp-box" type="text" inputmode="numeric" aria-label="Dígito 6">
               </div>
               <input type="hidden" id="codigo" name="codigo" pattern="[0-9]{6}" required>
             </label>
@@ -47,7 +47,7 @@
           <label class="field" for="confirmar_senha">Confirmar
             <input class="input" id="confirmar_senha" name="confirmar_senha" type="password" placeholder="Repita" minlength="6" autocomplete="new-password">
           </label>
-          <p class="alert" id="senha-erro" style="display:none;">As senhas não coincidem.</p>
+          <p class="alert" id="senha-erro" role="alert" style="display:none;">As senhas não coincidem.</p>
           <div class="btn-row">
             <button type="button" class="btn btn-ghost" id="btn-voltar">◀◀ VOLTAR</button>
             <button type="submit" class="btn btn-primary grow">REDEFINIR SENHA</button>

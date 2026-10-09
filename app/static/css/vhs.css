@@ -180,3 +180,8 @@ button{font:inherit}
 /* nome + RG de cada ingresso, logo abaixo da fita */
 .ing-info{list-style:none;margin:-4px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;font:13px var(--f-type);color:var(--muted)}
 .ing-info b{font:15px var(--f-vhs);letter-spacing:.12em;color:var(--red);margin-right:6px}
+
+/* iPhone dá zoom na página ao tocar num campo com fonte menor que 16px */
+@media (pointer:coarse){.input{font-size:16px}}
+/* a barra de endereço do celular faz 100vh passar da área visível (rola à toa) */
+@supports (min-height:100dvh){.vhs{min-height:100dvh}}

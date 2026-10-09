@@ -5,12 +5,30 @@ document.addEventListener('submit', function (evt) {
   var btn = evt.target.querySelector('button[type="submit"]');
   if (btn && !btn.disabled) {
     setTimeout(function () {
+      // Um handler pode ter CANCELADO o envio (senhas diferentes, código
+      // incompleto, modal de confirmação do admin): aí o botão tem que
+      // continuar clicável. Antes travava mesmo assim e, depois de corrigir a
+      // senha, não dava mais pra clicar em "Criar conta".
+      if (evt.defaultPrevented) { return; }
       btn.disabled = true;
+      btn.dataset.travado = '1';
       btn.style.opacity = '.6';
       btn.style.cursor = 'not-allowed';
     }, 0);
   }
 }, true);
+
+// Voltar pelo navegador restaura a página do cache (bfcache) com o botão ainda
+// travado -- quem enviava o formulário e voltava ficava sem conseguir reenviar.
+window.addEventListener('pageshow', function (evt) {
+  if (!evt.persisted) { return; }
+  document.querySelectorAll('button[data-travado]').forEach(function (btn) {
+    btn.disabled = false;
+    btn.style.opacity = '';
+    btn.style.cursor = '';
+    delete btn.dataset.travado;
+  });
+});
 
 // Formata WhatsApp ao vivo -- (DD) DDDDD-DDDD (celular, 9 dígitos) ou
 // (DD) DDDD-DDDD (fixo, 8 dígitos). Uma função só (antes havia cópias em

@@ -8,7 +8,6 @@
     <div><div class="kicker">BACK TO HALLOWEEN</div><h1 class="neon" style="font-size:44px">Esqueci a senha</h1></div>
     <div class="card">
       <p class="lead">Rebobinando… Digite seu e-mail e mandamos um código de 6 dígitos pra redefinir sua senha.</p>
-      {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
       <form method="post" action="/esqueci-senha" style="display:flex;flex-direction:column;gap:14px">
         <label class="field" for="email">E-mail
           <input class="input" id="email" name="email" type="email" placeholder="voce@email.com" required autocomplete="email">

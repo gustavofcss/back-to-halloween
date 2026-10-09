@@ -91,6 +91,7 @@ def index():
 
     return render_template(
         "convite.html", evento=evento, data_formatada=data_formatada,
+        base_url=config.BASE_URL.rstrip("/"),
         promo_casadinha_valor=int(config.PROMO_CASADINHA_VALOR),
     )
 

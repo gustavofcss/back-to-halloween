@@ -12,17 +12,16 @@
     <h1 class="title">Confirme seu e-mail</h1>
     <p class="type" style="margin:0">Mandamos um código de 6 dígitos pra <strong style="color:#ff6b7c">{{ email }}</strong>. Digite ele abaixo pra confirmar que a conta é sua — depois é só esperar o administrador aprovar.</p>
     <div class="card" style="text-align:left">
-      {% if erro %}<div class="alert">{{ erro }}</div>{% endif %}
       <form method="post" action="/confirmar-email" style="display:flex;flex-direction:column;gap:14px">
         <input type="hidden" name="email" value="{{ email }}">
         <label class="field">Código de 6 dígitos
           <div class="otp">
-            <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 1">
-            <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 2">
-            <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 3">
-            <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 4">
-            <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 5">
-            <input class="otp-box" type="text" inputmode="numeric" maxlength="1" aria-label="Dígito 6">
+            <input class="otp-box" type="text" inputmode="numeric" autocomplete="one-time-code" aria-label="Dígito 1">
+            <input class="otp-box" type="text" inputmode="numeric" aria-label="Dígito 2">
+            <input class="otp-box" type="text" inputmode="numeric" aria-label="Dígito 3">
+            <input class="otp-box" type="text" inputmode="numeric" aria-label="Dígito 4">
+            <input class="otp-box" type="text" inputmode="numeric" aria-label="Dígito 5">
+            <input class="otp-box" type="text" inputmode="numeric" aria-label="Dígito 6">
           </div>
           <input type="hidden" id="codigo" name="codigo" pattern="[0-9]{6}" required>
         </label>
