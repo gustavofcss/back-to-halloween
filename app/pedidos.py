@@ -55,6 +55,15 @@ _WHATSAPP_CARACTERES_RE = re.compile(r"^[\d()\-+\s]+$", re.ASCII)
 _WHATSAPP_RE = re.compile(r"^\d{10,11}$", re.ASCII)
 
 
+def _nome_completo(bruto: str | None) -> str:
+    """Nome com os espaços normalizados, ou "" se não tiver nome E sobrenome.
+    O cadastro da conta já exigia os dois; o acompanhante e a pessoa do 2º
+    pedido aceitavam uma palavra só ("Maria"), e o ingresso/portaria precisam
+    do nome inteiro pra conferir com o RG."""
+    nome = " ".join((bruto or "").split())
+    return nome if len(nome.split()) >= 2 else ""
+
+
 def _validar_rg(bruto: str | None) -> str | None:
     bruto = (bruto or "").strip()
     if not bruto or not _RG_CARACTERES_RE.match(bruto):
@@ -518,7 +527,7 @@ def _comprar_impl(usuario: dict):
 
             titular_nome = titular_email = None
             if not erro and slot == 2:
-                titular_nome = (request.form.get("titular_nome") or "").strip()
+                titular_nome = _nome_completo(request.form.get("titular_nome"))
                 titular_email = (request.form.get("titular_email") or "").strip().lower()
                 if (
                     not titular_nome
@@ -526,7 +535,7 @@ def _comprar_impl(usuario: dict):
                     or len(titular_nome) > 120
                     or len(titular_email) > 160
                 ):
-                    erro = "Preencha nome e e-mail válidos de quem vai usar esse ingresso."
+                    erro = "Preencha nome completo (nome e sobrenome) e e-mail válidos de quem vai usar esse ingresso."
                 elif (
                     titular_nome.casefold() == usuario["nome"].strip().casefold()
                     or titular_email == usuario["email"]
@@ -556,7 +565,7 @@ def _comprar_impl(usuario: dict):
             # (que já É o pedido de outra pessoa, sempre quantidade 1).
             acompanhante_nome = acompanhante_email = acompanhante_rg = acompanhante_whatsapp = None
             if not erro and slot == 1 and quantidade == 2:
-                acompanhante_nome = (request.form.get("acompanhante_nome") or "").strip()
+                acompanhante_nome = _nome_completo(request.form.get("acompanhante_nome"))
                 acompanhante_email = (request.form.get("acompanhante_email") or "").strip().lower()
                 acompanhante_rg = _validar_rg(request.form.get("acompanhante_rg"))
                 acompanhante_whatsapp = _validar_whatsapp(request.form.get("acompanhante_whatsapp"))
@@ -568,7 +577,7 @@ def _comprar_impl(usuario: dict):
                     or not acompanhante_rg
                     or not acompanhante_whatsapp
                 ):
-                    erro = "Preencha nome, e-mail, RG (só números) e WhatsApp (só números) válidos do acompanhante."
+                    erro = "Preencha nome completo (nome e sobrenome), e-mail, RG (só números) e WhatsApp (só números) válidos do acompanhante."
 
             if erro:
                 return render_template(
