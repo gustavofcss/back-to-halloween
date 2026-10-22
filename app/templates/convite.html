@@ -160,6 +160,10 @@
       </div>
     </div>
 
+    {% set encerrado = evento and evento.vendas_encerradas and not tem_pedido and not (usuario and usuario.hierarquia in ['adm', 'superadm']) %}
+    {% if encerrado %}
+    <span class="bth-btn-play" aria-disabled="true" style="opacity:.55;cursor:default">■ VENDAS ENCERRADAS</span>
+    {% else %}
     <a href="{{ cta_href }}" class="bth-btn-play">
       {%- if not usuario -%}
         ▶ COMPRAR INGRESSO{% if evento %} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
@@ -171,10 +175,11 @@
         ▶ COMPRAR INGRESSO{% if evento %} · R$&nbsp;{{ evento.valor_entrada }}{% endif %}
       {%- endif -%}
     </a>
-    {% if evento and evento.promo_casadinha and evento.quantidade_max_ingressos >= 2 %}
+    {% endif %}
+    {% if evento and evento.promo_casadinha and evento.quantidade_max_ingressos >= 2 and not encerrado %}
     <p class="bth-btn-note"><strong>CASADINHA · 2 INGRESSOS POR R$&nbsp;{{ promo_casadinha_valor }}</strong></p>
     {% endif %}
-    <p class="bth-btn-note">VAGAS LIMITADAS · PAGAMENTO VIA PIX</p>
+    <p class="bth-btn-note">{% if encerrado %}OBRIGADO A TODOS QUE GARANTIRAM O INGRESSO{% else %}VAGAS LIMITADAS · PAGAMENTO VIA PIX{% endif %}</p>
 
     <article class="bth-news">
       <div class="bth-news__head"><span>Diário da Meia-Noite</span><span>31 de outubro de 1999</span></div>

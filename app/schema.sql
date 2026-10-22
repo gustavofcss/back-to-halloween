@@ -56,6 +56,11 @@ CREATE TABLE IF NOT EXISTS evento (
 -- Liga/desliga pelo admin (tela Evento). Em banco já existente, rode só esta linha.
 ALTER TABLE evento ADD COLUMN IF NOT EXISTS promo_casadinha BOOLEAN NOT NULL DEFAULT FALSE;
 
+-- Encerrar vendas: com TRUE ninguém cria pedido novo (quem já tem pedido pendente
+-- ainda consegue pagar). Liga/desliga pelo admin (tela Evento). Em banco já
+-- existente, rode só esta linha.
+ALTER TABLE evento ADD COLUMN IF NOT EXISTS vendas_encerradas BOOLEAN NOT NULL DEFAULT FALSE;
+
 -- Limite de tentativas dos códigos de 6 dígitos (confirmar e-mail e "esqueci a
 -- senha"): depois de 5 erros o código é invalidado (auth.py,
 -- _MAX_TENTATIVAS_CODIGO). Em banco já existente, rode só estas duas linhas.

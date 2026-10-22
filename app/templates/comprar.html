@@ -11,6 +11,12 @@
         <p class="type" style="margin:0">As vendas ainda não começaram. Volte em breve.</p>
         <a href="/" class="btn btn-ghost" style="align-self:center">◀◀ VOLTAR</a>
       </div>
+    {% elif encerrado %}
+      <div class="card center">
+        <h2 class="title">VENDAS ENCERRADAS</h2>
+        <p class="type" style="margin:0">As vendas de ingressos foram encerradas. Quem já fez pedido pode conferir o status em Meus pedidos.</p>
+        <a href="/meus-pedidos" class="btn btn-primary" style="align-self:center">VER MEUS PEDIDOS</a>
+      </div>
     {% elif esgotado %}
       <div class="card center">
         <h2 class="title">ESGOTADO</h2>

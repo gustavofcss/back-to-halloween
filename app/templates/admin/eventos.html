@@ -53,6 +53,23 @@
 </section>
 
 <section class="a-card">
+  <h2 class="a-card__title fs-18">Vendas de ingressos</h2>
+  <p class="help-text no-margin">
+    {% if ultimo and ultimo.vendas_encerradas %}<strong>Encerradas</strong> — ninguém consegue criar pedido novo.{% else %}<strong>Abertas</strong>.{% endif %}
+    Pedidos já feitos continuam valendo e quem tem pagamento pendente ainda consegue pagar; cortesias do admin seguem liberadas.
+  </p>
+  <form method="post" action="/admin/eventos/encerrar-vendas"{% if not (ultimo and ultimo.vendas_encerradas) %} onsubmit="return confirm('Encerrar as vendas? Ninguém conseguirá criar pedido novo até você reabrir.')"{% endif %}>
+    {% if ultimo and ultimo.vendas_encerradas %}
+    <input type="hidden" name="encerrar" value="0">
+    <button type="submit" class="admin-btn-primary">Reabrir vendas</button>
+    {% else %}
+    <input type="hidden" name="encerrar" value="1">
+    <button type="submit" class="admin-btn-outline is-perigoso">Encerrar vendas</button>
+    {% endif %}
+  </form>
+</section>
+
+<section class="a-card">
   <h2 class="a-card__title fs-18">Promoção casadinha</h2>
   <p class="help-text no-margin">
     {% if ultimo and ultimo.promo_casadinha %}<strong>Ligada</strong>{% else %}Desligada{% endif %}

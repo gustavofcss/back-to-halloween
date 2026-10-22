@@ -1463,6 +1463,26 @@ def eventos_casadinha():
     return redirect(url_for("admin.eventos"))
 
 
+@admin_bp.route("/eventos/encerrar-vendas", methods=["POST"])
+@admin_required
+def eventos_encerrar_vendas():
+    # Mesmo padrão de eventos_casadinha: age no lote ativo (o mais recente).
+    # Só bloqueia pedido NOVO (pedidos.py _comprar_impl); pagamento de pedido já
+    # criado e cortesia do admin continuam funcionando.
+    encerrar = request.form.get("encerrar") == "1"
+    with db.get_conn() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1")
+            ultimo = cur.fetchone()
+            if ultimo:
+                cur.execute(
+                    "UPDATE evento SET vendas_encerradas = %s WHERE id_evento = %s",
+                    (encerrar, ultimo["id_evento"]),
+                )
+    flash("Vendas encerradas." if encerrar else "Vendas reabertas.")
+    return redirect(url_for("admin.eventos"))
+
+
 @admin_bp.route("/eventos/endereco", methods=["POST"])
 @admin_required
 def eventos_endereco():
@@ -1505,7 +1525,7 @@ def eventos_apagar(id_evento: int):
             try:
                 cur.execute(
                     "SELECT id_evento, nome_evento, data_evento, hora_evento, endereco, bairro, "
-                    "capacidade_maxima, promo_casadinha FROM evento ORDER BY data_cadastro DESC LIMIT 1"
+                    "capacidade_maxima, promo_casadinha, vendas_encerradas FROM evento ORDER BY data_cadastro DESC LIMIT 1"
                 )
                 ativo = cur.fetchone()
                 cur.execute("DELETE FROM evento WHERE id_evento = %s", (id_evento,))
@@ -1516,12 +1536,12 @@ def eventos_apagar(id_evento: int):
                     # o convite voltaria com dados velhos do lote antigo.
                     cur.execute(
                         "UPDATE evento SET nome_evento = %s, data_evento = %s, hora_evento = %s, "
-                        "endereco = %s, bairro = %s, capacidade_maxima = %s, promo_casadinha = %s "
+                        "endereco = %s, bairro = %s, capacidade_maxima = %s, promo_casadinha = %s, vendas_encerradas = %s "
                         "WHERE id_evento = (SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1)",
                         (
                             ativo["nome_evento"], ativo["data_evento"], ativo["hora_evento"],
                             ativo["endereco"], ativo["bairro"], ativo["capacidade_maxima"],
-                            ativo["promo_casadinha"],
+                            ativo["promo_casadinha"], ativo["vendas_encerradas"],
                         ),
                     )
             except psycopg2.errors.ForeignKeyViolation:

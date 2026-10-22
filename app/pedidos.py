@@ -517,6 +517,8 @@ def _comprar_impl(usuario: dict):
             evento = _evento_ativo(cur)
             if not evento:
                 return render_template("comprar.html", sem_evento=True)
+            if evento.get("vendas_encerradas"):
+                return render_template("comprar.html", encerrado=True)
 
             # Serializa as compras do evento: sem a trava, duas contas comprando
             # ao mesmo tempo liam o mesmo "vagas restantes" e as duas passavam
@@ -876,7 +878,7 @@ def meus_pedidos():
             # mais enquanto a conta não bateu o limite de pedidos/ingressos.
             pode_comprar_mais = 0
             evento = _evento_ativo(cur)
-            if evento:
+            if evento and not evento.get("vendas_encerradas"):
                 existentes = _pedidos_ativos(cur, usuario["id_usuario"])
                 proximo = _proximo_slot(existentes, evento)
                 if proximo:
