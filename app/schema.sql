@@ -1,4 +1,4 @@
--- Schema do Horror Night Party, baseado no fluxograma do usuário.
+-- Schema do Back to Halloween, baseado no fluxograma do usuário.
 -- Rode uma vez contra o banco Postgres (local ou Render) antes do primeiro
 -- deploy: psql "$DATABASE_URL" -f app/schema.sql
 
@@ -38,7 +38,7 @@ CREATE TABLE IF NOT EXISTS evento (
     nome_evento               VARCHAR(160) NOT NULL,
     data_evento               DATE,
     hora_evento               TIME,
-    -- endereco/bairro (ex. "Rua Mário Bhering, 171" / "Tamarineira") --
+    -- endereco/bairro (ex. "Rua Exemplo, 123" / "Centro") --
     -- mesmo padrão de nome_evento/data_evento: editado no admin (Lotes do
     -- evento) e herdado pro próximo lote cadastrado, porque é sempre a
     -- MESMA festa, só o preço muda a cada lote.

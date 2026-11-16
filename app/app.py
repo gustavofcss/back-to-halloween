@@ -1,4 +1,4 @@
-"""Horror Night Party -- site de convite/venda de ingresso do usuário.
+"""Back to Halloween -- site de convite/venda de ingresso do usuário.
 Projeto pessoal, banco Postgres próprio (Render), sem relação com nenhum
 outro projeto/credencial de trabalho.
 """
