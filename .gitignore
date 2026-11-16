@@ -20,3 +20,7 @@ Untitled-*.png
 # Memória própria de cada subagente (gerada automaticamente pelo harness do
 # Claude Code) -- estado interno da ferramenta, não do projeto.
 .claude/agent-memory/
+
+# Arquivos de ferramentas de desenvolvimento (agentes/MCP) -- ficam só na máquina de quem desenvolve
+.dev-squad/
+.mcp.json
