@@ -79,7 +79,7 @@ class Cur:
         self.sql = sql
 
     def fetchall(self):
-        if "FROM pedido p" in self.sql and "p.data_pedido <" in self.sql:
+        if "FROM v_pedido p" in self.sql and "p.data_pedido <" in self.sql:
             return [
                 {"id_pedido": 7, "valor": Decimal("30"), "data_pedido": agora - timedelta(minutes=30),
                  "status_pedido": "pendente", "mp_payment_id": None, "titular_nome": None,

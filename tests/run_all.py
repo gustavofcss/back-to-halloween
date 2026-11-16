@@ -31,6 +31,8 @@ def rodar(teste: Path) -> tuple[int, int, list[str]]:
     linhas = proc.stdout.splitlines()
     ok = sum(1 for linha in linhas if linha.startswith("OK"))
     falhas = [linha for linha in linhas if linha.startswith("FALHOU")]
+    if any(linha.startswith("PULADO") for linha in linhas):
+        return -1, 0, [linha for linha in linhas if linha.startswith("PULADO")]
     if proc.returncode != 0 and not falhas:
         falhas.append("o script terminou com erro (código %d)" % proc.returncode)
     return ok, len(falhas), falhas
@@ -39,9 +41,13 @@ def rodar(teste: Path) -> tuple[int, int, list[str]]:
 def main() -> int:
     if hasattr(sys.stdout, "reconfigure"):
         sys.stdout.reconfigure(encoding="utf-8")
-    total_ok = total_falhas = 0
+    total_ok = total_falhas = pulados = 0
     for teste in TESTES:
         ok, falhas, detalhes = rodar(teste)
+        if ok == -1:
+            pulados += 1
+            print(f"pulado  {teste.name:45} {detalhes[0]}")
+            continue
         total_ok += ok
         total_falhas += falhas
         situacao = "ok" if not falhas else "FALHOU"

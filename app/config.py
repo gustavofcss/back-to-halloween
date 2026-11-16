@@ -45,7 +45,7 @@ PIX_KEYS = {
 }
 
 # Promoção "casadinha": 2 ingressos no MESMO pedido por um valor fechado, em
-# vez de valor_entrada x 2. Quem liga/desliga é o admin (evento.promo_casadinha,
+# vez de valor_entrada x 2. Quem liga/desliga é o admin (lote.promo_casadinha,
 # tela Evento). O valor é fixo aqui porque cada valor possível precisa de uma
 # chave Pix (PIX_KEYS) criada à mão -- se mudar, cadastre a chave pro valor
 # novo.

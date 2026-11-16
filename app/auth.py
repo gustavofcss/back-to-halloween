@@ -180,7 +180,7 @@ def _destino_pos_login(id_usuario: int, next_url: str | None = None) -> str:
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT 1 FROM pedido WHERE id_usuario = %s AND status_pedido != 'cancelado' LIMIT 1",
+                "SELECT 1 FROM v_pedido WHERE id_usuario = %s AND status_pedido != 'cancelado' LIMIT 1",
                 (id_usuario,),
             )
             tem_pedido = cur.fetchone() is not None
@@ -233,16 +233,18 @@ def signup():
             senha_hash = generate_password_hash(senha)
             cur.execute(
                 """
-                INSERT INTO login_usuario (
-                    nome, email, senha_hash, email_confirmado,
-                    email_verificado, email_verificacao_codigo_hash, email_verificacao_codigo_expira
-                )
-                VALUES (%s, %s, %s, FALSE, FALSE, %s, now() + interval '15 minutes')
+                INSERT INTO login_usuario (nome, email, senha_hash, email_confirmado, email_verificado)
+                VALUES (%s, %s, %s, FALSE, FALSE)
                 RETURNING id_usuario
                 """,
-                (nome, email, senha_hash, codigo_hash),
+                (nome, email, senha_hash),
             )
             id_usuario = cur.fetchone()["id_usuario"]
+            cur.execute(
+                "INSERT INTO codigo_verificacao (id_usuario, tipo, codigo_hash, expira_em) "
+                "VALUES (%s, 'email', %s, now() + interval '15 minutes')",
+                (id_usuario, codigo_hash),
+            )
             cur.execute(
                 "INSERT INTO hierarquia (id_usuario, hierarquia) VALUES (%s, 'cliente')",
                 (id_usuario,),
@@ -275,36 +277,38 @@ def confirmar_email():
                 # threads) liam o mesmo contador e passavam ~8 palpites em vez de 5.
                 # Só código de 6 dígitos DIGITADO por inteiro conta como tentativa.
                 cur.execute(
-                    "UPDATE login_usuario SET email_verificacao_tentativas = email_verificacao_tentativas + 1 "
-                    "WHERE email = %s AND email_verificado = FALSE "
-                    "AND email_verificacao_codigo_hash IS NOT NULL AND email_verificacao_tentativas < %s "
-                    "RETURNING id_usuario, nome, email_verificacao_codigo_hash, "
-                    "email_verificacao_codigo_expira, email_verificacao_tentativas",
+                    "UPDATE codigo_verificacao c SET tentativas = c.tentativas + 1 "
+                    "FROM login_usuario u "
+                    "WHERE u.id_usuario = c.id_usuario AND u.email = %s AND u.email_verificado = FALSE "
+                    "AND c.tipo = 'email' AND c.tentativas < %s "
+                    "RETURNING u.id_usuario, u.nome, c.codigo_hash, c.expira_em, c.tentativas",
                     (email, _MAX_TENTATIVAS_CODIGO),
                 )
                 usuario = cur.fetchone()
 
             valido = bool(
                 usuario
-                and usuario["email_verificacao_codigo_expira"]
-                and usuario["email_verificacao_codigo_expira"] > datetime.now(timezone.utc)
-                and check_password_hash(usuario["email_verificacao_codigo_hash"], codigo)
+                and usuario["expira_em"]
+                and usuario["expira_em"] > datetime.now(timezone.utc)
+                and check_password_hash(usuario["codigo_hash"], codigo)
             )
 
             if not valido:
-                if usuario and usuario["email_verificacao_tentativas"] >= _MAX_TENTATIVAS_CODIGO:
+                if usuario and usuario["tentativas"] >= _MAX_TENTATIVAS_CODIGO:
                     # esgotou as tentativas: o código deixa de existir (só pedindo outro)
                     cur.execute(
-                        "UPDATE login_usuario SET email_verificacao_codigo_hash = NULL WHERE id_usuario = %s",
+                        "DELETE FROM codigo_verificacao WHERE id_usuario = %s AND tipo = 'email'",
                         (usuario["id_usuario"],),
                     )
                 flash("Código inválido ou expirado.")
                 return render_template("verifique_email.html", email=email), 400
 
             cur.execute(
-                "UPDATE login_usuario SET email_verificado = TRUE, email_verificacao_tentativas = 0, "
-                "email_verificacao_codigo_hash = NULL, email_verificacao_codigo_expira = NULL, "
-                "data_atualizacao = now() WHERE id_usuario = %s",
+                "UPDATE login_usuario SET email_verificado = TRUE, data_atualizacao = now() WHERE id_usuario = %s",
+                (usuario["id_usuario"],),
+            )
+            cur.execute(
+                "DELETE FROM codigo_verificacao WHERE id_usuario = %s AND tipo = 'email'",
                 (usuario["id_usuario"],),
             )
 
@@ -326,9 +330,11 @@ def confirmar_email_reenviar():
             # Sem esse intervalo, o endpoint (sem login) servia pra disparar
             # e-mail em massa pra qualquer endereço.
             cur.execute(
-                "SELECT id_usuario, nome, "
-                "email_verificacao_codigo_expira > now() + interval '14 minutes' AS recente "
-                "FROM login_usuario WHERE email = %s AND email_verificado = FALSE",
+                "SELECT u.id_usuario, u.nome, "
+                "COALESCE(c.expira_em > now() + interval '14 minutes', FALSE) AS recente "
+                "FROM login_usuario u "
+                "LEFT JOIN codigo_verificacao c ON c.id_usuario = u.id_usuario AND c.tipo = 'email' "
+                "WHERE u.email = %s AND u.email_verificado = FALSE",
                 (email,),
             )
             usuario = cur.fetchone()
@@ -337,11 +343,11 @@ def confirmar_email_reenviar():
                 codigo = f"{secrets.randbelow(1000000):06d}"
                 codigo_hash = _hash_do_codigo(codigo)
                 cur.execute(
-                    "UPDATE login_usuario SET email_verificacao_codigo_hash = %s, "
-                    "email_verificacao_tentativas = 0, "
-                    "email_verificacao_codigo_expira = now() + interval '15 minutes' "
-                    "WHERE id_usuario = %s",
-                    (codigo_hash, usuario["id_usuario"]),
+                    "INSERT INTO codigo_verificacao (id_usuario, tipo, codigo_hash, expira_em, tentativas) "
+                    "VALUES (%s, 'email', %s, now() + interval '15 minutes', 0) "
+                    "ON CONFLICT (id_usuario, tipo) DO UPDATE SET "
+                    "codigo_hash = EXCLUDED.codigo_hash, expira_em = EXCLUDED.expira_em, tentativas = 0",
+                    (usuario["id_usuario"], codigo_hash),
                 )
 
     if codigo:
@@ -396,10 +402,16 @@ def confirmar_email_mudar():
             codigo = f"{secrets.randbelow(1000000):06d}"
             codigo_hash = _hash_do_codigo(codigo)
             cur.execute(
-                "UPDATE login_usuario SET email = %s, email_verificacao_codigo_hash = %s, "
-                "email_verificacao_codigo_expira = now() + interval '15 minutes', "
-                "data_atualizacao = now() WHERE id_usuario = %s",
-                (novo_email, codigo_hash, usuario["id_usuario"]),
+                "UPDATE login_usuario SET email = %s, data_atualizacao = now() WHERE id_usuario = %s",
+                (novo_email, usuario["id_usuario"]),
+            )
+            # Código novo SEM zerar as tentativas: trocar de e-mail não pode dar mais 5 palpites.
+            cur.execute(
+                "INSERT INTO codigo_verificacao (id_usuario, tipo, codigo_hash, expira_em) "
+                "VALUES (%s, 'email', %s, now() + interval '15 minutes') "
+                "ON CONFLICT (id_usuario, tipo) DO UPDATE SET "
+                "codigo_hash = EXCLUDED.codigo_hash, expira_em = EXCLUDED.expira_em",
+                (usuario["id_usuario"], codigo_hash),
             )
             nome = usuario["nome"]
 
@@ -466,9 +478,11 @@ def esqueci_senha():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "SELECT id_usuario, nome, "
-                "reset_codigo_expira > now() + interval '14 minutes' AS recente "
-                "FROM login_usuario WHERE email = %s",
+                "SELECT u.id_usuario, u.nome, "
+                "COALESCE(c.expira_em > now() + interval '14 minutes', FALSE) AS recente "
+                "FROM login_usuario u "
+                "LEFT JOIN codigo_verificacao c ON c.id_usuario = u.id_usuario AND c.tipo = 'senha' "
+                "WHERE u.email = %s",
                 (email,),
             )
             usuario = cur.fetchone()
@@ -477,10 +491,11 @@ def esqueci_senha():
                 codigo = f"{secrets.randbelow(1000000):06d}"
                 codigo_hash = _hash_do_codigo(codigo)
                 cur.execute(
-                    "UPDATE login_usuario SET reset_codigo_hash = %s, reset_tentativas = 0, "
-                    "reset_codigo_expira = now() + interval '15 minutes' "
-                    "WHERE id_usuario = %s",
-                    (codigo_hash, usuario["id_usuario"]),
+                    "INSERT INTO codigo_verificacao (id_usuario, tipo, codigo_hash, expira_em, tentativas) "
+                    "VALUES (%s, 'senha', %s, now() + interval '15 minutes', 0) "
+                    "ON CONFLICT (id_usuario, tipo) DO UPDATE SET "
+                    "codigo_hash = EXCLUDED.codigo_hash, expira_em = EXCLUDED.expira_em, tentativas = 0",
+                    (usuario["id_usuario"], codigo_hash),
                 )
 
     if codigo:
@@ -515,31 +530,39 @@ def redefinir_senha():
             if _codigo_bem_formado(codigo):
                 # Reserva a tentativa ANTES de conferir (ver confirmar_email).
                 cur.execute(
-                    "UPDATE login_usuario SET reset_tentativas = reset_tentativas + 1 "
-                    "WHERE email = %s AND reset_codigo_hash IS NOT NULL AND reset_tentativas < %s "
-                    "RETURNING id_usuario, reset_codigo_hash, reset_codigo_expira, reset_tentativas",
+                    "UPDATE codigo_verificacao c SET tentativas = c.tentativas + 1 "
+                    "FROM login_usuario u "
+                    "WHERE u.id_usuario = c.id_usuario AND u.email = %s "
+                    "AND c.tipo = 'senha' AND c.tentativas < %s "
+                    "RETURNING u.id_usuario, c.codigo_hash, c.expira_em, c.tentativas",
                     (email, _MAX_TENTATIVAS_CODIGO),
                 )
                 usuario = cur.fetchone()
 
             valido = bool(
                 usuario
-                and usuario["reset_codigo_expira"]
-                and usuario["reset_codigo_expira"] > datetime.now(timezone.utc)
-                and check_password_hash(usuario["reset_codigo_hash"], codigo)
+                and usuario["expira_em"]
+                and usuario["expira_em"] > datetime.now(timezone.utc)
+                and check_password_hash(usuario["codigo_hash"], codigo)
             )
 
             if not valido:
-                if usuario and usuario["reset_tentativas"] >= _MAX_TENTATIVAS_CODIGO:
-                    cur.execute("UPDATE login_usuario SET reset_codigo_hash = NULL WHERE id_usuario = %s", (usuario["id_usuario"],))
+                if usuario and usuario["tentativas"] >= _MAX_TENTATIVAS_CODIGO:
+                    cur.execute(
+                        "DELETE FROM codigo_verificacao WHERE id_usuario = %s AND tipo = 'senha'",
+                        (usuario["id_usuario"],),
+                    )
                 flash("Código inválido ou expirado.")
                 return render_template("redefinir_senha.html"), 400
 
             # data_atualizacao muda aqui: as sessões abertas antes disso deixam de valer
             cur.execute(
-                "UPDATE login_usuario SET senha_hash = %s, reset_tentativas = 0, reset_codigo_hash = NULL, "
-                "reset_codigo_expira = NULL, data_atualizacao = now() WHERE id_usuario = %s",
+                "UPDATE login_usuario SET senha_hash = %s, data_atualizacao = now() WHERE id_usuario = %s",
                 (generate_password_hash(nova_senha), usuario["id_usuario"]),
+            )
+            cur.execute(
+                "DELETE FROM codigo_verificacao WHERE id_usuario = %s AND tipo = 'senha'",
+                (usuario["id_usuario"],),
             )
 
     flash("Senha redefinida com sucesso. Faça login com a nova senha.")
@@ -603,10 +626,13 @@ def auth_google_callback():
                 cur.execute(
                     "UPDATE login_usuario SET google_id = %s, "
                     "senha_hash = CASE WHEN email_verificado THEN senha_hash ELSE NULL END, "
-                    "email_verificado = TRUE, email_verificacao_codigo_hash = NULL, "
-                    "email_verificacao_codigo_expira = NULL, "
+                    "email_verificado = TRUE, "
                     "data_atualizacao = now() WHERE id_usuario = %s",
                     (google_id, id_usuario),
+                )
+                cur.execute(
+                    "DELETE FROM codigo_verificacao WHERE id_usuario = %s AND tipo = 'email'",
+                    (id_usuario,),
                 )
             else:
                 # Login com Google não isenta da aprovação manual do admin --

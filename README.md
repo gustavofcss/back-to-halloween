@@ -10,7 +10,8 @@ Cadastro com aprovação · Pix direto na chave, sem taxa de checkout · confirm
 ![Flask](https://img.shields.io/badge/Flask-3.1-000000?logo=flask&logoColor=white)
 ![PostgreSQL](https://img.shields.io/badge/PostgreSQL-Supabase-4169E1?logo=postgresql&logoColor=white)
 ![Mercado Pago](https://img.shields.io/badge/Mercado%20Pago-API%20de%20Pagamentos-00B1EA)
-![Testes](https://img.shields.io/badge/testes-240%20verifica%C3%A7%C3%B5es-brightgreen)
+![Testes](https://img.shields.io/badge/testes-338%20verifica%C3%A7%C3%B5es-brightgreen)
+![Modelo](https://img.shields.io/badge/modelo%20de%20dados-3FN-blueviolet)
 ![Status](https://img.shields.io/badge/status-encerrado-lightgrey)
 
 <img src="docs/img/tela-inicial.png" alt="Tela inicial do Back to Halloween: TV de tubo, estantes de fitas VHS e o convite" width="420">
@@ -87,21 +88,41 @@ Detalhes, regras e limites conhecidos em [`docs/ARQUITETURA.md`](docs/ARQUITETUR
 
 ## Modelo de dados
 
-Cinco tabelas em PostgreSQL: `login_usuario`, `hierarquia`, `evento` (cada linha
-é um lote), `pedido` e `despesa_material`. As regras críticas moram no banco:
+Normalizado até a **3FN**, em PostgreSQL (`app/schema.sql`): 9 tabelas e 2 views de leitura.
 
-- `SELECT ... FOR UPDATE` no evento: duas compras simultâneas não passam da capacidade;
-- índice único parcial `(id_usuario, id_evento, slot)`: sem pedido duplicado por duplo clique;
-- índice único parcial em `mp_payment_id`: um pagamento, um pedido.
+| Tabela | O que guarda |
+|---|---|
+| `login_usuario`, `hierarquia` | Contas e papéis (cliente, admin, superadmin) |
+| `codigo_verificacao` | Códigos de 6 dígitos (e-mail e "esqueci a senha"), uma linha por código ativo |
+| `festa` | O evento: nome, data, hora, endereço e capacidade |
+| `lote` | Preço, promoção casadinha e liga/desliga das vendas (o lote mais recente está à venda) |
+| `pedido` | Quem comprou, qual lote, quanto pagou, status e o Pix que o quitou |
+| `ingresso`, `participante` | Uma linha por pessoa que vai à festa (titular ou acompanhante) com nome, e-mail, RG e WhatsApp |
+| `despesa_material` | Despesas do evento |
+
+As regras críticas moram no banco:
+
+- `SELECT ... FOR UPDATE` na festa: duas compras simultâneas não passam da capacidade;
+- índice único parcial `(id_usuario, id_lote, slot)`: sem pedido duplicado por duplo clique;
+- índice único parcial em `mp_payment_id`: um pagamento, um pedido;
+- `UNIQUE (id_pedido, papel)`: no máximo um titular e um acompanhante por pedido;
+- trigger que apaga o participante que ficou sem ingresso.
+
+`v_evento` e `v_pedido` são views **só de leitura** que juntam as tabelas no formato que as telas, os e-mails e a planilha consomem; as escritas vão direto nas tabelas. Uma decisão de projeto: `pedido.valor` guarda o **preço pago na época** (histórico, não cálculo), então não se recalcula a partir do lote.
 
 | Modelo conceitual | Modelo lógico |
 |---|---|
 | <img src="docs/img/modelo-conceitual.png" alt="Modelo conceitual"> | <img src="docs/img/modelo-logico.png" alt="Modelo lógico"> |
 
-O modelo atual é pragmático e **não está em 3FN**. Uma proposta normalizada
-(`festa`, `lote`, `participante`, `ingresso`, `codigo_verificacao`) está desenhada
-em [conceitual](docs/img/proposta-3fn-conceitual.png) e
-[lógico](docs/img/proposta-3fn-logico.png), mas não foi implementada.
+### Banco que já existia (versão anterior)
+
+O banco da versão anterior (tabela `evento`, pedido com colunas do titular e do acompanhante) é convertido **sem perder dados** por [`app/migracao_3fn.sql`](app/migracao_3fn.sql), numa transação só. Faça um backup, rode a migração **antes** de subir o código novo (os dois não funcionam juntos) e confira o resultado:
+
+```bash
+psql "$DATABASE_URL" -f app/migracao_3fn.sql
+```
+
+A migração é testada contra um PostgreSQL de verdade: os pedidos continuam idênticos na view e a estrutura migrada é igual à de um banco criado só com o `schema.sql`.
 
 ## Segurança e desempenho
 
@@ -118,7 +139,7 @@ Pré-requisitos: Python 3.12 e um PostgreSQL.
 
 ```bash
 pip install -r requirements.txt
-psql "$DATABASE_URL" -f app/schema.sql     # cria as tabelas
+psql "$DATABASE_URL" -f app/schema.sql     # cria as tabelas (banco novo)
 cp .env.example .env                        # preencha os valores
 cd app && python app.py                     # http://127.0.0.1:5000
 ```
@@ -145,13 +166,17 @@ Todas as variáveis estão comentadas em [`.env.example`](.env.example).
 ### Testes
 
 ```bash
+pip install -r requirements-dev.txt
 python tests/run_all.py
 ```
 
-240 verificações em 9 suítes, sem precisar de banco: Postgres, Mercado Pago,
-Brevo e Google são simulados. Cobrem conciliação do Pix, limites de vagas e de
-conta, segurança dos códigos de login, falhas de integração e desempenho do
-cache e do pool.
+338 verificações em 11 suítes. Nove usam banco simulado (e Mercado Pago, Brevo e Google
+simulados): conciliação do Pix, limites de vagas e de conta, segurança dos códigos de
+login, falhas de integração, desempenho do cache e do pool. Duas usam um **PostgreSQL de
+verdade** (embarcado, via `pgserver`, sem instalar nada): a migração para a 3FN e o
+**fluxo completo do site**, de cadastro e compra até Pix, expiração, painel admin e
+redefinição de senha, conferindo o que fica em cada tabela. Sem o `pgserver`, essas duas
+são puladas.
 
 ### Deploy
 
@@ -175,7 +200,8 @@ app/
   limitador.py      # limite de requisições por IP
   db.py             # pool de conexões Postgres
   config.py         # variáveis de ambiente
-  schema.sql        # schema do banco
+  schema.sql        # schema do banco (3FN)
+  migracao_3fn.sql  # converte um banco da versão anterior
   templates/        # páginas (Jinja)
   static/           # CSS, JS, fontes e imagens
 docs/               # arquitetura e imagens (telas e modelos de dados)
@@ -191,7 +217,6 @@ render.yaml         # deploy no Render
 ## Próximos passos (se o projeto continuasse)
 
 - Webhook do Mercado Pago, para confirmar o Pix mesmo com a aba fechada.
-- Normalizar o modelo de dados (3FN), como na proposta de `docs/`.
 - Limitador de requisições com armazenamento compartilhado (Redis) para várias instâncias.
 - Painel de portaria com leitura de QR Code no check-in.
 

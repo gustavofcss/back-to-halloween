@@ -3,6 +3,16 @@
 Resumo das fases do projeto, do esqueleto à revisão final. O histórico completo
 está nos commits.
 
+## 2026-11-16: banco normalizado em 3FN
+
+- `evento` virou `festa` (nome, data, endereço, capacidade) + `lote` (preço, promoção,
+  vendas). Pessoas saíram do pedido para `participante` + `ingresso`; os códigos de
+  verificação foram para a tabela `codigo_verificacao`; `expirado` virou status.
+- Migração sem perda de dados (`app/migracao_3fn.sql`), testada contra um PostgreSQL de verdade.
+- Função **encerrar/reabrir vendas** pelo painel (tela Evento).
+- Testes com banco real (migração e fluxo completo do site): 338 verificações no total.
+- README, documentação de arquitetura e testes reorganizados.
+
 ## 2026-10-09: revisão completa e desempenho
 
 - **Dinheiro e vagas:** conciliação do Pix mais robusta (paginação, cache curto,

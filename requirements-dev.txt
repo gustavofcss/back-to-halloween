@@ -1,0 +1,5 @@
+# Dependências só para desenvolvimento e testes
+-r requirements.txt
+
+# PostgreSQL embarcado: habilita os testes com banco real (migração e fluxo completo)
+pgserver

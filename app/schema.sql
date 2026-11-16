@@ -1,6 +1,17 @@
--- Schema do Back to Halloween, baseado no fluxograma do usuário.
+-- Schema do Back to Halloween, normalizado até a 3FN.
 -- Rode uma vez contra o banco Postgres (local ou Render) antes do primeiro
 -- deploy: psql "$DATABASE_URL" -f app/schema.sql
+--
+-- Banco que já existia na versão anterior (com a tabela `evento`): NÃO rode este
+-- arquivo; rode app/migracao_3fn.sql, que converte os dados sem perder nada.
+--
+-- Tabelas:
+--   login_usuario, codigo_verificacao, hierarquia   -> contas e papéis
+--   festa, lote                                     -> o evento e seus lotes de preço
+--   pedido, ingresso, participante                  -> vendas e pessoas
+--   despesa_material                                -> despesas do evento
+-- Views de leitura (v_evento, v_pedido): juntam as tabelas acima no formato que
+-- as telas e os e-mails consomem. Só leitura: as escritas vão nas tabelas.
 
 CREATE TABLE IF NOT EXISTS login_usuario (
     id_usuario       SERIAL PRIMARY KEY,
@@ -10,12 +21,22 @@ CREATE TABLE IF NOT EXISTS login_usuario (
     google_id        VARCHAR(60) UNIQUE,  -- NULL se a conta só usa login por senha
     email_confirmado BOOLEAN NOT NULL DEFAULT FALSE,  -- aprovação manual do admin (fila "Cadastros pendentes")
     email_verificado BOOLEAN NOT NULL DEFAULT FALSE,  -- dono provou que é dono do e-mail (código); login Google já entra TRUE
-    email_verificacao_codigo_hash   VARCHAR(255), -- hash do código de confirmação de e-mail, NULL fora do fluxo
-    email_verificacao_codigo_expira TIMESTAMPTZ,  -- validade do código acima (15 min)
-    reset_codigo_hash    VARCHAR(255),        -- hash do código de "esqueci a senha", NULL fora do fluxo
-    reset_codigo_expira  TIMESTAMPTZ,         -- validade do código acima (15 min)
     data_cadastro    TIMESTAMPTZ NOT NULL DEFAULT now(),
     data_atualizacao TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Códigos de 6 dígitos (confirmar e-mail e "esqueci a senha"). Eram dois grupos
+-- de colunas repetidos em login_usuario (email_verificacao_* e reset_*); aqui é
+-- uma linha por código ativo. Sem linha = sem código pendente. Depois de 5 erros
+-- o código é invalidado (auth.py, _MAX_TENTATIVAS_CODIGO).
+CREATE TABLE IF NOT EXISTS codigo_verificacao (
+    id_codigo    SERIAL PRIMARY KEY,
+    id_usuario   INTEGER NOT NULL REFERENCES login_usuario(id_usuario) ON DELETE CASCADE,
+    tipo         VARCHAR(10) NOT NULL CHECK (tipo IN ('email', 'senha')),
+    codigo_hash  VARCHAR(255) NOT NULL,
+    expira_em    TIMESTAMPTZ NOT NULL,
+    tentativas   INTEGER NOT NULL DEFAULT 0,
+    UNIQUE (id_usuario, tipo)
 );
 
 -- Papel do usuário (cliente/adm/superadm) -- tabela separada (não uma coluna
@@ -29,110 +50,111 @@ CREATE TABLE IF NOT EXISTS hierarquia (
     hierarquia  VARCHAR(20) NOT NULL DEFAULT 'cliente' CHECK (hierarquia IN ('cliente', 'adm', 'superadm'))
 );
 
--- Um admin pode cadastrar mais de um evento (ex.: festas futuras) -- por isso
--- "evento" tem id próprio e quem cadastrou, em vez de nome_evento fixo como
--- chave e uma linha só. "numero_lote" cobre preços por lote (1º lote, 2º
--- lote etc.) dentro do mesmo evento.
-CREATE TABLE IF NOT EXISTS evento (
-    id_evento                 SERIAL PRIMARY KEY,
-    nome_evento               VARCHAR(160) NOT NULL,
-    data_evento               DATE,
-    hora_evento               TIME,
-    -- endereco/bairro (ex. "Rua Exemplo, 123" / "Centro") --
-    -- mesmo padrão de nome_evento/data_evento: editado no admin (Lotes do
-    -- evento) e herdado pro próximo lote cadastrado, porque é sempre a
-    -- MESMA festa, só o preço muda a cada lote.
-    endereco                  VARCHAR(200),
-    bairro                    VARCHAR(100),
+-- A festa: o que vale pro evento inteiro (nome, data, hora, endereço, capacidade).
+-- Antes isso se repetia em cada lote (tabela `evento`) e o código precisava
+-- copiar os dados a cada lote novo e atualizar só o mais recente.
+CREATE TABLE IF NOT EXISTS festa (
+    id_festa           SERIAL PRIMARY KEY,
+    nome_festa         VARCHAR(160) NOT NULL,
+    data_festa         DATE,
+    hora_festa         TIME,
+    endereco           VARCHAR(200),
+    bairro             VARCHAR(100),
+    capacidade_maxima  INTEGER NOT NULL DEFAULT 60,
+    usuario_cadastro   INTEGER REFERENCES login_usuario(id_usuario),
+    data_cadastro      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- O lote: o que muda com o preço (1º lote R$ 30, 2º lote R$ 50...). O lote mais
+-- recente é o que está à venda.
+CREATE TABLE IF NOT EXISTS lote (
+    id_lote                   SERIAL PRIMARY KEY,
+    id_festa                  INTEGER NOT NULL REFERENCES festa(id_festa),
     numero_lote               INTEGER NOT NULL DEFAULT 1,
     valor_entrada             NUMERIC(10,2) NOT NULL,
     quantidade_max_ingressos  INTEGER NOT NULL DEFAULT 2,
-    capacidade_maxima         INTEGER NOT NULL DEFAULT 60,
-    usuario_cadastro          INTEGER REFERENCES login_usuario(id_usuario),
-    data_cadastro             TIMESTAMPTZ NOT NULL DEFAULT now()
+    -- Promoção casadinha: 2 ingressos no mesmo pedido por config.PROMO_CASADINHA_VALOR.
+    promo_casadinha           BOOLEAN NOT NULL DEFAULT FALSE,
+    -- Com TRUE ninguém cria pedido novo (quem já tem pedido pendente ainda paga).
+    vendas_encerradas         BOOLEAN NOT NULL DEFAULT FALSE,
+    data_cadastro             TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (id_festa, numero_lote)
 );
 
--- Promoção casadinha (2 ingressos no mesmo pedido por config.PROMO_CASADINHA_VALOR).
--- Liga/desliga pelo admin (tela Evento). Em banco já existente, rode só esta linha.
-ALTER TABLE evento ADD COLUMN IF NOT EXISTS promo_casadinha BOOLEAN NOT NULL DEFAULT FALSE;
-
--- Encerrar vendas: com TRUE ninguém cria pedido novo (quem já tem pedido pendente
--- ainda consegue pagar). Liga/desliga pelo admin (tela Evento). Em banco já
--- existente, rode só esta linha.
-ALTER TABLE evento ADD COLUMN IF NOT EXISTS vendas_encerradas BOOLEAN NOT NULL DEFAULT FALSE;
-
--- Limite de tentativas dos códigos de 6 dígitos (confirmar e-mail e "esqueci a
--- senha"): depois de 5 erros o código é invalidado (auth.py,
--- _MAX_TENTATIVAS_CODIGO). Em banco já existente, rode só estas duas linhas.
-ALTER TABLE login_usuario ADD COLUMN IF NOT EXISTS email_verificacao_tentativas INTEGER NOT NULL DEFAULT 0;
-ALTER TABLE login_usuario ADD COLUMN IF NOT EXISTS reset_tentativas INTEGER NOT NULL DEFAULT 0;
-
+-- O pedido guarda só o que é do pedido: quem comprou, qual lote, quanto foi
+-- pago, em que situação está e qual pagamento Pix o quitou. Quem vai usar cada
+-- ingresso mora em ingresso/participante.
+--   * valor é o preço pago NA ÉPOCA (histórico), de propósito: não se recalcula
+--     a partir do lote, que pode mudar depois.
+--   * a quantidade de ingressos é a contagem de linhas em `ingresso` (não é coluna).
+--   * 'expirado' é um status (cancelamento automático por estourar a janela de
+--     pagamento de 5 min), não um booleano à parte.
+--   * slot 1 = o pedido principal da conta; slot 2 = um 2º pedido pra OUTRA
+--     pessoa. No máximo 2 pedidos ativos por conta+lote (índice abaixo).
+--   * cortesia: ingresso criado pelo admin, valor 0, já nasce 'confirmado'.
+--     id_usuario é o ADMIN que criou; o convidado é o participante do ingresso.
 CREATE TABLE IF NOT EXISTS pedido (
     id_pedido      SERIAL PRIMARY KEY,
     id_usuario     INTEGER NOT NULL REFERENCES login_usuario(id_usuario) ON DELETE CASCADE,
-    id_evento      INTEGER NOT NULL REFERENCES evento(id_evento),
-    -- slot 1 = o pedido "principal" da conta (titular = a própria conta,
-    -- nome/email vêm de login_usuario, como sempre foi). slot 2 = um 2º
-    -- pedido pra OUTRA pessoa (titular_nome/titular_email preenchidos,
-    -- diferentes da conta) -- no máximo 2 pedidos ativos por conta+evento,
-    -- garantido pelo índice único abaixo (não é "até 2 ingressos", é "até
-    -- 2 pedidos", cada um com seu próprio titular).
+    id_lote        INTEGER NOT NULL REFERENCES lote(id_lote),
     slot           INTEGER NOT NULL DEFAULT 1 CHECK (slot IN (1, 2)),
-    -- Preenchidos só no pedido de slot 2 (titular diferente da conta
-    -- logada) -- NULL no slot 1, onde o titular é sempre a própria conta.
-    titular_nome   VARCHAR(120),
-    titular_email  VARCHAR(160),
-    rg             VARCHAR(20),
-    whatsapp       VARCHAR(20),
     valor          NUMERIC(10,2) NOT NULL,
-    quantidade     INTEGER NOT NULL CHECK (quantidade > 0),
-    status_pedido  VARCHAR(20) NOT NULL DEFAULT 'pendente' CHECK (status_pedido IN ('pendente', 'confirmado', 'cancelado')),
-    -- TRUE só quando o cancelamento foi automático por estourar a janela de
-    -- pagamento (_JANELA_PAGAMENTO, 5 min -- pedido explícito do usuário:
-    -- forçar pagar dentro do prazo), pra distinguir de um cancelamento
-    -- manual do admin na tela de pagamento ("Pagamento expirado" vs
-    -- "Pedido cancelado").
-    expirado       BOOLEAN NOT NULL DEFAULT FALSE,
-    mp_payment_id     VARCHAR(40),  -- id do pagamento Pix criado no Mercado Pago
-    -- 2º ingresso (quantidade = 2) pode ser pra um acompanhante -- não
-    -- precisa ser a mesma pessoa que está logada/comprando. NULL quando
-    -- quantidade = 1 (só o titular). Só existe no slot 1 -- o slot 2 é
-    -- sempre quantidade = 1 (o próprio titular do slot 2).
-    acompanhante_nome      VARCHAR(120),
-    acompanhante_email     VARCHAR(160),
-    acompanhante_rg        VARCHAR(20),
-    acompanhante_whatsapp  VARCHAR(20),
-    -- Ingresso de cortesia criado pelo admin (app/admin.py,
-    -- pedidos_cortesia) -- valor=0, status_pedido já nasce 'confirmado'
-    -- (nunca passa pelo fluxo de pagamento). id_usuario fica sendo o
-    -- ADMIN que criou (não o convidado, que não precisa ter conta) --
-    -- titular_nome/titular_email/rg/whatsapp são os dados do convidado de
-    -- verdade, mesmo padrão já usado no pedido de slot 2 (pra outra
-    -- pessoa). Por isso o índice único de slot (abaixo) precisa ignorar
-    -- cortesia: um admin criando vários cortesia com a PRÓPRIA conta não
-    -- pode esbarrar no limite de "até 2 pedidos por conta".
+    status_pedido  VARCHAR(20) NOT NULL DEFAULT 'pendente'
+                   CHECK (status_pedido IN ('pendente', 'confirmado', 'cancelado', 'expirado')),
     cortesia       BOOLEAN NOT NULL DEFAULT FALSE,
+    mp_payment_id  VARCHAR(40),  -- id do pagamento Pix aprovado no Mercado Pago
     data_pedido    TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- "Um pedido por pessoa" (app/pedidos.py, rota /comprar) era só checado com
--- SELECT-antes-de-INSERT -- sem essa trava no banco, dois envios concorrentes
--- do mesmo usuário (duplo clique, duas abas) podiam ler "zero pedidos" os
--- dois ANTES de qualquer um dos dois commitar o INSERT, e os dois passavam
--- (TOCTOU real, achado nesta revisão de segurança). Índice único parcial
--- (só entre pedidos não cancelados), agora incluindo "slot" -- permite até 2
--- pedidos ativos por conta+evento (um por slot), mas nunca dois no mesmo
--- slot ao mesmo tempo. Postgres rejeita o INSERT concorrente com uma
--- UniqueViolation, que a rota captura.
-CREATE UNIQUE INDEX IF NOT EXISTS ux_pedido_usuario_evento_slot_ativo ON pedido (id_usuario, id_evento, slot) WHERE status_pedido != 'cancelado' AND NOT cortesia;
+-- Quem vai à festa. Uma pessoa por linha: nome, e-mail, RG e WhatsApp dependem da
+-- pessoa, não do pedido (antes eram colunas repetidas "titular_*" e "acompanhante_*").
+CREATE TABLE IF NOT EXISTS participante (
+    id_participante  SERIAL PRIMARY KEY,
+    nome             VARCHAR(120) NOT NULL,
+    email            VARCHAR(160),
+    rg               VARCHAR(20),
+    whatsapp         VARCHAR(20)
+);
 
--- Pix direto na chave (app/pedidos.py, _tentar_conciliar_pix_direto): o
--- mesmo pagamento real do Mercado Pago nunca pode ser reivindicado por
--- dois pedidos -- sem essa trava, dois pedidos pendentes do MESMO valor
--- concorrendo (2 pessoas pagando quase ao mesmo tempo) podiam os dois
--- reivindicar o mesmo mp_payment_id antes de qualquer um commitar,
--- contando o mesmo dinheiro duas vezes. Parcial (só quando preenchido) --
--- mp_payment_id continua NULL até alguém pagar.
+-- Um ingresso liga um pedido a um participante. Cada pedido tem no máximo um
+-- titular e um acompanhante.
+CREATE TABLE IF NOT EXISTS ingresso (
+    id_ingresso      SERIAL PRIMARY KEY,
+    id_pedido        INTEGER NOT NULL REFERENCES pedido(id_pedido) ON DELETE CASCADE,
+    id_participante  INTEGER NOT NULL REFERENCES participante(id_participante),
+    papel            VARCHAR(12) NOT NULL CHECK (papel IN ('titular', 'acompanhante')),
+    UNIQUE (id_pedido, papel)
+);
+
+-- Apagar um ingresso (ou um pedido, que apaga seus ingressos em cascata) não pode
+-- deixar participante solto: remove o participante que ficou sem nenhum ingresso.
+CREATE OR REPLACE FUNCTION remover_participante_sem_ingresso() RETURNS trigger AS $$
+BEGIN
+    DELETE FROM participante
+    WHERE id_participante = OLD.id_participante
+      AND NOT EXISTS (SELECT 1 FROM ingresso WHERE id_participante = OLD.id_participante);
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_ingresso_remove_participante ON ingresso;
+CREATE TRIGGER trg_ingresso_remove_participante
+    AFTER DELETE ON ingresso
+    FOR EACH ROW EXECUTE FUNCTION remover_participante_sem_ingresso();
+
+-- "Até 2 pedidos por conta" era só checado com SELECT-antes-de-INSERT; sem
+-- trava no banco, dois envios concorrentes do mesmo usuário (duplo clique, duas
+-- abas) passavam os dois. Índice único parcial (só pedidos ativos e não
+-- cortesia): no máximo um pedido ativo por conta+lote+slot. O Postgres rejeita o
+-- INSERT concorrente com UniqueViolation, que a rota captura.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_pedido_usuario_lote_slot_ativo
+    ON pedido (id_usuario, id_lote, slot)
+    WHERE status_pedido NOT IN ('cancelado', 'expirado') AND NOT cortesia;
+
+-- Pix direto na chave (pedidos.py, _tentar_conciliar_pix_direto): o mesmo
+-- pagamento real do Mercado Pago nunca pode ser reivindicado por dois pedidos
+-- (2 pessoas pagando o mesmo valor quase juntas). Parcial: mp_payment_id fica
+-- NULL até alguém pagar.
 CREATE UNIQUE INDEX IF NOT EXISTS ux_pedido_mp_payment_id ON pedido (mp_payment_id) WHERE mp_payment_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS despesa_material (
@@ -143,3 +165,58 @@ CREATE TABLE IF NOT EXISTS despesa_material (
     data_compra       DATE NOT NULL DEFAULT CURRENT_DATE,
     usuario_cadastro  INTEGER REFERENCES login_usuario(id_usuario)
 );
+
+-- ---------------------------------------------------------------------------
+-- Views de leitura (as telas, os e-mails e a planilha leem daqui)
+-- ---------------------------------------------------------------------------
+
+-- O "evento" que o código lê: o lote com os dados da festa.
+-- id_evento = id_lote (o evento à venda é sempre o lote mais recente).
+CREATE OR REPLACE VIEW v_evento AS
+SELECT l.id_lote AS id_evento,
+       l.id_lote,
+       f.id_festa,
+       f.nome_festa AS nome_evento,
+       f.data_festa AS data_evento,
+       f.hora_festa AS hora_evento,
+       f.endereco,
+       f.bairro,
+       l.numero_lote,
+       l.valor_entrada,
+       l.quantidade_max_ingressos,
+       f.capacidade_maxima,
+       l.promo_casadinha,
+       l.vendas_encerradas,
+       f.usuario_cadastro,
+       l.data_cadastro
+FROM lote l
+JOIN festa f ON f.id_festa = l.id_festa;
+
+-- O pedido completo: situação, titular e acompanhante. status_pedido mostra
+-- 'cancelado' para o pedido expirado (e expirado = TRUE), que é como as telas
+-- sempre enxergaram; para filtrar na tabela pedido, use os dois status.
+CREATE OR REPLACE VIEW v_pedido AS
+SELECT p.id_pedido,
+       p.id_usuario,
+       p.id_lote AS id_evento,
+       p.slot,
+       p.valor,
+       (SELECT COUNT(*)::int FROM ingresso i WHERE i.id_pedido = p.id_pedido) AS quantidade,
+       CASE WHEN p.status_pedido = 'expirado' THEN 'cancelado' ELSE p.status_pedido END AS status_pedido,
+       (p.status_pedido = 'expirado') AS expirado,
+       p.cortesia,
+       p.mp_payment_id,
+       p.data_pedido,
+       t.nome     AS titular_nome,
+       t.email    AS titular_email,
+       t.rg       AS rg,
+       t.whatsapp AS whatsapp,
+       a.nome     AS acompanhante_nome,
+       a.email    AS acompanhante_email,
+       a.rg       AS acompanhante_rg,
+       a.whatsapp AS acompanhante_whatsapp
+FROM pedido p
+LEFT JOIN ingresso it       ON it.id_pedido = p.id_pedido AND it.papel = 'titular'
+LEFT JOIN participante t    ON t.id_participante = it.id_participante
+LEFT JOIN ingresso ia       ON ia.id_pedido = p.id_pedido AND ia.papel = 'acompanhante'
+LEFT JOIN participante a    ON a.id_participante = ia.id_participante;

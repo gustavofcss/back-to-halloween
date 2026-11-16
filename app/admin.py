@@ -36,6 +36,7 @@ from email_utils import (
 )
 from pedidos import (
     _chave_pix_do_valor,
+    _criar_pedido,
     _evento_ativo,
     _ingressos_vendidos_total,
     _validar_rg,
@@ -201,10 +202,10 @@ def _injetar_contadores_nav():
                      JOIN hierarquia h ON h.id_usuario = u.id_usuario
                      WHERE u.email_confirmado = TRUE) AS hierarquia,
                   (SELECT COUNT(*) FROM despesa_material) AS material,
-                  (SELECT COUNT(*) FROM evento) AS eventos,
-                  (SELECT COALESCE(SUM(quantidade), 0) FROM pedido
-                     WHERE status_pedido != 'cancelado') AS vendidos,
-                  COALESCE((SELECT capacidade_maxima FROM evento ORDER BY data_cadastro DESC LIMIT 1), 60)
+                  (SELECT COUNT(*) FROM lote) AS eventos,
+                  (SELECT COUNT(*) FROM ingresso i JOIN pedido p ON p.id_pedido = i.id_pedido
+                     WHERE p.status_pedido NOT IN ('cancelado', 'expirado')) AS vendidos,
+                  COALESCE((SELECT capacidade_maxima FROM v_evento ORDER BY data_cadastro DESC LIMIT 1), 60)
                      AS capacidade
                 """
             )
@@ -228,7 +229,7 @@ def _injetar_contadores_nav():
 def _totais_pedidos(cur) -> dict:
     cur.execute(
         """
-        SELECT COALESCE((SELECT capacidade_maxima FROM evento ORDER BY data_cadastro DESC LIMIT 1), 60)
+        SELECT COALESCE((SELECT capacidade_maxima FROM v_evento ORDER BY data_cadastro DESC LIMIT 1), 60)
                    AS capacidade_maxima,
                COUNT(*) AS total,
                COALESCE(SUM(quantidade) FILTER (WHERE status_pedido != 'cancelado'), 0) AS ingressos_vendidos,
@@ -236,7 +237,7 @@ def _totais_pedidos(cur) -> dict:
                COUNT(*) FILTER (WHERE status_pedido = 'confirmado') AS confirmados,
                COALESCE(SUM(quantidade) FILTER (WHERE status_pedido = 'confirmado'), 0) AS ingressos_confirmados,
                COUNT(*) FILTER (WHERE status_pedido = 'pendente') AS pendentes
-        FROM pedido
+        FROM v_pedido
         """
     )
     agregados = cur.fetchone()
@@ -326,7 +327,7 @@ def pedidos():
                        COALESCE(p.titular_nome, u.nome) AS nome,
                        COALESCE(p.titular_email, u.email) AS email,
                        u.nome AS comprador_nome, u.email AS comprador_email
-                FROM pedido p
+                FROM v_pedido p
                 JOIN login_usuario u ON u.id_usuario = p.id_usuario
                 ORDER BY p.data_pedido DESC
                 """
@@ -373,21 +374,15 @@ def pedidos_cortesia():
 
             # Mesma trava do /comprar: cortesia concorrente com uma compra podia passar
             # da capacidade sem ninguém ver. Passar de propósito é permitido, mas avisa.
-            cur.execute("SELECT 1 FROM evento WHERE id_evento = %s FOR UPDATE", (evento["id_evento"],))
+            cur.execute("SELECT 1 FROM festa WHERE id_festa = %s FOR UPDATE", (evento["id_festa"],))
             passou_da_capacidade = _ingressos_vendidos_total(cur) + 1 > evento["capacidade_maxima"]
 
-            cur.execute(
-                """
-                INSERT INTO pedido (
-                    id_usuario, id_evento, slot, titular_nome, titular_email,
-                    rg, whatsapp, valor, quantidade, status_pedido, cortesia
-                )
-                VALUES (%s, %s, 1, %s, %s, %s, %s, 0, 1, 'confirmado', TRUE)
-                RETURNING id_pedido
-                """,
-                (admin["id_usuario"], evento["id_evento"], nome, email, rg, whatsapp),
+            # O convidado é o participante do ingresso; id_usuario do pedido é o admin.
+            id_pedido = _criar_pedido(
+                cur, admin["id_usuario"], evento["id_evento"], 1, 0,
+                {"nome": nome, "email": email, "rg": rg, "whatsapp": whatsapp},
+                status="confirmado", cortesia=True,
             )
-            id_pedido = cur.fetchone()["id_pedido"]
 
     try:
         enviar_confirmacao_pedido(
@@ -426,7 +421,7 @@ def pedidos_email_massa():
                 SELECT DISTINCT ON (COALESCE(p.titular_email, u.email))
                        COALESCE(p.titular_email, u.email) AS email,
                        COALESCE(p.titular_nome, u.nome) AS nome
-                FROM pedido p
+                FROM v_pedido p
                 JOIN login_usuario u ON u.id_usuario = p.id_usuario
                 WHERE p.status_pedido != 'cancelado'
                 """
@@ -452,7 +447,7 @@ def pedidos_exportar():
                 """
                 SELECT p.id_pedido, p.rg, p.acompanhante_nome, p.acompanhante_rg,
                        COALESCE(p.titular_nome, u.nome) AS nome
-                FROM pedido p
+                FROM v_pedido p
                 JOIN login_usuario u ON u.id_usuario = p.id_usuario
                 WHERE p.status_pedido = 'confirmado'
                 ORDER BY p.id_pedido
@@ -515,7 +510,7 @@ def pedidos_lista():
                        COALESCE(p.titular_nome, u.nome) AS nome,
                        COALESCE(p.titular_email, u.email) AS email,
                        u.nome AS comprador_nome, u.email AS comprador_email
-                FROM pedido p
+                FROM v_pedido p
                 JOIN login_usuario u ON u.id_usuario = p.id_usuario
                 ORDER BY p.data_pedido DESC
                 """
@@ -556,7 +551,7 @@ def pedido_confirmar(id_pedido: int):
                 SELECT p.*,
                        COALESCE(p.titular_nome, u.nome) AS nome,
                        COALESCE(p.titular_email, u.email) AS email
-                FROM pedido p
+                FROM v_pedido p
                 JOIN login_usuario u ON u.id_usuario = p.id_usuario
                 WHERE p.id_pedido = %s
                 """,
@@ -612,7 +607,7 @@ def pedido_cancelar(id_pedido: int):
         with conn.cursor() as cur:
             cur.execute(
                 "UPDATE pedido SET status_pedido = 'cancelado' "
-                "WHERE id_pedido = %s AND status_pedido != 'cancelado'",
+                "WHERE id_pedido = %s AND status_pedido NOT IN ('cancelado', 'expirado')",
                 (id_pedido,),
             )
             mudou = cur.rowcount > 0
@@ -645,7 +640,7 @@ def pedidos_confirmar_lote():
                     SELECT p.*,
                            COALESCE(p.titular_nome, u.nome) AS nome,
                            COALESCE(p.titular_email, u.email) AS email
-                    FROM pedido p
+                    FROM v_pedido p
                     JOIN login_usuario u ON u.id_usuario = p.id_usuario
                     WHERE p.id_pedido = ANY(%s)
                     """,
@@ -715,7 +710,7 @@ def pedidos_cancelar_lote():
                 # aconteceu no banco.
                 cur.execute(
                     "UPDATE pedido SET status_pedido = 'cancelado' "
-                    "WHERE id_pedido = ANY(%s) AND status_pedido != 'cancelado' "
+                    "WHERE id_pedido = ANY(%s) AND status_pedido NOT IN ('cancelado', 'expirado') "
                     "RETURNING id_pedido",
                     (ids,),
                 )
@@ -739,7 +734,7 @@ def pedido_apagar(id_pedido: int):
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(
-                "DELETE FROM pedido WHERE id_pedido = %s AND status_pedido = 'cancelado'",
+                "DELETE FROM pedido WHERE id_pedido = %s AND status_pedido IN ('cancelado', 'expirado')",
                 (id_pedido,),
             )
             apagou = cur.rowcount > 0
@@ -771,7 +766,7 @@ def pedidos_apagar_lote():
         with conn.cursor() as cur:
             if ids:
                 cur.execute(
-                    "DELETE FROM pedido WHERE id_pedido = ANY(%s) AND status_pedido = 'cancelado' "
+                    "DELETE FROM pedido WHERE id_pedido = ANY(%s) AND status_pedido IN ('cancelado', 'expirado') "
                     "RETURNING id_pedido",
                     (ids,),
                 )
@@ -1282,7 +1277,7 @@ def eventos():
     # existia).
     with db.get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM evento ORDER BY data_cadastro DESC LIMIT 1")
+            cur.execute("SELECT * FROM v_evento ORDER BY data_cadastro DESC LIMIT 1")
             ultimo = cur.fetchone()
 
     if request.method == "POST":
@@ -1297,38 +1292,34 @@ def eventos():
         if valor_entrada is None or quantidade_max_ingressos is None:
             flash("Informe um valor de entrada maior que zero e 1 ou 2 ingressos por pessoa.")
             return redirect(url_for("admin.eventos"))
-        nome_evento = ultimo["nome_evento"] if ultimo else "BACK TO HALLOWEEN"
-        data_evento = ultimo["data_evento"] if ultimo else None
-        hora_evento = ultimo["hora_evento"] if ultimo else None
-        endereco = ultimo["endereco"] if ultimo else None
-        bairro = ultimo["bairro"] if ultimo else None
-        capacidade_maxima = ultimo["capacidade_maxima"] if ultimo else 60
         numero_lote = (ultimo["numero_lote"] + 1) if ultimo else 1
         promo_casadinha = bool(ultimo["promo_casadinha"]) if ultimo else False
 
         with db.get_conn() as conn:
             with conn.cursor() as cur:
+                # Nome, data, hora, endereço e capacidade são da FESTA: o lote novo só
+                # aponta pra ela (nada a copiar). Só cria a festa na 1ª vez.
+                if ultimo:
+                    id_festa = ultimo["id_festa"]
+                else:
+                    cur.execute("SELECT id_festa FROM festa ORDER BY id_festa DESC LIMIT 1")
+                    existente = cur.fetchone()
+                    if existente:
+                        id_festa = existente["id_festa"]
+                    else:
+                        cur.execute(
+                            "INSERT INTO festa (nome_festa, capacidade_maxima, usuario_cadastro) "
+                            "VALUES ('BACK TO HALLOWEEN', 60, %s) RETURNING id_festa",
+                            (current_user()["id_usuario"],),
+                        )
+                        id_festa = cur.fetchone()["id_festa"]
                 cur.execute(
                     """
-                    INSERT INTO evento
-                        (nome_evento, data_evento, hora_evento, endereco, bairro, numero_lote,
-                         valor_entrada, quantidade_max_ingressos, capacidade_maxima, usuario_cadastro,
-                         promo_casadinha)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    INSERT INTO lote
+                        (id_festa, numero_lote, valor_entrada, quantidade_max_ingressos, promo_casadinha)
+                    VALUES (%s, %s, %s, %s, %s)
                     """,
-                    (
-                        nome_evento,
-                        data_evento,
-                        hora_evento,
-                        endereco,
-                        bairro,
-                        numero_lote,
-                        valor_entrada,
-                        quantidade_max_ingressos,
-                        capacidade_maxima,
-                        current_user()["id_usuario"],
-                        promo_casadinha,
-                    ),
+                    (id_festa, numero_lote, valor_entrada, quantidade_max_ingressos, promo_casadinha),
                 )
         # Só existem chaves Pix para os valores de config.PIX_KEYS: um preço fora da lista
         # cria pedidos que ninguém consegue pagar (a venda para sem nenhum aviso).
@@ -1352,7 +1343,7 @@ def eventos():
                 SELECT e.id_evento, e.nome_evento, e.data_evento, e.hora_evento, e.numero_lote,
                        e.valor_entrada, e.quantidade_max_ingressos, e.capacidade_maxima, e.data_cadastro,
                        u.nome AS cadastrado_por
-                FROM evento e
+                FROM v_evento e
                 LEFT JOIN login_usuario u ON u.id_usuario = e.usuario_cadastro
                 ORDER BY e.data_cadastro DESC
                 """
@@ -1360,7 +1351,7 @@ def eventos():
             lista = cur.fetchall()
 
             cur.execute(
-                "SELECT COALESCE(SUM(quantidade), 0) AS total FROM pedido WHERE status_pedido != 'cancelado'"
+                "SELECT COALESCE(SUM(quantidade), 0) AS total FROM v_pedido WHERE status_pedido != 'cancelado'"
             )
             ingressos_vendidos_total = cur.fetchone()["total"]
 
@@ -1392,12 +1383,12 @@ def eventos_capacidade():
     aviso = None
     with db.get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1")
+            cur.execute("SELECT id_festa FROM v_evento ORDER BY data_cadastro DESC LIMIT 1")
             ultimo = cur.fetchone()
             if ultimo:
                 cur.execute(
-                    "UPDATE evento SET capacidade_maxima = %s WHERE id_evento = %s",
-                    (capacidade_maxima, ultimo["id_evento"]),
+                    "UPDATE festa SET capacidade_maxima = %s WHERE id_festa = %s",
+                    (capacidade_maxima, ultimo["id_festa"]),
                 )
                 vendidos = _ingressos_vendidos_total(cur)
                 if capacidade_maxima < vendidos:
@@ -1432,12 +1423,12 @@ def eventos_nome_data():
 
     with db.get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1")
+            cur.execute("SELECT id_festa FROM v_evento ORDER BY data_cadastro DESC LIMIT 1")
             ultimo = cur.fetchone()
             if ultimo:
                 cur.execute(
-                    "UPDATE evento SET nome_evento = %s, data_evento = %s, hora_evento = %s WHERE id_evento = %s",
-                    (nome_evento, data_evento, hora_evento, ultimo["id_evento"]),
+                    "UPDATE festa SET nome_festa = %s, data_festa = %s, hora_festa = %s WHERE id_festa = %s",
+                    (nome_evento, data_evento, hora_evento, ultimo["id_festa"]),
                 )
     flash("Nome, data e hora atualizados.")
     return redirect(url_for("admin.eventos"))
@@ -1452,12 +1443,12 @@ def eventos_casadinha():
     ligar = request.form.get("ativo") == "1"
     with db.get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1")
+            cur.execute("SELECT id_lote FROM lote ORDER BY data_cadastro DESC LIMIT 1")
             ultimo = cur.fetchone()
             if ultimo:
                 cur.execute(
-                    "UPDATE evento SET promo_casadinha = %s WHERE id_evento = %s",
-                    (ligar, ultimo["id_evento"]),
+                    "UPDATE lote SET promo_casadinha = %s WHERE id_lote = %s",
+                    (ligar, ultimo["id_lote"]),
                 )
     flash("Promoção casadinha ligada." if ligar else "Promoção casadinha desligada.")
     return redirect(url_for("admin.eventos"))
@@ -1472,12 +1463,12 @@ def eventos_encerrar_vendas():
     encerrar = request.form.get("encerrar") == "1"
     with db.get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1")
+            cur.execute("SELECT id_lote FROM lote ORDER BY data_cadastro DESC LIMIT 1")
             ultimo = cur.fetchone()
             if ultimo:
                 cur.execute(
-                    "UPDATE evento SET vendas_encerradas = %s WHERE id_evento = %s",
-                    (encerrar, ultimo["id_evento"]),
+                    "UPDATE lote SET vendas_encerradas = %s WHERE id_lote = %s",
+                    (encerrar, ultimo["id_lote"]),
                 )
     flash("Vendas encerradas." if encerrar else "Vendas reabertas.")
     return redirect(url_for("admin.eventos"))
@@ -1498,12 +1489,12 @@ def eventos_endereco():
         return redirect(url_for("admin.eventos"))
     with db.get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1")
+            cur.execute("SELECT id_festa FROM v_evento ORDER BY data_cadastro DESC LIMIT 1")
             ultimo = cur.fetchone()
             if ultimo:
                 cur.execute(
-                    "UPDATE evento SET endereco = %s, bairro = %s WHERE id_evento = %s",
-                    (endereco, bairro, ultimo["id_evento"]),
+                    "UPDATE festa SET endereco = %s, bairro = %s WHERE id_festa = %s",
+                    (endereco, bairro, ultimo["id_festa"]),
                 )
     flash("Endereço atualizado.")
     return redirect(url_for("admin.eventos"))
@@ -1523,27 +1514,8 @@ def eventos_apagar(id_evento: int):
     with db.get_conn() as conn:
         with conn.cursor() as cur:
             try:
-                cur.execute(
-                    "SELECT id_evento, nome_evento, data_evento, hora_evento, endereco, bairro, "
-                    "capacidade_maxima, promo_casadinha, vendas_encerradas FROM evento ORDER BY data_cadastro DESC LIMIT 1"
-                )
-                ativo = cur.fetchone()
-                cur.execute("DELETE FROM evento WHERE id_evento = %s", (id_evento,))
+                cur.execute("DELETE FROM lote WHERE id_lote = %s", (id_evento,))
                 apagou = cur.rowcount > 0
-                if apagou and ativo and ativo["id_evento"] == id_evento:
-                    # O lote que vira o ativo herda os dados da festa (nome, data,
-                    # endereço, capacidade, promoção) do que acabou de sair; senão
-                    # o convite voltaria com dados velhos do lote antigo.
-                    cur.execute(
-                        "UPDATE evento SET nome_evento = %s, data_evento = %s, hora_evento = %s, "
-                        "endereco = %s, bairro = %s, capacidade_maxima = %s, promo_casadinha = %s, vendas_encerradas = %s "
-                        "WHERE id_evento = (SELECT id_evento FROM evento ORDER BY data_cadastro DESC LIMIT 1)",
-                        (
-                            ativo["nome_evento"], ativo["data_evento"], ativo["hora_evento"],
-                            ativo["endereco"], ativo["bairro"], ativo["capacidade_maxima"],
-                            ativo["promo_casadinha"], ativo["vendas_encerradas"],
-                        ),
-                    )
             except psycopg2.errors.ForeignKeyViolation:
                 # Precisa dar rollback ANTES de sair do `with db.get_conn()`
                 # -- sem isso, o commit automático dele na saída limpa

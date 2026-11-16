@@ -44,7 +44,7 @@ class Banco:
         self.rollbacks = 0
         self.falhar_update_ids = set()   # ids de pedido cujo UPDATE de confirmação viola o índice único
         self.pedidos = {}
-        self.evento = L(id_evento=2, nome_evento="BTH", valor_entrada=Decimal("30.00"), quantidade_max_ingressos=2,
+        self.evento = L(id_evento=2, id_festa=1, nome_evento="BTH", valor_entrada=Decimal("30.00"), quantidade_max_ingressos=2,
                         capacidade_maxima=60, promo_casadinha=False, numero_lote=2, data_evento=None, hora_evento=None,
                         endereco="Rua X", bairro="Y")
         self.ativos = []       # o que _pedidos_ativos devolve
@@ -74,15 +74,17 @@ class Cur:
         s = self.sql
         if "FROM login_usuario u JOIN hierarquia h" in s and "WHERE u.id_usuario" in s:
             return L(id_usuario=1, nome="Admin Teste", email="a@x.com", hierarquia="adm")
-        if "SELECT * FROM evento" in s:
+        if "SELECT * FROM v_evento" in s:
             return banco.evento
         if "FOR UPDATE" in s:
             return None
-        if "COALESCE(SUM(quantidade)" in s and "FROM pedido WHERE status_pedido" in s:
+        if "FROM ingresso i JOIN pedido p" in s:
             return L(total=banco.vendidos)
         if s.startswith("INSERT INTO pedido"):
             return L(id_pedido=banco.proximo_id)
-        if "COUNT(*) AS total" in s and "FROM pedido" in s:
+        if s.startswith("INSERT INTO participante"):
+            return L(id_participante=1)
+        if "COUNT(*) AS total" in s and "FROM v_pedido" in s:
             return L(capacidade_maxima=60, total=3, ingressos_vendidos=banco.vendidos, valor_total=Decimal("0"), confirmados=0,
                      ingressos_confirmados=0, pendentes=0)
         if s.startswith("SELECT p.*") and "WHERE p.id_pedido = %s" in s:
@@ -93,7 +95,7 @@ class Cur:
 
     def fetchall(self):
         s = self.sql
-        if s.startswith("SELECT * FROM pedido WHERE id_usuario"):
+        if s.startswith("SELECT * FROM v_pedido WHERE id_usuario"):
             return banco.ativos
         if s.startswith("SELECT p.*") and "ANY(%s)" in s:
             return [banco.pedidos[i] for i in self.params[0] if i in banco.pedidos]
@@ -346,7 +348,7 @@ cm = appmod.app.test_client()
 with cm.session_transaction() as sess:
     sess["user_id"] = 1
 cm.get("/meus-pedidos")
-sql_meus = next((q for q in banco.sqls if "FROM pedido p" in q and "JOIN evento e" in q), "")
+sql_meus = next((q for q in banco.sqls if "FROM v_pedido p" in q and "JOIN v_evento e" in q), "")
 check("meus-pedidos não lista cortesia do admin", "NOT p.cortesia" in sql_meus, sql_meus[-70:])
 
 # ======================================================== e-mails em segundo plano

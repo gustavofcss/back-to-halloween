@@ -216,13 +216,13 @@ for _ in range(10):
 custo = (_t.perf_counter() - t0) / 10 * 1000
 check("hash do código é rápido (<30 ms, o padrão leva ~190 ms)", custo < 30, f"({custo:.1f} ms)")
 
-claim_sql = "UPDATE login_usuario SET email_verificacao_tentativas = email_verificacao_tentativas + 1"
+claim_sql = "UPDATE codigo_verificacao c SET tentativas = c.tentativas + 1"
 hash_ok = auth._hash_do_codigo("123456")
 expira = agora + timedelta(minutes=10)
 
 
 def linha_claim(tentativas, hash_=hash_ok, exp=expira):
-    return L(id_usuario=1, nome="Ana", email_verificacao_codigo_hash=hash_, email_verificacao_codigo_expira=exp, email_verificacao_tentativas=tentativas)
+    return L(id_usuario=1, nome="Ana", codigo_hash=hash_, expira_em=exp, tentativas=tentativas)
 
 
 def post_codigo(codigo):
@@ -241,16 +241,16 @@ r = post_codigo("123456")
 ordem = [i for i, q in enumerate(sqls) if q.startswith(claim_sql)]
 check("confirmar: a tentativa é reservada num UPDATE ... RETURNING (atômico)", ordem and "RETURNING" in sqls[ordem[0]])
 check("confirmar: código certo aprova (200 cadastro em análise)", r.status_code == 200 and "Cadastro em análise" in r.get_data(as_text=True))
-check("confirmar: sucesso zera o contador e limpa o código", any("email_verificado = TRUE, email_verificacao_tentativas = 0" in q for q in sqls))
+check("confirmar: sucesso verifica o e-mail e apaga o código", any("email_verificado = TRUE" in q for q in sqls) and any("DELETE FROM codigo_verificacao" in q and "email" in q for q in sqls))
 
 zerar()
 regra(claim_sql, linha_claim(3))
 r = post_codigo("000000")
-check("confirmar: código errado na 3ª tentativa -> 400 e o código continua valendo", r.status_code == 400 and not any("codigo_hash = NULL WHERE" in q for q in sqls))
+check("confirmar: código errado na 3ª tentativa -> 400 e o código continua valendo", r.status_code == 400 and not any("DELETE FROM codigo_verificacao" in q for q in sqls))
 zerar()
 regra(claim_sql, linha_claim(5))
 r = post_codigo("000000")
-check("confirmar: 5ª tentativa errada invalida o código (hash = NULL)", r.status_code == 400 and any("email_verificacao_codigo_hash = NULL WHERE id_usuario" in q for q in sqls))
+check("confirmar: 5ª tentativa errada invalida o código (apaga a linha)", r.status_code == 400 and any("DELETE FROM codigo_verificacao WHERE id_usuario = %s AND tipo = 'email'" in q for q in sqls))
 zerar()   # nenhuma linha devolvida pela reserva = tentativas esgotadas
 r = post_codigo("123456")
 check("confirmar: tentativas esgotadas -> nem o código certo passa até pedir outro", r.status_code == 400 and not any("email_verificado = TRUE" in q for q in sqls))
@@ -258,7 +258,7 @@ zerar()
 regra(claim_sql, linha_claim(1, exp=agora - timedelta(minutes=1)))
 check("confirmar: código expirado -> 400", post_codigo("123456").status_code == 400)
 
-claim_reset = "UPDATE login_usuario SET reset_tentativas = reset_tentativas + 1"
+claim_reset = "UPDATE codigo_verificacao c SET tentativas = c.tentativas + 1"
 
 
 def post_reset(codigo, senha="novasenha1"):
@@ -266,17 +266,17 @@ def post_reset(codigo, senha="novasenha1"):
 
 
 zerar()
-regra(claim_reset, L(id_usuario=1, reset_codigo_hash=hash_ok, reset_codigo_expira=expira, reset_tentativas=1))
+regra(claim_reset, L(id_usuario=1, codigo_hash=hash_ok, expira_em=expira, tentativas=1))
 r = post_reset("123456", senha="123")
 check("redefinir: senha curta é avisada à parte e NÃO gasta tentativa", r.status_code == 400 and "entre 6 e 128" in r.get_data(as_text=True) and not any(q.startswith(claim_reset) for q in sqls))
 zerar()
-regra(claim_reset, L(id_usuario=1, reset_codigo_hash=hash_ok, reset_codigo_expira=expira, reset_tentativas=1))
+regra(claim_reset, L(id_usuario=1, codigo_hash=hash_ok, expira_em=expira, tentativas=1))
 r = post_reset("123456")
-check("redefinir: código certo troca a senha e atualiza data_atualizacao (derruba sessões)", r.status_code == 302 and any("senha_hash = %s, reset_tentativas = 0" in q and "data_atualizacao = now()" in q for q in sqls))
+check("redefinir: código certo troca a senha, atualiza data_atualizacao (derruba sessões) e apaga o código", r.status_code == 302 and any("senha_hash = %s" in q and "data_atualizacao = now()" in q for q in sqls) and any("DELETE FROM codigo_verificacao" in q and "senha" in q for q in sqls))
 zerar()
-regra(claim_reset, L(id_usuario=1, reset_codigo_hash=hash_ok, reset_codigo_expira=expira, reset_tentativas=5))
+regra(claim_reset, L(id_usuario=1, codigo_hash=hash_ok, expira_em=expira, tentativas=5))
 r = post_reset("000000")
-check("redefinir: 5ª tentativa errada invalida o código", r.status_code == 400 and any("reset_codigo_hash = NULL WHERE id_usuario" in q for q in sqls))
+check("redefinir: 5ª tentativa errada invalida o código (apaga a linha)", r.status_code == 400 and any("DELETE FROM codigo_verificacao WHERE id_usuario = %s AND tipo = 'senha'" in q for q in sqls))
 zerar()
 r = post_reset("123456")
 check("redefinir: tentativas esgotadas -> recusa", r.status_code == 400 and not any("senha_hash = %s" in q for q in sqls))
@@ -290,7 +290,8 @@ regra("SELECT id_usuario, nome FROM login_usuario WHERE email = %s AND email_ver
 auth.enviar_codigo_verificacao_email = lambda *a, **k: None
 appmod.app.test_client().post("/confirmar-email/mudar-email", data={"email_atual": "a@x.test", "novo_email": "novo@x.test"}, headers=H)
 upd = next((q for q in sqls if q.startswith("UPDATE login_usuario SET email = %s")), "")
-check("mudar e-mail: o UPDATE existe e NÃO zera email_verificacao_tentativas", bool(upd) and "tentativas" not in upd, upd[:90])
+ins = next((q for q in sqls if q.startswith("INSERT INTO codigo_verificacao")), "")
+check("mudar e-mail: o código novo NÃO zera as tentativas", bool(upd) and bool(ins) and "tentativas" not in ins and "tentativas" not in upd, ins[:120])
 
 # ========================================================== Google
 zerar()

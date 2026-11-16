@@ -256,15 +256,46 @@ def _tentar_conciliar_pix_direto(cur, pedido: dict, usuario: dict, usar_cache: b
 
 
 def _evento_ativo(cur):
-    cur.execute("SELECT * FROM evento ORDER BY data_cadastro DESC LIMIT 1")
+    """O lote mais recente (o que está à venda), já com os dados da festa (view v_evento)."""
+    cur.execute("SELECT * FROM v_evento ORDER BY data_cadastro DESC LIMIT 1")
     return cur.fetchone()
 
 
 def _ingressos_vendidos_total(cur) -> int:
+    """Ingressos que ocupam vaga: um por linha de `ingresso` de pedido que não foi
+    cancelado nem expirou."""
     cur.execute(
-        "SELECT COALESCE(SUM(quantidade), 0) AS total FROM pedido WHERE status_pedido != 'cancelado'"
+        "SELECT COUNT(*) AS total FROM ingresso i JOIN pedido p ON p.id_pedido = i.id_pedido "
+        "WHERE p.status_pedido NOT IN ('cancelado', 'expirado')"
     )
     return cur.fetchone()["total"]
+
+
+def _criar_pedido(
+    cur, id_usuario: int, id_lote: int, slot: int, valor, titular: dict, acompanhante: dict | None = None,
+    status: str = "pendente", cortesia: bool = False,
+) -> int:
+    """Cria o pedido, os participantes e os ingressos de uma vez (na transação de
+    quem chama). `titular` e `acompanhante` são dicts com nome, email, rg e whatsapp;
+    o acompanhante só existe no pedido de 2 ingressos. Devolve o id do pedido."""
+    cur.execute(
+        "INSERT INTO pedido (id_usuario, id_lote, slot, valor, status_pedido, cortesia) "
+        "VALUES (%s, %s, %s, %s, %s, %s) RETURNING id_pedido",
+        (id_usuario, id_lote, slot, valor, status, cortesia),
+    )
+    id_pedido = cur.fetchone()["id_pedido"]
+    for papel, pessoa in (("titular", titular), ("acompanhante", acompanhante)):
+        if not pessoa:
+            continue
+        cur.execute(
+            "INSERT INTO participante (nome, email, rg, whatsapp) VALUES (%s, %s, %s, %s) RETURNING id_participante",
+            (pessoa["nome"], pessoa["email"], pessoa["rg"], pessoa["whatsapp"]),
+        )
+        cur.execute(
+            "INSERT INTO ingresso (id_pedido, id_participante, papel) VALUES (%s, %s, %s)",
+            (id_pedido, cur.fetchone()["id_participante"], papel),
+        )
+    return id_pedido
 
 
 def _valor_do_pedido(evento: dict, slot: int, quantidade: int) -> Decimal:
@@ -278,7 +309,7 @@ def _valor_do_pedido(evento: dict, slot: int, quantidade: int) -> Decimal:
 
 def _pedido_do_usuario(cur, id_pedido: int, id_usuario: int):
     cur.execute(
-        "SELECT * FROM pedido WHERE id_pedido = %s AND id_usuario = %s",
+        "SELECT * FROM v_pedido WHERE id_pedido = %s AND id_usuario = %s",
         (id_pedido, id_usuario),
     )
     return cur.fetchone()
@@ -294,7 +325,7 @@ def _pedidos_ativos(cur, id_usuario: int) -> list:
     `evento`, mas a festa é a mesma: filtrando por lote, quem já tinha comprado 2
     ingressos voltava a poder comprar mais 2 assim que o admin abria o lote 2."""
     cur.execute(
-        "SELECT * FROM pedido WHERE id_usuario = %s "
+        "SELECT * FROM v_pedido WHERE id_usuario = %s "
         "AND status_pedido != 'cancelado' AND NOT cortesia ORDER BY slot",
         (id_usuario,),
     )
@@ -408,7 +439,7 @@ def _expirar_pedido(cur, pedido: dict) -> str:
     na hora do timeout -- mesma trava "AND status_pedido != alvo" +
     rowcount de toda mutação de pedido neste arquivo, nunca otimismo)."""
     cur.execute(
-        "UPDATE pedido SET status_pedido = 'cancelado', expirado = TRUE "
+        "UPDATE pedido SET status_pedido = 'expirado' "
         "WHERE id_pedido = %s AND status_pedido = 'pendente'",
         (pedido["id_pedido"],),
     )
@@ -465,7 +496,7 @@ def expirar_pedidos_vencidos(limite: int = 5) -> None:
                 cur.execute(
                     """
                     SELECT p.*, u.nome AS nome_conta, u.email AS email_conta
-                    FROM pedido p
+                    FROM v_pedido p
                     JOIN login_usuario u ON u.id_usuario = p.id_usuario
                     WHERE p.status_pedido = 'pendente' AND NOT p.cortesia
                       AND p.data_pedido < now() - %s
@@ -524,7 +555,7 @@ def _comprar_impl(usuario: dict):
             # ao mesmo tempo liam o mesmo "vagas restantes" e as duas passavam
             # (venda acima da capacidade). Vale até o commit; só no POST.
             if request.method == "POST":
-                cur.execute("SELECT 1 FROM evento WHERE id_evento = %s FOR UPDATE", (evento["id_evento"],))
+                cur.execute("SELECT 1 FROM festa WHERE id_festa = %s FOR UPDATE", (evento["id_festa"],))
 
             # Até 2 PEDIDOS por conta+evento e até quantidade_max_ingressos
             # ingressos NO TOTAL. O 1º (slot 1) é o titular = a própria conta, com
@@ -648,23 +679,22 @@ def _comprar_impl(usuario: dict):
                 ), 400
 
             valor = _valor_do_pedido(evento, slot, quantidade)
-            cur.execute(
-                """
-                INSERT INTO pedido (
-                    id_usuario, id_evento, slot, titular_nome, titular_email,
-                    rg, whatsapp, valor, quantidade, status_pedido,
-                    acompanhante_nome, acompanhante_email, acompanhante_rg, acompanhante_whatsapp
-                )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, 'pendente', %s, %s, %s, %s)
-                RETURNING id_pedido
-                """,
-                (
-                    usuario["id_usuario"], evento["id_evento"], slot, titular_nome, titular_email,
-                    rg, whatsapp, valor, quantidade,
-                    acompanhante_nome, acompanhante_email, acompanhante_rg, acompanhante_whatsapp,
-                ),
+            # Titular: no slot 1 é a própria conta; no slot 2 é a outra pessoa.
+            titular = {
+                "nome": titular_nome or usuario["nome"],
+                "email": titular_email or usuario["email"],
+                "rg": rg,
+                "whatsapp": whatsapp,
+            }
+            acompanhante = None
+            if acompanhante_nome:
+                acompanhante = {
+                    "nome": acompanhante_nome, "email": acompanhante_email,
+                    "rg": acompanhante_rg, "whatsapp": acompanhante_whatsapp,
+                }
+            id_pedido = _criar_pedido(
+                cur, usuario["id_usuario"], evento["id_evento"], slot, valor, titular, acompanhante,
             )
-            id_pedido = cur.fetchone()["id_pedido"]
 
     # Depois do commit (fora do `with`): o pedido já existe de verdade.
     avisar_admins_pedido_novo(
@@ -812,7 +842,7 @@ def webhook_mercadopago():
             cur.execute(
                 """
                 SELECT p.*, u.nome, u.email
-                FROM pedido p
+                FROM v_pedido p
                 JOIN login_usuario u ON u.id_usuario = p.id_usuario
                 WHERE p.mp_payment_id = %s
                 """,
@@ -840,8 +870,8 @@ def meus_pedidos():
             cur.execute(
                 """
                 SELECT p.*, e.numero_lote, e.nome_evento
-                FROM pedido p
-                JOIN evento e ON e.id_evento = p.id_evento
+                FROM v_pedido p
+                JOIN v_evento e ON e.id_evento = p.id_evento
                 WHERE p.id_usuario = %s AND NOT p.cortesia
                 ORDER BY p.data_pedido DESC
                 """,

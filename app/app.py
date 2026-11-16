@@ -58,7 +58,7 @@ class _TemPedido:
             with db.get_conn() as conn:
                 with conn.cursor() as cur:
                     cur.execute(
-                        "SELECT 1 FROM pedido WHERE id_usuario = %s AND status_pedido != 'cancelado' LIMIT 1",
+                        "SELECT 1 FROM v_pedido WHERE id_usuario = %s AND status_pedido != 'cancelado' LIMIT 1",
                         (self._id_usuario,),
                     )
                     self._valor = cur.fetchone() is not None
@@ -154,7 +154,7 @@ app.add_template_filter(data_hora_br, "data_hora_br")
 def index():
     with db.get_conn() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT * FROM evento ORDER BY data_cadastro DESC LIMIT 1")
+            cur.execute("SELECT * FROM v_evento ORDER BY data_cadastro DESC LIMIT 1")
             evento = cur.fetchone()
 
     data_formatada = None
